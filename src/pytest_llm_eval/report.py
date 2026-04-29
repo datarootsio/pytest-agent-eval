@@ -13,7 +13,6 @@ from pytest_llm_eval.models import EvalResult, RunResult, TranscriptResult, Turn
 
 
 def _serialize_result(result: TranscriptResult) -> dict[str, Any]:
-    """Convert TranscriptResult to a plain dict (for xdist user_properties forwarding)."""
     return dataclasses.asdict(result)
 
 
@@ -33,7 +32,6 @@ def _deserialize_run(r: dict[str, Any]) -> RunResult:
 
 
 def _deserialize_result(data: dict[str, Any]) -> TranscriptResult:
-    """Reconstruct TranscriptResult from a plain dict."""
     return TranscriptResult(
         passed=data["passed"],
         score=data["score"],
@@ -125,8 +123,11 @@ class LLMEvalReportPlugin:
         if call.when == "call":
             result: TranscriptResult | None = getattr(item, "_eval_result", None)
             if result is not None:
-                report.user_properties.append((_XDIST_NAME_KEY, item.name))
-                report.user_properties.append((_XDIST_RESULT_KEY, _serialize_result(result)))
+                if self._is_xdist_worker():
+                    report.user_properties.append((_XDIST_NAME_KEY, item.name))
+                    report.user_properties.append((_XDIST_RESULT_KEY, _serialize_result(result)))
+                else:
+                    self.add_result(item.name, result)
                 score_info = _score_line(result)
                 verbosity = self._config.getoption("verbose", default=0)
                 if verbosity >= 1:
@@ -140,8 +141,6 @@ class LLMEvalReportPlugin:
                                     if er.reasoning:
                                         details.append(f"    {er.reasoning}")
                     report.sections.append(("LLM Eval", f"{score_info}\n" + "\n".join(details)))
-                if not self._is_xdist_worker():
-                    self.add_result(item.name, result)
 
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         if not self._is_xdist_controller() or report.when != "call":

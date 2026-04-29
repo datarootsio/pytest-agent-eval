@@ -245,5 +245,5 @@ def test_xdist_report_collects_all_workers(pytester: pytest.Pytester, tmp_path: 
     result.assert_outcomes(passed=2)
     assert report_path.exists()
     content = report_path.read_text()
-    assert "transcript_one" in content
-    assert "transcript_two" in content
+    assert content.count("transcript_one") == 2
+    assert content.count("transcript_two") == 2
