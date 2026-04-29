@@ -1,6 +1,8 @@
 """LLM judge evaluator using pydantic-ai."""
 from __future__ import annotations
+import asyncio
 from dataclasses import dataclass
+from pathlib import Path
 from pydantic import BaseModel
 from pydantic_ai import Agent
 from pytest_llm_eval.models import TurnContext, EvalResult
@@ -56,8 +58,8 @@ class JudgeEvaluator:
     timeout: float = 30.0
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
-        """Run the LLM judge and return a pass/fail verdict."""
-        model_id = self.model or "openai:gpt-4o"
+        from pytest_llm_eval.config import load_config_from_toml
+        model_id = self.model if self.model is not None else load_config_from_toml(Path("pyproject.toml")).model
         agent: Agent[None, _JudgeOutput] = Agent(
             model_id,
             output_type=_JudgeOutput,
@@ -68,12 +70,9 @@ class JudgeEvaluator:
         last_error: Exception | None = None
         for _ in range(self.retries + 1):
             try:
-                result = await agent.run(user_msg)
+                result = await asyncio.wait_for(agent.run(user_msg), timeout=self.timeout)
                 output = result.output
-                return EvalResult(
-                    passed=bool(output.passed),
-                    reasoning=str(output.reasoning).strip(),
-                )
+                return EvalResult(passed=output.passed, reasoning=output.reasoning)
             except Exception as exc:
                 last_error = exc
 

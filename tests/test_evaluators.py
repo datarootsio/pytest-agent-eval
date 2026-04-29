@@ -1,8 +1,10 @@
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 from pytest_llm_eval.models import TurnContext, EvalResult
 from pytest_llm_eval.evaluators.base import Evaluator
 from pytest_llm_eval.evaluators.contains import ContainsEvaluator
 from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
+from pytest_llm_eval.evaluators.judge import JudgeEvaluator
 
 
 def _ctx(reply: str = "", tool_calls: list[str] | None = None) -> TurnContext:
@@ -120,10 +122,6 @@ async def test_tool_call_empty_config_passes():
     assert result.passed is True
 
 
-from unittest.mock import AsyncMock, MagicMock, patch
-from pytest_llm_eval.evaluators.judge import JudgeEvaluator
-
-
 @pytest.mark.asyncio
 async def test_judge_evaluator_passes_on_positive_verdict():
     mock_output = MagicMock()
@@ -178,3 +176,4 @@ async def test_judge_evaluator_returns_failure_after_retries_exhausted():
 
     assert result.passed is False
     assert "Judge failed" in result.reasoning
+    assert instance.run.call_count == 2  # retries=1 means 2 total attempts
