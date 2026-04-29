@@ -76,6 +76,7 @@ class LLMEvalFile(pytest.File):
     """Pytest collector for a single YAML transcript file."""
 
     def collect(self) -> Generator[pytest.Item, None, None]:
+        """Yield a single LLMEvalItem for this YAML transcript."""
         transcript = load_transcript(self.path)
         yield LLMEvalItem.from_parent(self, name=transcript.id, transcript=transcript)
 
@@ -87,6 +88,7 @@ class LLMEvalItem(pytest.Item):
     nofuncargs = True
 
     def __init__(self, *, transcript: Transcript, **kwargs: Any) -> None:
+        """Wire transcript fixtures and the llm_eval marker onto the pytest item."""
         super().__init__(**kwargs)
         self.transcript = transcript
         self.add_marker(
@@ -115,6 +117,7 @@ class LLMEvalItem(pytest.Item):
         self._request._fillfixtures()
 
     def runtest(self) -> None:
+        """Execute the transcript against the configured agent and assert threshold."""
         agent = self.funcargs.get("llm_eval_agent")
         if agent is None:
             pytest.skip(
@@ -131,9 +134,11 @@ class LLMEvalItem(pytest.Item):
         result.assert_threshold()
 
     def repr_failure(self, excinfo: Any) -> str:
+        """Render assertion errors plainly; defer other failures to pytest."""
         if isinstance(excinfo.value, AssertionError):
             return str(excinfo.value)
         return super().repr_failure(excinfo)
 
     def reportinfo(self) -> tuple[Any, int | None, str]:
+        """Provide the location string pytest shows for this item."""
         return self.fspath, None, f"llm_eval: {self.transcript.id}"

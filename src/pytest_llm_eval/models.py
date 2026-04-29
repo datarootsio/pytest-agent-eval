@@ -71,6 +71,7 @@ class TranscriptResult:
 
     @property
     def passed_run_count(self) -> int:
+        """Number of runs that passed."""
         return sum(r.passed for r in self.runs)
 
     def assert_threshold(self) -> None:

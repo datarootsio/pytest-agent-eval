@@ -98,10 +98,12 @@ class LLMEvalReportPlugin:
     """Pytest plugin that collects results and writes the report."""
 
     def __init__(self, config: pytest.Config) -> None:
+        """Bind the plugin to a pytest config and initialise the result buffer."""
         self._config = config
         self._results: list[tuple[str, TranscriptResult]] = []
 
     def add_result(self, name: str, result: TranscriptResult) -> None:
+        """Append a transcript result to the in-memory report buffer."""
         self._results.append((name, result))
 
     def _is_xdist_worker(self) -> bool:
@@ -118,6 +120,7 @@ class LLMEvalReportPlugin:
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(self, item: pytest.Item, call: pytest.CallInfo) -> Any:
+        """Capture per-test eval results and forward them across xdist workers."""
         outcome = yield
         report = outcome.get_result()
         if call.when == "call":
@@ -143,6 +146,7 @@ class LLMEvalReportPlugin:
                     report.sections.append(("LLM Eval", f"{score_info}\n" + "\n".join(details)))
 
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
+        """On the xdist controller, deserialise eval results forwarded by workers."""
         if not self._is_xdist_controller() or report.when != "call":
             return
         result_data = next((v for k, v in report.user_properties if k == _XDIST_RESULT_KEY), None)
@@ -152,6 +156,7 @@ class LLMEvalReportPlugin:
         self.add_result(name, _deserialize_result(result_data))
 
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
+        """Write the markdown report to disk if a path was configured."""
         from pytest_llm_eval.config import load_config
 
         cfg = load_config(self._config)

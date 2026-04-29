@@ -67,6 +67,7 @@ class JudgeEvaluator:
         return self._agent
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
+        """Run the LLM judge against the turn and return its verdict."""
         agent = self._get_agent()
         user_msg = _format_judge_prompt(self.rubric, ctx)
 

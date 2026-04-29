@@ -9,6 +9,7 @@ from pytest_llm_eval.yaml_loader import pytest_collect_file  # noqa: F401
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register --llm-eval-live and --llm-eval-report CLI options."""
     group = parser.getgroup("llm_eval", "LLM evaluation options")
     group.addoption(
         "--llm-eval-live",
@@ -25,6 +26,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    """Register the llm_eval marker and the report-writing plugin."""
     config.addinivalue_line(
         "markers",
         "llm_eval(threshold=None, runs=None): mark test as an LLM evaluation test. "
@@ -36,6 +38,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip llm_eval-marked items unless live mode is enabled."""
     cfg = load_config(config)
     if cfg.live:
         return

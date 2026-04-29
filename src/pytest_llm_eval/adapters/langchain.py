@@ -25,6 +25,7 @@ class LangChainAdapter:
     """
 
     def __init__(self, runnable: Any) -> None:
+        """Store the LangChain runnable to delegate calls to."""
         self._runnable = runnable
 
     async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:

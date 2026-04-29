@@ -31,6 +31,7 @@ class OpenAIAdapter:
         model: str,
         system_prompt: str | None = None,
     ) -> None:
+        """Store the OpenAI client, model name, and optional system prompt."""
         self._client = client
         self._model = model
         self._system_prompt = system_prompt

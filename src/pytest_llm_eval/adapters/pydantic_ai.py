@@ -25,6 +25,7 @@ class PydanticAIAdapter:
     """
 
     def __init__(self, agent: Any) -> None:
+        """Store the pydantic-ai agent to delegate calls to."""
         self._agent = agent
 
     async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:

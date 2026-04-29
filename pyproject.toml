@@ -34,9 +34,9 @@ xdist = ["pytest-xdist>=3.0"]
 llm_eval = "pytest_llm_eval.plugin"
 
 [project.urls]
-Homepage = "https://github.com/YOUR_ORG/pytest-llm-eval"
-Documentation = "https://YOUR_ORG.github.io/pytest-llm-eval"
-Repository = "https://github.com/YOUR_ORG/pytest-llm-eval"
+Homepage = "https://github.com/datarootsio/pytest-llm-eval"
+Documentation = "https://datarootsio.github.io/pytest-llm-eval"
+Repository = "https://github.com/datarootsio/pytest-llm-eval"
 
 [dependency-groups]
 dev = [
@@ -62,4 +62,10 @@ testpaths = ["tests"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
+select = ["E", "F", "I", "W", "D102", "D103", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D102", "D103", "D107"]

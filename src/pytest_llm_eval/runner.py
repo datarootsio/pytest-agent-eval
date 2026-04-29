@@ -144,6 +144,7 @@ class EvalSession:
         judge_model: str | None = None,
         _item: Any = None,
     ) -> None:
+        """Initialise an EvalSession with thresholds, run count, and model fallbacks."""
         self.threshold = threshold
         self.runs = runs
         self.config_model = config_model
