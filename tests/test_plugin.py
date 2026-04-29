@@ -1,5 +1,6 @@
 """Integration tests for plugin.py using pytester."""
 import pytest
+from unittest.mock import AsyncMock, MagicMock
 
 
 def test_plugin_registers_marker(pytester: pytest.Pytester):
@@ -117,3 +118,44 @@ def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
     )
     result = pytester.runpytest("--llm-eval-live", "-v")
     assert result.ret == 0
+
+
+# --- Adapter tests ---
+
+def test_pydantic_ai_adapter_normalises_output():
+    from pytest_llm_eval.adapters.pydantic_ai import PydanticAIAdapter
+
+    mock_agent = MagicMock()
+    mock_result = MagicMock()
+    mock_result.output = "Hello!"
+    mock_result.all_messages.return_value = []
+    mock_agent.run = AsyncMock(return_value=mock_result)
+
+    adapter = PydanticAIAdapter(mock_agent)
+
+    import asyncio
+    reply, tool_calls = asyncio.run(adapter([{"role": "user", "content": "hi"}]))
+    assert reply == "Hello!"
+    assert tool_calls == []
+
+
+def test_openai_adapter_normalises_output():
+    from pytest_llm_eval.adapters.openai import OpenAIAdapter
+
+    mock_client = MagicMock()
+    mock_message = MagicMock()
+    mock_message.content = "Hello from OpenAI!"
+    mock_message.tool_calls = None
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+    adapter = OpenAIAdapter(mock_client, model="gpt-4o")
+
+    import asyncio
+    reply, tool_calls = asyncio.run(adapter([{"role": "user", "content": "hi"}]))
+    assert reply == "Hello from OpenAI!"
+    assert tool_calls == []
