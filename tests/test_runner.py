@@ -1,10 +1,14 @@
 import pytest
-from pytest_llm_eval.models import (
-    Transcript, Turn, Expect, TranscriptResult, EvalResult, TurnContext
-)
+
 from pytest_llm_eval.evaluators.contains import ContainsEvaluator
 from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
-from pytest_llm_eval.runner import run_transcript
+from pytest_llm_eval.models import (
+    Expect,
+    Transcript,
+    TranscriptResult,
+    Turn,
+)
+from pytest_llm_eval.runner import EvalSession, run_transcript
 
 
 async def _echo_agent(history: list[dict]) -> tuple[str, list[str]]:
@@ -39,9 +43,7 @@ async def test_run_transcript_with_contains_evaluator():
         turns=[
             Turn(
                 user="book me a slot",
-                expect=Expect(
-                    evaluators=[ContainsEvaluator(any_of=["confirmed"])]
-                ),
+                expect=Expect(evaluators=[ContainsEvaluator(any_of=["confirmed"])]),
             )
         ],
         threshold=1.0,
@@ -59,9 +61,7 @@ async def test_run_transcript_with_tool_call_evaluator():
         turns=[
             Turn(
                 user="book me",
-                expect=Expect(
-                    evaluators=[ToolCallEvaluator(must_include=["book_slot"])]
-                ),
+                expect=Expect(evaluators=[ToolCallEvaluator(must_include=["book_slot"])]),
             )
         ],
         threshold=1.0,
@@ -78,9 +78,7 @@ async def test_run_transcript_fails_when_evaluator_fails():
         turns=[
             Turn(
                 user="book me",
-                expect=Expect(
-                    evaluators=[ContainsEvaluator(any_of=["cancelled"])]
-                ),
+                expect=Expect(evaluators=[ContainsEvaluator(any_of=["cancelled"])]),
             )
         ],
         threshold=1.0,
@@ -135,10 +133,6 @@ async def test_history_is_accumulated_across_turns():
     assert len(captured_histories[0]) == 1
     assert len(captured_histories[1]) == 3
     assert captured_histories[1][-1]["content"] == "second"
-
-
-from pytest_llm_eval.runner import EvalSession
-from pytest_llm_eval.models import Turn
 
 
 @pytest.mark.asyncio
