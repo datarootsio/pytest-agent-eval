@@ -2,6 +2,7 @@
 from __future__ import annotations
 import pytest
 from pytest_llm_eval.config import load_config
+from pytest_llm_eval.yaml_loader import pytest_collect_file  # noqa: F401
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
