@@ -217,3 +217,33 @@ def test_logreport_ignores_reports_without_llm_eval_result():
     )
     plugin.pytest_runtest_logreport(report)
     assert plugin._results == []
+
+
+def test_xdist_report_collects_all_workers(pytester: pytest.Pytester, tmp_path: Path):
+    """With -n2, results from both workers appear in the report."""
+    pytest.importorskip("xdist")
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makefile(
+        ".yaml",
+        **{
+            "tests/evals/t1": "id: transcript_one\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n",
+            "tests/evals/t2": "id: transcript_two\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hello\n",
+        },
+    )
+    pytester.makeconftest(
+        """
+        import pytest
+        @pytest.fixture
+        def llm_eval_agent():
+            async def agent(history):
+                return "ok", []
+            return agent
+        """
+    )
+    report_path = tmp_path / "xdist_report.md"
+    result = pytester.runpytest("--llm-eval-live", f"--llm-eval-report={report_path}", "-n2")
+    result.assert_outcomes(passed=2)
+    assert report_path.exists()
+    content = report_path.read_text()
+    assert "transcript_one" in content
+    assert "transcript_two" in content
