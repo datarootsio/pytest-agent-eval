@@ -47,7 +47,7 @@ async def _run_turn(
         user=turn.user,
         reply=reply,
         tool_calls=tool_calls,
-        history=history[:-2],  # history before this exchange
+        history=history[:-1],  # history up to but not including the assistant reply
     )
 
     evaluators = list(turn.expect.evaluators) + _build_yaml_evaluators(turn.expect)

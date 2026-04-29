@@ -135,3 +135,24 @@ async def test_history_is_accumulated_across_turns():
     assert len(captured_histories[0]) == 1
     assert len(captured_histories[1]) == 3
     assert captured_histories[1][-1]["content"] == "second"
+
+
+from pytest_llm_eval.runner import EvalSession
+from pytest_llm_eval.models import Turn
+
+
+@pytest.mark.asyncio
+async def test_eval_session_run_stores_result_on_item():
+    """EvalSession.run() returns result and stores it on _item._eval_result."""
+    import types
+
+    async def agent(history: list[dict]) -> tuple[str, list[str]]:
+        return "all good", []
+
+    mock_item = types.SimpleNamespace()  # simple namespace that accepts arbitrary attributes
+    session = EvalSession(threshold=0.0, runs=1, _item=mock_item)
+    result = await session.run(agent=agent, turns=[Turn(user="hi")])
+
+    assert result.passed is True
+    assert hasattr(mock_item, "_eval_result")
+    assert mock_item._eval_result is result
