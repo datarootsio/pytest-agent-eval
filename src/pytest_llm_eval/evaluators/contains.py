@@ -1,7 +1,10 @@
 """Substring-based evaluator."""
+
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from pytest_llm_eval.models import TurnContext, EvalResult
+
+from pytest_llm_eval.models import EvalResult, TurnContext
 
 
 @dataclass
@@ -18,6 +21,7 @@ class ContainsEvaluator:
         ContainsEvaluator(all_of=["booking", "reference number"])
         ```
     """
+
     any_of: list[str] = field(default_factory=list)
     all_of: list[str] = field(default_factory=list)
 

@@ -1,15 +1,18 @@
 """Shared data types for pytest-llm-eval."""
+
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from pytest_llm_eval.evaluators.base import Evaluator
+    pass
 
 
 @dataclass
 class EvalResult:
     """Result from a single evaluator on a single turn."""
+
     passed: bool
     reasoning: str = ""
 
@@ -25,6 +28,7 @@ class TurnContext:
         history: Full conversation history in OpenAI message format, up to but not including
             the assistant reply for this turn.
     """
+
     user: str
     reply: str
     tool_calls: list[str]
@@ -34,6 +38,7 @@ class TurnContext:
 @dataclass
 class TurnResult:
     """Aggregated result for a single turn across all evaluators."""
+
     turn_index: int
     passed: bool
     eval_results: list[EvalResult]
@@ -42,6 +47,7 @@ class TurnResult:
 @dataclass
 class RunResult:
     """Result of one full run of a transcript (all turns)."""
+
     run_index: int
     passed: bool
     turn_results: list[TurnResult]
@@ -57,18 +63,22 @@ class TranscriptResult:
         threshold: Required pass fraction.
         runs: Individual run results.
     """
+
     passed: bool
     score: float
     threshold: float
     runs: list[RunResult]
 
+    @property
+    def passed_run_count(self) -> int:
+        return sum(r.passed for r in self.runs)
+
     def assert_threshold(self) -> None:
         """Raise AssertionError if score is below threshold."""
         if not self.passed:
-            passed_count = sum(r.passed for r in self.runs)
             raise AssertionError(
                 f"LLM eval failed: score={self.score:.2f} < threshold={self.threshold:.2f} "
-                f"({passed_count}/{len(self.runs)} runs passed)"
+                f"({self.passed_run_count}/{len(self.runs)} runs passed)"
             )
 
 
@@ -81,6 +91,7 @@ class JudgeConfig:
         model: Optional pydantic-ai model ID override (e.g. "openai:gpt-4o").
             Falls back to [tool.llm_eval] model if None.
     """
+
     rubric: str
     model: str | None = None
 
@@ -97,6 +108,7 @@ class Expect:
         reply_contains_any: Reply must contain at least one of these strings.
         reply_contains_all: Reply must contain all of these strings.
     """
+
     evaluators: list[Any] = field(default_factory=list)
     judge: JudgeConfig | None = None
     tool_calls_include: list[str] = field(default_factory=list)
@@ -113,6 +125,7 @@ class Turn:
         user: The user message.
         expect: Expectations for the agent's reply.
     """
+
     user: str
     expect: Expect = field(default_factory=Expect)
 
@@ -128,6 +141,7 @@ class Transcript:
         runs: Number of times to execute this transcript.
         tags: Optional quality-gate tags (e.g. ["gate:booking"]).
     """
+
     id: str
     turns: list[Turn]
     threshold: float = 0.8

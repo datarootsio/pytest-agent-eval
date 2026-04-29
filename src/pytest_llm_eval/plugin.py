@@ -1,6 +1,9 @@
 """pytest-llm-eval: hooks, markers, fixtures, and CLI options."""
+
 from __future__ import annotations
+
 import pytest
+
 from pytest_llm_eval.config import load_config
 from pytest_llm_eval.yaml_loader import pytest_collect_file  # noqa: F401
 
@@ -28,12 +31,11 @@ def pytest_configure(config: pytest.Config) -> None:
         "Skipped unless --llm-eval-live or EVAL_LIVE=1.",
     )
     from pytest_llm_eval.report import LLMEvalReportPlugin
+
     config.pluginmanager.register(LLMEvalReportPlugin(config), "llm_eval_report")
 
 
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     cfg = load_config(config)
     if cfg.live:
         return
@@ -60,6 +62,7 @@ def llm_eval(request: pytest.FixtureRequest):
         ```
     """
     from pytest_llm_eval.runner import EvalSession
+
     cfg = load_config(request.config)
     marker = request.node.get_closest_marker("llm_eval")
     threshold = marker.kwargs["threshold"] if (marker and "threshold" in marker.kwargs) else cfg.threshold

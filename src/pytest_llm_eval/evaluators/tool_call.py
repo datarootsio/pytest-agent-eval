@@ -1,7 +1,10 @@
 """Tool call assertion evaluator."""
+
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from pytest_llm_eval.models import TurnContext, EvalResult
+
+from pytest_llm_eval.models import EvalResult, TurnContext
 
 
 def _is_ordered_subsequence(needle: list[str], haystack: list[str]) -> bool:
@@ -24,6 +27,7 @@ class ToolCallEvaluator:
         ToolCallEvaluator(must_include=["auth", "fetch", "respond"], ordered=True)
         ```
     """
+
     must_include: list[str] = field(default_factory=list)
     must_exclude: list[str] = field(default_factory=list)
     ordered: bool = False
@@ -43,9 +47,7 @@ class ToolCallEvaluator:
 
         if self.ordered and self.must_include:
             if not _is_ordered_subsequence(self.must_include, ctx.tool_calls):
-                failures.append(
-                    f"Tools {self.must_include!r} not called in order in {ctx.tool_calls!r}"
-                )
+                failures.append(f"Tools {self.must_include!r} not called in order in {ctx.tool_calls!r}")
 
         if failures:
             return EvalResult(passed=False, reasoning="\n".join(failures))

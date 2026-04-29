@@ -1,5 +1,7 @@
 """Adapter for LangChain Runnable/Chain instances."""
+
 from __future__ import annotations
+
 from typing import Any
 
 

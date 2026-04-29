@@ -1,10 +1,12 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from pytest_llm_eval.models import TurnContext, EvalResult
+
+import pytest
+
 from pytest_llm_eval.evaluators.base import Evaluator
 from pytest_llm_eval.evaluators.contains import ContainsEvaluator
-from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
 from pytest_llm_eval.evaluators.judge import JudgeEvaluator
+from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
+from pytest_llm_eval.models import TurnContext
 
 
 def _ctx(reply: str = "", tool_calls: list[str] | None = None) -> TurnContext:
@@ -17,6 +19,7 @@ def _ctx(reply: str = "", tool_calls: list[str] | None = None) -> TurnContext:
 
 
 # --- ContainsEvaluator ---
+
 
 @pytest.mark.asyncio
 async def test_contains_any_of_passes_when_present():
@@ -64,12 +67,14 @@ async def test_contains_empty_config_always_passes():
 
 # --- Evaluator Protocol ---
 
+
 def test_evaluator_protocol_is_satisfied_by_contains():
     ev = ContainsEvaluator(any_of=["hello"])
     assert isinstance(ev, Evaluator)
 
 
 # --- ToolCallEvaluator ---
+
 
 @pytest.mark.asyncio
 async def test_tool_call_must_include_passes():

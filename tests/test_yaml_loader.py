@@ -1,8 +1,8 @@
 from pathlib import Path
-import pytest
-from pytest_llm_eval.yaml_loader import load_transcript
-from pytest_llm_eval.models import Transcript
 
+import pytest
+
+from pytest_llm_eval.yaml_loader import load_transcript
 
 SAMPLE = Path(__file__).parent / "fixtures" / "sample_transcript.yaml"
 
@@ -23,15 +23,7 @@ def test_yaml_discovery_and_collection(pytester: pytest.Pytester):
     pytester.makeini("[pytest]\nasyncio_mode = auto\n")
     pytester.makefile(
         ".yaml",
-        **{
-            "tests/evals/hello": (
-                "id: hello_test\n"
-                "threshold: 0.0\n"
-                "runs: 1\n"
-                "turns:\n"
-                "  - user: hi\n"
-            )
-        },
+        **{"tests/evals/hello": ("id: hello_test\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n")},
     )
     pytester.makeconftest(
         """

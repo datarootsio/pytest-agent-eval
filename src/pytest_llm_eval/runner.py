@@ -1,12 +1,21 @@
 """N-run evaluation loop with threshold aggregation."""
+
 from __future__ import annotations
+
 import asyncio
-from typing import Any, Callable, Awaitable
-from pytest_llm_eval.models import (
-    Transcript, Turn, Expect, TurnContext, TurnResult, RunResult, TranscriptResult, EvalResult
-)
+from typing import Any, Awaitable, Callable
+
 from pytest_llm_eval.evaluators.contains import ContainsEvaluator
 from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
+from pytest_llm_eval.models import (
+    Expect,
+    RunResult,
+    Transcript,
+    TranscriptResult,
+    Turn,
+    TurnContext,
+    TurnResult,
+)
 
 AgentCallable = Callable[[list[dict[str, Any]]], Awaitable[tuple[str, list[str]]]]
 
@@ -54,15 +63,12 @@ async def _run_turn(
 
     if turn.expect.judge is not None:
         from pytest_llm_eval.evaluators.judge import JudgeEvaluator
+
         judge_model = turn.expect.judge.model or config_model
         evaluators.append(JudgeEvaluator(rubric=turn.expect.judge.rubric, model=judge_model))
 
-    eval_results: list[EvalResult] = []
-    for ev in evaluators:
-        result = await ev.evaluate(ctx)
-        eval_results.append(result)
-
-    turn_passed = all(r.passed for r in eval_results) if eval_results else True
+    eval_results = list(await asyncio.gather(*(ev.evaluate(ctx) for ev in evaluators)))
+    turn_passed = all(r.passed for r in eval_results)
     return TurnResult(turn_index=turn_idx, passed=turn_passed, eval_results=eval_results), reply, tool_calls
 
 
@@ -99,13 +105,12 @@ async def run_transcript(
     Returns:
         TranscriptResult with score, threshold, and per-run details.
     """
-    run_results: list[RunResult] = []
-    for run_idx in range(transcript.runs):
-        run_result = await _run_once(transcript, agent, run_idx, config_model)
-        run_results.append(run_result)
-
-    passed_runs = sum(r.passed for r in run_results)
-    score = passed_runs / len(run_results)
+    run_results = list(
+        await asyncio.gather(
+            *(_run_once(transcript, agent, run_idx, config_model) for run_idx in range(transcript.runs))
+        )
+    )
+    score = sum(r.passed for r in run_results) / len(run_results)
     passed = score >= transcript.threshold
 
     return TranscriptResult(

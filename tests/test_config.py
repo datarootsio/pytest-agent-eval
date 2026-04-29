@@ -1,8 +1,9 @@
-import os
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
-from pytest_llm_eval.config import LLMEvalConfig, load_config_from_toml, load_config
+
+import pytest
+
+from pytest_llm_eval.config import LLMEvalConfig, load_config, load_config_from_toml
 
 
 def test_default_config():
@@ -20,11 +21,7 @@ def test_default_config():
 def test_load_from_toml(tmp_path: Path):
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
-        "[tool.llm_eval]\n"
-        'model = "anthropic:claude-3-5-sonnet-latest"\n'
-        "threshold = 0.9\n"
-        "runs = 3\n"
-        "live = true\n"
+        '[tool.llm_eval]\nmodel = "anthropic:claude-3-5-sonnet-latest"\nthreshold = 0.9\nruns = 3\nlive = true\n'
     )
     cfg = load_config_from_toml(pyproject)
     assert cfg.model == "anthropic:claude-3-5-sonnet-latest"
@@ -74,9 +71,7 @@ def test_load_config_cli_flag_sets_live(tmp_path: Path):
 
     mock_config = MagicMock()
     mock_config.rootdir = tmp_path
-    mock_config.getoption.side_effect = lambda name, **kw: (
-        True if name == "--llm-eval-live" else None
-    )
+    mock_config.getoption.side_effect = lambda name, **kw: True if name == "--llm-eval-live" else None
 
     cfg = load_config(mock_config)
     assert cfg.live is True

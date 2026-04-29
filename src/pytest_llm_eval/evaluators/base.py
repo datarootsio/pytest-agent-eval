@@ -1,7 +1,10 @@
 """Evaluator protocol and base result type."""
+
 from __future__ import annotations
+
 from typing import Protocol, runtime_checkable
-from pytest_llm_eval.models import TurnContext, EvalResult
+
+from pytest_llm_eval.models import EvalResult, TurnContext
 
 
 @runtime_checkable
@@ -22,6 +25,7 @@ class Evaluator(Protocol):
                 return EvalResult(passed=False, reasoning=f"Expected tone not found")
         ```
     """
+
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Evaluate a single turn.
 

@@ -1,5 +1,7 @@
 """Adapter for the raw OpenAI async client."""
+
 from __future__ import annotations
+
 from typing import Any
 
 

@@ -1,9 +1,13 @@
 """Terminal output hooks and markdown report writer."""
+
 from __future__ import annotations
+
 from datetime import date
 from pathlib import Path
 from typing import Any
+
 import pytest
+
 from pytest_llm_eval.models import TranscriptResult
 
 
@@ -26,13 +30,9 @@ def build_markdown_report(
     lines.append("|---|---|---|---|---|---|")
 
     for name, result in results:
-        passed_runs = sum(r.passed for r in result.runs)
-        total_runs = len(result.runs)
         status = "✅ PASS" if result.passed else "❌ FAIL"
-        lines.append(
-            f"| {name} | {total_runs} | {passed_runs} "
-            f"| {result.score:.2f} | {result.threshold:.2f} | {status} |"
-        )
+        n, p = len(result.runs), result.passed_run_count
+        lines.append(f"| {name} | {n} | {p} | {result.score:.2f} | {result.threshold:.2f} | {status} |")
 
     lines.append("")
     lines.append("## Details")
@@ -41,25 +41,24 @@ def build_markdown_report(
     for name, result in results:
         lines.append(f"### {name}")
         for run in result.runs:
-            lines.append(f"**Run {run.run_index + 1}** {'✅' if run.passed else '❌'}")
-            for turn in run.turn_results:
-                lines.append(f"- Turn {turn.turn_index + 1}: {'PASS' if turn.passed else 'FAIL'}")
-                for er in turn.eval_results:
-                    if er.reasoning:
-                        lines.append(f"  - {er.reasoning}")
+            lines.extend(_format_run_lines(run))
         lines.append("")
 
     return "\n".join(lines)
 
 
+def _format_run_lines(run: Any) -> list[str]:
+    lines = [f"**Run {run.run_index + 1}** {'✅' if run.passed else '❌'}"]
+    for turn in run.turn_results:
+        lines.append(f"- Turn {turn.turn_index + 1}: {'PASS' if turn.passed else 'FAIL'}")
+        lines.extend(f"  - {er.reasoning}" for er in turn.eval_results if er.reasoning)
+    return lines
+
+
 def _score_line(result: TranscriptResult) -> str:
-    passed_runs = sum(r.passed for r in result.runs)
-    total_runs = len(result.runs)
     symbol = ">=" if result.passed else "<"
-    return (
-        f"[{passed_runs}/{total_runs} runs, "
-        f"score={result.score:.2f} {symbol} {result.threshold:.2f}]"
-    )
+    p, n = result.passed_run_count, len(result.runs)
+    return f"[{p}/{n} runs, score={result.score:.2f} {symbol} {result.threshold:.2f}]"
 
 
 class LLMEvalReportPlugin:
@@ -92,12 +91,11 @@ class LLMEvalReportPlugin:
                                 for er in turn.eval_results:
                                     if er.reasoning:
                                         details.append(f"    {er.reasoning}")
-                    report.sections.append(
-                        ("LLM Eval", f"{score_info}\n" + "\n".join(details))
-                    )
+                    report.sections.append(("LLM Eval", f"{score_info}\n" + "\n".join(details)))
 
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         from pytest_llm_eval.config import load_config
+
         cfg = load_config(self._config)
         if cfg.report_path and self._results:
             report_text = build_markdown_report(self._results)

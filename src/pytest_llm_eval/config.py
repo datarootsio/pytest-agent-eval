@@ -1,10 +1,13 @@
 """Configuration loading for pytest-llm-eval."""
+
 from __future__ import annotations
+
 import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
 import pytest
 
 
@@ -22,6 +25,7 @@ class LLMEvalConfig:
         live: Whether to actually run LLM tests (False = skip all llm_eval tests).
         report_path: Path to write markdown report, or None to skip.
     """
+
     model: str = "openai:gpt-4o"
     threshold: float = 0.8
     runs: int = 1

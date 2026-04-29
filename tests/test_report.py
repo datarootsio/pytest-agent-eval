@@ -1,9 +1,9 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
+from pytest_llm_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
 from pytest_llm_eval.report import build_markdown_report
-from pytest_llm_eval.models import (
-    TranscriptResult, RunResult, TurnResult, EvalResult
-)
 
 
 def _make_result(passed: bool, score: float, threshold: float, name: str = "test") -> tuple[str, TranscriptResult]:
@@ -45,15 +45,7 @@ def test_report_written_to_file_with_flag(pytester: pytest.Pytester, tmp_path: P
     pytester.makeini("[pytest]\nasyncio_mode = auto\n")
     pytester.makefile(
         ".yaml",
-        **{
-            "tests/evals/simple": (
-                "id: simple_test\n"
-                "threshold: 0.0\n"
-                "runs: 1\n"
-                "turns:\n"
-                "  - user: hi\n"
-            )
-        },
+        **{"tests/evals/simple": ("id: simple_test\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n")},
     )
     pytester.makeconftest(
         """
@@ -76,15 +68,7 @@ def test_verbose_output_shows_run_details(pytester: pytest.Pytester):
     pytester.makeini("[pytest]\nasyncio_mode = auto\n")
     pytester.makefile(
         ".yaml",
-        **{
-            "tests/evals/verbose_test": (
-                "id: verbose_case\n"
-                "threshold: 0.0\n"
-                "runs: 1\n"
-                "turns:\n"
-                "  - user: hi\n"
-            )
-        },
+        **{"tests/evals/verbose_test": ("id: verbose_case\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n")},
     )
     pytester.makeconftest(
         """

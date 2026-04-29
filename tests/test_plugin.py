@@ -1,6 +1,8 @@
 """Integration tests for plugin.py using pytester."""
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 def test_plugin_registers_marker(pytester: pytest.Pytester):
@@ -122,6 +124,7 @@ def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
 
 # --- Adapter tests ---
 
+
 def test_pydantic_ai_adapter_normalises_output():
     from pytest_llm_eval.adapters.pydantic_ai import PydanticAIAdapter
 
@@ -134,6 +137,7 @@ def test_pydantic_ai_adapter_normalises_output():
     adapter = PydanticAIAdapter(mock_agent)
 
     import asyncio
+
     reply, tool_calls = asyncio.run(adapter([{"role": "user", "content": "hi"}]))
     assert reply == "Hello!"
     assert tool_calls == []
@@ -156,6 +160,7 @@ def test_openai_adapter_normalises_output():
     adapter = OpenAIAdapter(mock_client, model="gpt-4o")
 
     import asyncio
+
     reply, tool_calls = asyncio.run(adapter([{"role": "user", "content": "hi"}]))
     assert reply == "Hello from OpenAI!"
     assert tool_calls == []

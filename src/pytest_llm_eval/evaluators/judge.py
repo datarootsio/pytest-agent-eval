@@ -1,11 +1,15 @@
 """LLM judge evaluator using pydantic-ai."""
+
 from __future__ import annotations
+
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+
 from pydantic import BaseModel
 from pydantic_ai import Agent
-from pytest_llm_eval.models import TurnContext, EvalResult
+
+from pytest_llm_eval.models import EvalResult, TurnContext
 
 _SYSTEM_PROMPT = (
     "You are a strict rubric evaluator for an LLM agent. "
@@ -20,14 +24,9 @@ class _JudgeOutput(BaseModel):
 
 
 def _format_judge_prompt(rubric: str, ctx: TurnContext) -> str:
-    history_text = "\n".join(
-        f"{m['role'].upper()}: {m['content']}" for m in ctx.history
-    )
+    history_text = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in ctx.history)
     return (
-        f"RUBRIC:\n{rubric}\n\n"
-        f"CONVERSATION HISTORY:\n{history_text}\n\n"
-        f"USER: {ctx.user}\n\n"
-        f"AGENT REPLY:\n{ctx.reply}"
+        f"RUBRIC:\n{rubric}\n\nCONVERSATION HISTORY:\n{history_text}\n\nUSER: {ctx.user}\n\nAGENT REPLY:\n{ctx.reply}"
     )
 
 
@@ -52,19 +51,23 @@ class JudgeEvaluator:
         )
         ```
     """
+
     rubric: str
     model: str | None = None
     retries: int = 2
     timeout: float = 30.0
+    _agent: "Agent[None, _JudgeOutput] | None" = field(default=None, init=False, repr=False)
+
+    def _get_agent(self) -> "Agent[None, _JudgeOutput]":
+        if self._agent is None:
+            from pytest_llm_eval.config import load_config_from_toml
+
+            model_id = self.model or load_config_from_toml(Path("pyproject.toml")).model
+            self._agent = Agent(model_id, output_type=_JudgeOutput, system_prompt=_SYSTEM_PROMPT)
+        return self._agent
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
-        from pytest_llm_eval.config import load_config_from_toml
-        model_id = self.model if self.model is not None else load_config_from_toml(Path("pyproject.toml")).model
-        agent: Agent[None, _JudgeOutput] = Agent(
-            model_id,
-            output_type=_JudgeOutput,
-            system_prompt=_SYSTEM_PROMPT,
-        )
+        agent = self._get_agent()
         user_msg = _format_judge_prompt(self.rubric, ctx)
 
         last_error: Exception | None = None

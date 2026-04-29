@@ -1,15 +1,33 @@
 """YAML transcript discovery and pytest collection."""
+
 from __future__ import annotations
+
 import asyncio
 from pathlib import Path
-from typing import Generator, Any
-import yaml
+from typing import Any, Generator
+
 import pytest
+import yaml
+
 from pytest_llm_eval.config import load_config
-from pytest_llm_eval.models import (
-    Transcript, Turn, Expect, JudgeConfig
-)
+from pytest_llm_eval.models import Expect, JudgeConfig, Transcript, Turn
 from pytest_llm_eval.runner import run_transcript
+
+
+def _parse_turn(raw_turn: dict[str, Any]) -> Turn:
+    raw_expect = raw_turn.get("expect", {})
+    judge_cfg: JudgeConfig | None = None
+    if "judge" in raw_expect:
+        j = raw_expect["judge"]
+        judge_cfg = JudgeConfig(rubric=j["rubric"], model=j.get("model"))
+    expect = Expect(
+        judge=judge_cfg,
+        tool_calls_include=raw_expect.get("tool_calls_include", []),
+        tool_calls_exclude=raw_expect.get("tool_calls_exclude", []),
+        reply_contains_any=raw_expect.get("reply_contains_any", []),
+        reply_contains_all=raw_expect.get("reply_contains_all", []),
+    )
+    return Turn(user=raw_turn["user"], expect=expect)
 
 
 def load_transcript(path: Path) -> Transcript:
@@ -27,35 +45,16 @@ def load_transcript(path: Path) -> Transcript:
     with open(path) as f:
         data: dict[str, Any] = yaml.safe_load(f)
 
-    turns: list[Turn] = []
-    for raw_turn in data.get("turns", []):
-        raw_expect = raw_turn.get("expect", {})
-        judge_cfg: JudgeConfig | None = None
-        if "judge" in raw_expect:
-            j = raw_expect["judge"]
-            judge_cfg = JudgeConfig(rubric=j["rubric"], model=j.get("model"))
-
-        expect = Expect(
-            judge=judge_cfg,
-            tool_calls_include=raw_expect.get("tool_calls_include", []),
-            tool_calls_exclude=raw_expect.get("tool_calls_exclude", []),
-            reply_contains_any=raw_expect.get("reply_contains_any", []),
-            reply_contains_all=raw_expect.get("reply_contains_all", []),
-        )
-        turns.append(Turn(user=raw_turn["user"], expect=expect))
-
     return Transcript(
         id=data["id"],
-        turns=turns,
+        turns=[_parse_turn(t) for t in data.get("turns", [])],
         threshold=data.get("threshold", 0.8),
         runs=data.get("runs", 1),
         tags=data.get("tags", []),
     )
 
 
-def pytest_collect_file(
-    parent: pytest.Collector, file_path: Path
-) -> pytest.Collector | None:
+def pytest_collect_file(parent: pytest.Collector, file_path: Path) -> pytest.Collector | None:
     """Collect YAML transcript files from configured yaml_dirs."""
     if file_path.suffix not in (".yaml", ".yml"):
         return None
@@ -108,6 +107,7 @@ class LLMEvalItem(pytest.Item):
         self.fixturenames = fixtureinfo.names_closure
         self.funcargs: dict[str, Any] = {}
         from _pytest.fixtures import TopRequest
+
         self._request = TopRequest(self, _ispytest=True)
 
     def setup(self) -> None:
