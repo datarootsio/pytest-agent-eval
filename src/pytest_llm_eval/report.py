@@ -92,6 +92,10 @@ def _score_line(result: TranscriptResult) -> str:
     return f"[{p}/{n} runs, score={result.score:.2f} {symbol} {result.threshold:.2f}]"
 
 
+_XDIST_RESULT_KEY = "llm_eval_result"
+_XDIST_NAME_KEY = "llm_eval_name"
+
+
 class LLMEvalReportPlugin:
     """Pytest plugin that collects results and writes the report."""
 
@@ -102,6 +106,18 @@ class LLMEvalReportPlugin:
     def add_result(self, name: str, result: TranscriptResult) -> None:
         self._results.append((name, result))
 
+    def _is_xdist_worker(self) -> bool:
+        return hasattr(self._config, "workerinput")
+
+    def _xdist_active(self) -> bool:
+        try:
+            return self._config.option.dist != "no"
+        except AttributeError:
+            return False
+
+    def _is_xdist_controller(self) -> bool:
+        return self._xdist_active() and not self._is_xdist_worker()
+
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(self, item: pytest.Item, call: pytest.CallInfo) -> Any:
         outcome = yield
@@ -109,7 +125,8 @@ class LLMEvalReportPlugin:
         if call.when == "call":
             result: TranscriptResult | None = getattr(item, "_eval_result", None)
             if result is not None:
-                self.add_result(item.name, result)
+                report.user_properties.append((_XDIST_NAME_KEY, item.name))
+                report.user_properties.append((_XDIST_RESULT_KEY, _serialize_result(result)))
                 score_info = _score_line(result)
                 verbosity = self._config.getoption("verbose", default=0)
                 if verbosity >= 1:
@@ -123,6 +140,17 @@ class LLMEvalReportPlugin:
                                     if er.reasoning:
                                         details.append(f"    {er.reasoning}")
                     report.sections.append(("LLM Eval", f"{score_info}\n" + "\n".join(details)))
+                if not self._is_xdist_worker():
+                    self.add_result(item.name, result)
+
+    def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
+        if not self._is_xdist_controller() or report.when != "call":
+            return
+        result_data = next((v for k, v in report.user_properties if k == _XDIST_RESULT_KEY), None)
+        if result_data is None:
+            return
+        name = next((v for k, v in report.user_properties if k == _XDIST_NAME_KEY), report.nodeid)
+        self.add_result(name, _deserialize_result(result_data))
 
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         from pytest_llm_eval.config import load_config

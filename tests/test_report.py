@@ -1,9 +1,11 @@
+import types
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from pytest_llm_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
-from pytest_llm_eval.report import _deserialize_result, _serialize_result, build_markdown_report
+from pytest_llm_eval.report import LLMEvalReportPlugin, _deserialize_result, _serialize_result, build_markdown_report
 
 
 def _make_full_result() -> TranscriptResult:
@@ -131,3 +133,67 @@ def test_verbose_output_shows_run_details(pytester: pytest.Pytester):
     )
     result = pytester.runpytest("--llm-eval-live", "-v")
     result.stdout.fnmatch_lines(["*verbose_case*"])
+
+
+def _make_mock_config(*, has_workerinput: bool = False, dist: str = "no") -> Any:
+    cfg = types.SimpleNamespace()
+    cfg.option = types.SimpleNamespace(dist=dist)
+    if has_workerinput:
+        cfg.workerinput = {}
+    return cfg
+
+
+def test_is_xdist_worker_when_workerinput_present():
+    cfg = _make_mock_config(has_workerinput=True, dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._is_xdist_worker() is True
+
+
+def test_is_not_xdist_worker_normally():
+    cfg = _make_mock_config()
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._is_xdist_worker() is False
+
+
+def test_is_xdist_controller_when_dist_active_and_not_worker():
+    cfg = _make_mock_config(dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._is_xdist_controller() is True
+
+
+def test_is_not_xdist_controller_when_dist_no():
+    cfg = _make_mock_config(dist="no")
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._is_xdist_controller() is False
+
+
+def test_logreport_collects_result_on_controller():
+    cfg = _make_mock_config(dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+    result = _make_full_result()
+
+    report = types.SimpleNamespace(
+        when="call",
+        nodeid="tests/evals/foo.yaml::my_transcript",
+        user_properties=[
+            ("llm_eval_name", "my_transcript"),
+            ("llm_eval_result", _serialize_result(result)),
+        ],
+    )
+    plugin.pytest_runtest_logreport(report)
+
+    assert len(plugin._results) == 1
+    name, collected = plugin._results[0]
+    assert name == "my_transcript"
+    assert collected == result
+
+
+def test_logreport_ignores_non_call_phases():
+    cfg = _make_mock_config(dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+
+    for phase in ("setup", "teardown"):
+        report = types.SimpleNamespace(when=phase, nodeid="foo::bar", user_properties=[])
+        plugin.pytest_runtest_logreport(report)
+
+    assert plugin._results == []
