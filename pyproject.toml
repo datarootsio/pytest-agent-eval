@@ -28,6 +28,7 @@ dependencies = [
 [project.optional-dependencies]
 langchain = ["langchain-core>=0.3"]
 openai = ["openai>=1.0"]
+smolagents = ["smolagents>=1.0"]
 xdist = ["pytest-xdist>=3.0"]
 
 [project.entry-points.pytest11]
