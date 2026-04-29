@@ -3,7 +3,56 @@ from pathlib import Path
 import pytest
 
 from pytest_llm_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
-from pytest_llm_eval.report import build_markdown_report
+from pytest_llm_eval.report import _deserialize_result, _serialize_result, build_markdown_report
+
+
+def _make_full_result() -> TranscriptResult:
+    return TranscriptResult(
+        passed=True,
+        score=0.75,
+        threshold=0.5,
+        runs=[
+            RunResult(
+                run_index=0,
+                passed=True,
+                turn_results=[
+                    TurnResult(
+                        turn_index=0,
+                        passed=True,
+                        eval_results=[EvalResult(passed=True, reasoning="looks good")],
+                    )
+                ],
+            ),
+            RunResult(
+                run_index=1,
+                passed=False,
+                turn_results=[
+                    TurnResult(
+                        turn_index=0,
+                        passed=False,
+                        eval_results=[EvalResult(passed=False, reasoning="missing keyword")],
+                    )
+                ],
+            ),
+        ],
+    )
+
+
+def test_serialize_result_produces_dict():
+    result = _make_full_result()
+    data = _serialize_result(result)
+    assert isinstance(data, dict)
+    assert data["passed"] is True
+    assert data["score"] == 0.75
+    assert len(data["runs"]) == 2
+
+
+def test_deserialize_result_roundtrip():
+    original = _make_full_result()
+    restored = _deserialize_result(_serialize_result(original))
+    assert restored == original
+    assert restored.runs[0].turn_results[0].eval_results[0].reasoning == "looks good"
+    assert restored.runs[1].passed is False
 
 
 def _make_result(passed: bool, score: float, threshold: float, name: str = "test") -> tuple[str, TranscriptResult]:
