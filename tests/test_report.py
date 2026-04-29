@@ -1,9 +1,60 @@
+import types
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from pytest_llm_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
-from pytest_llm_eval.report import build_markdown_report
+from pytest_llm_eval.report import LLMEvalReportPlugin, _deserialize_result, _serialize_result, build_markdown_report
+
+
+def _make_full_result() -> TranscriptResult:
+    return TranscriptResult(
+        passed=True,
+        score=0.75,
+        threshold=0.5,
+        runs=[
+            RunResult(
+                run_index=0,
+                passed=True,
+                turn_results=[
+                    TurnResult(
+                        turn_index=0,
+                        passed=True,
+                        eval_results=[EvalResult(passed=True, reasoning="looks good")],
+                    )
+                ],
+            ),
+            RunResult(
+                run_index=1,
+                passed=False,
+                turn_results=[
+                    TurnResult(
+                        turn_index=0,
+                        passed=False,
+                        eval_results=[EvalResult(passed=False, reasoning="missing keyword")],
+                    )
+                ],
+            ),
+        ],
+    )
+
+
+def test_serialize_result_produces_dict():
+    result = _make_full_result()
+    data = _serialize_result(result)
+    assert isinstance(data, dict)
+    assert data["passed"] is True
+    assert data["score"] == 0.75
+    assert len(data["runs"]) == 2
+
+
+def test_deserialize_result_roundtrip():
+    original = _make_full_result()
+    restored = _deserialize_result(_serialize_result(original))
+    assert restored == original
+    assert restored.runs[0].turn_results[0].eval_results[0].reasoning == "looks good"
+    assert restored.runs[1].passed is False
 
 
 def _make_result(passed: bool, score: float, threshold: float, name: str = "test") -> tuple[str, TranscriptResult]:
@@ -82,3 +133,117 @@ def test_verbose_output_shows_run_details(pytester: pytest.Pytester):
     )
     result = pytester.runpytest("--llm-eval-live", "-v")
     result.stdout.fnmatch_lines(["*verbose_case*"])
+
+
+def _make_mock_config(*, has_workerinput: bool = False, dist: str = "no") -> Any:
+    cfg = types.SimpleNamespace()
+    cfg.option = types.SimpleNamespace(dist=dist)
+    if has_workerinput:
+        cfg.workerinput = {}
+    return cfg
+
+
+def test_is_xdist_worker_when_workerinput_present():
+    cfg = _make_mock_config(has_workerinput=True, dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._is_xdist_worker() is True
+
+
+def test_is_not_xdist_worker_normally():
+    cfg = _make_mock_config()
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._is_xdist_worker() is False
+
+
+def test_is_xdist_controller_when_dist_active_and_not_worker():
+    cfg = _make_mock_config(dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._is_xdist_controller() is True
+
+
+def test_is_not_xdist_controller_when_dist_no():
+    cfg = _make_mock_config(dist="no")
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._is_xdist_controller() is False
+
+
+def test_logreport_collects_result_on_controller():
+    cfg = _make_mock_config(dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+    result = _make_full_result()
+
+    report = types.SimpleNamespace(
+        when="call",
+        nodeid="tests/evals/foo.yaml::my_transcript",
+        user_properties=[
+            ("llm_eval_name", "my_transcript"),
+            ("llm_eval_result", _serialize_result(result)),
+        ],
+    )
+    plugin.pytest_runtest_logreport(report)
+
+    assert len(plugin._results) == 1
+    name, collected = plugin._results[0]
+    assert name == "my_transcript"
+    assert collected == result
+
+
+def test_logreport_ignores_non_call_phases():
+    cfg = _make_mock_config(dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+
+    for phase in ("setup", "teardown"):
+        report = types.SimpleNamespace(when=phase, nodeid="foo::bar", user_properties=[])
+        plugin.pytest_runtest_logreport(report)
+
+    assert plugin._results == []
+
+
+def test_xdist_active_returns_false_when_no_dist_option():
+    cfg = types.SimpleNamespace()
+    # config.option does not have a 'dist' attribute
+    cfg.option = types.SimpleNamespace()
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._xdist_active() is False
+
+
+def test_logreport_ignores_reports_without_llm_eval_result():
+    cfg = _make_mock_config(dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+    report = types.SimpleNamespace(
+        when="call",
+        nodeid="tests/foo.yaml::bar",
+        user_properties=[("some_other_key", "value")],
+    )
+    plugin.pytest_runtest_logreport(report)
+    assert plugin._results == []
+
+
+def test_xdist_report_collects_all_workers(pytester: pytest.Pytester, tmp_path: Path):
+    """With -n2, results from both workers appear in the report."""
+    pytest.importorskip("xdist")
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makefile(
+        ".yaml",
+        **{
+            "tests/evals/t1": "id: transcript_one\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n",
+            "tests/evals/t2": "id: transcript_two\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hello\n",
+        },
+    )
+    pytester.makeconftest(
+        """
+        import pytest
+        @pytest.fixture
+        def llm_eval_agent():
+            async def agent(history):
+                return "ok", []
+            return agent
+        """
+    )
+    report_path = tmp_path / "xdist_report.md"
+    result = pytester.runpytest("--llm-eval-live", f"--llm-eval-report={report_path}", "-n2")
+    result.assert_outcomes(passed=2)
+    assert report_path.exists()
+    content = report_path.read_text()
+    assert content.count("transcript_one") == 2
+    assert content.count("transcript_two") == 2

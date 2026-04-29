@@ -28,6 +28,7 @@ dependencies = [
 [project.optional-dependencies]
 langchain = ["langchain-core>=0.3"]
 openai = ["openai>=1.0"]
+xdist = ["pytest-xdist>=3.0"]
 
 [project.entry-points.pytest11]
 llm_eval = "pytest_llm_eval.plugin"
@@ -43,6 +44,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "anyio[trio]>=4.0",
     "pre-commit>=4.0",
+    "pytest-xdist>=3.0",
 ]
 docs = [
     "zensical",
