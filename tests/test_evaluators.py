@@ -118,3 +118,63 @@ async def test_tool_call_empty_config_passes():
     ev = ToolCallEvaluator()
     result = await ev.evaluate(_ctx(tool_calls=["anything"]))
     assert result.passed is True
+
+
+from unittest.mock import AsyncMock, MagicMock, patch
+from pytest_llm_eval.evaluators.judge import JudgeEvaluator
+
+
+@pytest.mark.asyncio
+async def test_judge_evaluator_passes_on_positive_verdict():
+    mock_output = MagicMock()
+    mock_output.passed = True
+    mock_output.reasoning = "Reply is helpful and accurate."
+
+    mock_result = MagicMock()
+    mock_result.output = mock_output
+
+    with patch("pytest_llm_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(return_value=mock_result)
+        MockAgent.return_value = instance
+
+        ev = JudgeEvaluator(rubric="Be helpful", model="openai:gpt-4o-mini")
+        result = await ev.evaluate(_ctx(reply="Here is a helpful response."))
+
+    assert result.passed is True
+    assert "helpful" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_judge_evaluator_fails_on_negative_verdict():
+    mock_output = MagicMock()
+    mock_output.passed = False
+    mock_output.reasoning = "Reply is off-topic."
+
+    mock_result = MagicMock()
+    mock_result.output = mock_output
+
+    with patch("pytest_llm_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(return_value=mock_result)
+        MockAgent.return_value = instance
+
+        ev = JudgeEvaluator(rubric="Be on-topic", model="openai:gpt-4o-mini")
+        result = await ev.evaluate(_ctx(reply="Unrelated content."))
+
+    assert result.passed is False
+    assert "off-topic" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_judge_evaluator_returns_failure_after_retries_exhausted():
+    with patch("pytest_llm_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(side_effect=Exception("API error"))
+        MockAgent.return_value = instance
+
+        ev = JudgeEvaluator(rubric="Be helpful", model="openai:gpt-4o-mini", retries=1)
+        result = await ev.evaluate(_ctx(reply="hello"))
+
+    assert result.passed is False
+    assert "Judge failed" in result.reasoning
