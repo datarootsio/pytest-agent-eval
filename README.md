@@ -45,6 +45,7 @@ pip install "pytest-llm-eval[openai]"
 pip install "pytest-llm-eval[smolagents]"
 # or with uv:
 uv add "pytest-llm-eval[langchain]"
+uv add "pytest-llm-eval[openai]"
 uv add "pytest-llm-eval[smolagents]"
 ```
 
