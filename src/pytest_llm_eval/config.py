@@ -27,6 +27,7 @@ class LLMEvalConfig:
     """
 
     model: str = "openai:gpt-4o"
+    judge_model: str | None = None
     threshold: float = 0.8
     runs: int = 1
     retries: int = 2

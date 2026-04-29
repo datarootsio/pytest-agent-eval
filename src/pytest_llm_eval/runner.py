@@ -46,6 +46,7 @@ async def _run_turn(
     history: list[dict[str, Any]],
     agent: AgentCallable,
     config_model: str | None = None,
+    judge_model: str | None = None,
 ) -> tuple[TurnResult, str, list[str]]:
     """Execute one turn and evaluate results."""
     history.append({"role": "user", "content": turn.user})
@@ -64,8 +65,8 @@ async def _run_turn(
     if turn.expect.judge is not None:
         from pytest_llm_eval.evaluators.judge import JudgeEvaluator
 
-        judge_model = turn.expect.judge.model or config_model
-        evaluators.append(JudgeEvaluator(rubric=turn.expect.judge.rubric, model=judge_model))
+        resolved_judge_model = turn.expect.judge.model or judge_model or config_model
+        evaluators.append(JudgeEvaluator(rubric=turn.expect.judge.rubric, model=resolved_judge_model))
 
     eval_results = list(await asyncio.gather(*(ev.evaluate(ctx) for ev in evaluators)))
     turn_passed = all(r.passed for r in eval_results)
@@ -77,13 +78,14 @@ async def _run_once(
     agent: AgentCallable,
     run_idx: int,
     config_model: str | None = None,
+    judge_model: str | None = None,
 ) -> RunResult:
     """Execute all turns once and return a RunResult."""
     history: list[dict[str, Any]] = []
     turn_results: list[TurnResult] = []
 
     for turn_idx, turn in enumerate(transcript.turns):
-        turn_result, _, _ = await _run_turn(turn, turn_idx, history, agent, config_model)
+        turn_result, _, _ = await _run_turn(turn, turn_idx, history, agent, config_model, judge_model)
         turn_results.append(turn_result)
 
     run_passed = all(t.passed for t in turn_results)
@@ -94,6 +96,7 @@ async def run_transcript(
     transcript: Transcript,
     agent: AgentCallable,
     config_model: str | None = None,
+    judge_model: str | None = None,
 ) -> TranscriptResult:
     """Run a transcript N times and aggregate results.
 
@@ -101,13 +104,14 @@ async def run_transcript(
         transcript: The transcript to execute.
         agent: Async callable ``(history) -> (reply, tool_calls)``.
         config_model: Fallback model string for JudgeEvaluator (from config).
+        judge_model: Dedicated judge model override; takes priority over config_model.
 
     Returns:
         TranscriptResult with score, threshold, and per-run details.
     """
     run_results = list(
         await asyncio.gather(
-            *(_run_once(transcript, agent, run_idx, config_model) for run_idx in range(transcript.runs))
+            *(_run_once(transcript, agent, run_idx, config_model, judge_model) for run_idx in range(transcript.runs))
         )
     )
     score = sum(r.passed for r in run_results) / len(run_results)
@@ -127,7 +131,8 @@ class EvalSession:
     Args:
         threshold: Pass threshold for this session (overrides config).
         runs: Number of runs (overrides config).
-        config_model: Judge model string from config.
+        config_model: Default model fallback for JudgeEvaluator.
+        judge_model: Dedicated judge model; takes priority over config_model.
         _item: The pytest item node — used by the report plugin to attach score output.
     """
 
@@ -136,11 +141,13 @@ class EvalSession:
         threshold: float,
         runs: int,
         config_model: str | None = None,
+        judge_model: str | None = None,
         _item: Any = None,
     ) -> None:
         self.threshold = threshold
         self.runs = runs
         self.config_model = config_model
+        self.judge_model = judge_model
         self._item = _item
 
     async def run(
@@ -163,7 +170,7 @@ class EvalSession:
             threshold=self.threshold,
             runs=self.runs,
         )
-        result = await run_transcript(transcript, agent, self.config_model)
+        result = await run_transcript(transcript, agent, self.config_model, self.judge_model)
         if self._item is not None:
             self._item._eval_result = result
         return result

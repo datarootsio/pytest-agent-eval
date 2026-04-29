@@ -126,7 +126,7 @@ class LLMEvalItem(pytest.Item):
                 "        return agent\n"
             )
         cfg = load_config(self.config)
-        result = asyncio.run(run_transcript(self.transcript, agent, cfg.model))
+        result = asyncio.run(run_transcript(self.transcript, agent, cfg.model, cfg.judge_model))
         self._eval_result = result
         result.assert_threshold()
 
