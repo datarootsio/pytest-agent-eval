@@ -103,6 +103,51 @@ Install the optional extra for OpenAI support:
 | `model`         | `str`            | Model name, e.g. `"gpt-4o"`                              |
 | `system_prompt` | `str \| None`    | Optional system prompt prepended to every request         |
 
+## `SmolagentsAdapter`
+
+Wraps a [smolagents](https://github.com/huggingface/smolagents) agent — `ToolCallingAgent`, `CodeAgent`, or any duck-typed agent exposing `.run()` and `.memory.steps`.
+
+```python
+from smolagents import ToolCallingAgent, InferenceClientModel
+from pytest_llm_eval.adapters.smolagents import SmolagentsAdapter
+import pytest
+
+model = InferenceClientModel(model_id="meta-llama/Llama-3.3-70B-Instruct")
+agent = ToolCallingAgent(tools=[...], model=model)
+
+@pytest.fixture
+def llm_eval_agent():
+    return SmolagentsAdapter(agent)
+```
+
+Install the optional extra for smolagents support:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-llm-eval[smolagents]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-llm-eval[smolagents]"
+    ```
+
+The adapter offloads the sync `agent.run` to a worker thread with `asyncio.to_thread`. It detects the first turn of a transcript via `len(history) == 1` and passes `reset=True` so each transcript starts with fresh agent memory; subsequent turns pass `reset=False` to continue the conversation.
+
+Tool-call names are collected from new entries in `agent.memory.steps`. Smolagents-internal pseudo-tools (`python_interpreter`, used by `CodeAgent`, and `final_answer`, the termination tool) are filtered by default — pass `include_internal_tools=True` to see them.
+
+!!! note "CodeAgent and tool-call assertions"
+    `CodeAgent` runs tools by executing generated Python; smolagents records only the `python_interpreter` step, not the inner tool calls. If you need fine-grained tool-call assertions with `ToolCallEvaluator`, use `ToolCallingAgent`.
+
+**Constructor:**
+
+| Parameter                | Type   | Default | Description                                                                  |
+|--------------------------|--------|---------|------------------------------------------------------------------------------|
+| `agent`                  | `Any`  | required | A smolagents agent (`ToolCallingAgent`, `CodeAgent`, or duck-typed equivalent) |
+| `include_internal_tools` | `bool` | `False`  | When `True`, return `python_interpreter` and `final_answer` in tool calls    |
+
 ## Writing a custom adapter
 
 Any async callable that accepts `list[dict]` and returns `(str, list[str])` works directly — no base class needed:

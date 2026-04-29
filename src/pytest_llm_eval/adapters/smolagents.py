@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+_INTERNAL_TOOLS = frozenset({"python_interpreter", "final_answer"})
+
 
 class SmolagentsAdapter:
     """Wrap a smolagents agent to conform to the agent callable contract.
@@ -40,7 +42,12 @@ class SmolagentsAdapter:
 
     async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
         """Run the agent against the latest user message and return (reply, tool_calls)."""
-        user_msg = history[-1]["content"]
+        user_msg = history[-1]["content"] if history else ""
         reset = len(history) == 1
+        prev = len(self._agent.memory.steps)
         result = await asyncio.to_thread(self._agent.run, user_msg, reset=reset)
-        return str(result), []
+        new_steps = self._agent.memory.steps[prev:] if not reset else self._agent.memory.steps
+        names = [tc.name for step in new_steps for tc in getattr(step, "tool_calls", None) or []]
+        if not self._include_internal_tools:
+            names = [n for n in names if n not in _INTERNAL_TOOLS]
+        return str(result), names
