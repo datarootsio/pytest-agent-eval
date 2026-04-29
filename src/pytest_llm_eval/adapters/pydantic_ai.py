@@ -28,7 +28,7 @@ class PydanticAIAdapter:
     async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
         """Run the agent and normalise output to (reply, tool_calls)."""
         user_msg = history[-1]["content"] if history else ""
-        message_history = history[:-1] if len(history) > 1 else []
+        message_history = history[:-1]
         result = await self._agent.run(user_msg, message_history=message_history)
 
         tool_calls = [
