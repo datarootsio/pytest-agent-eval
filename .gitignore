@@ -7,3 +7,4 @@ dist/
 site/
 llm_eval_report.md
 .worktrees/
+docs/superpowers/
