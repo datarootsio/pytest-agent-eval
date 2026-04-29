@@ -4,16 +4,35 @@ This guide walks you through installing `pytest-llm-eval` and writing your first
 
 ## Installation
 
-```bash
-pip install pytest-llm-eval
-```
+=== "pip"
 
-For framework-specific adapters, install optional extras:
+    ```bash
+    pip install pytest-llm-eval
+    ```
 
-```bash
-pip install pytest-llm-eval[langchain]   # LangChain support
-pip install pytest-llm-eval[openai]      # OpenAI client support
-```
+=== "uv"
+
+    ```bash
+    uv add pytest-llm-eval
+    ```
+
+For framework-specific adapters, install the matching optional extra:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-llm-eval[langchain]"   # LangChain / LangGraph support
+    pip install "pytest-llm-eval[openai]"      # OpenAI SDK support
+    pip install "pytest-llm-eval[xdist]"       # parallel test execution
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-llm-eval[langchain]"
+    uv add "pytest-llm-eval[openai]"
+    uv add "pytest-llm-eval[xdist]"
+    ```
 
 ## Configure pyproject.toml
 
@@ -21,10 +40,14 @@ Add a `[tool.llm_eval]` section to your `pyproject.toml`:
 
 ```toml
 [tool.llm_eval]
-model     = "openai:gpt-4o"
-threshold = 0.8
-runs      = 3
+model       = "openai:gpt-4o"   # default judge + agent-fallback model
+threshold   = 0.8
+runs        = 3
+yaml_dirs   = ["tests/evals"]   # enables YAML auto-discovery
 ```
+
+!!! tip "Use a separate judge model"
+    Set `judge_model = "openai:gpt-4o"` independently from the agent-under-test model — you typically want a stronger model judging a cheaper agent.
 
 ## Write your first test — Python API
 
@@ -35,9 +58,8 @@ import pytest
 from pytest_llm_eval import Turn, Expect, ContainsEvaluator
 
 async def my_agent(messages):
-    """Your agent callable — receives OpenAI-style messages, returns a string reply."""
-    # Replace with your actual agent
-    return "Your booking is confirmed for tomorrow at 10am."
+    """Your agent callable — receives OpenAI-style messages, returns (reply, tool_calls)."""
+    return "Your booking is confirmed for tomorrow at 10am.", []
 
 @pytest.mark.llm_eval(threshold=0.8, runs=3)
 async def test_booking_confirmation(llm_eval):
@@ -59,6 +81,9 @@ async def test_booking_confirmation(llm_eval):
 ```
 
 ## Write your first test — YAML style
+
+!!! info "YAML auto-discovery"
+    Any `*.yaml` file inside a directory listed in `yaml_dirs` becomes a pytest test automatically — no Python wrapper, no decorator. Drop a file, run `pytest`, see the result.
 
 Create `tests/evals/booking.yaml`:
 
@@ -83,7 +108,7 @@ Then register the YAML directory in `pyproject.toml`:
 yaml_dirs = ["tests/evals"]
 ```
 
-You must also provide an `agent` fixture named `llm_eval_agent` so the YAML loader knows what to call:
+You must also provide an `llm_eval_agent` fixture so the loader knows what to call:
 
 ```python
 # tests/conftest.py
@@ -92,7 +117,7 @@ import pytest
 @pytest.fixture
 def llm_eval_agent():
     async def my_agent(messages):
-        return "Your booking is confirmed for tomorrow at 10am."
+        return "Your booking is confirmed for tomorrow at 10am.", []
     return my_agent
 ```
 
@@ -100,13 +125,17 @@ def llm_eval_agent():
 
 By default, eval tests are **skipped** in CI to avoid unexpected API calls. Enable them explicitly:
 
-```bash
-# One-shot flag
-pytest --llm-eval-live
+=== "Flag"
 
-# Or via environment variable
-EVAL_LIVE=1 pytest
-```
+    ```bash
+    pytest --llm-eval-live
+    ```
+
+=== "Environment"
+
+    ```bash
+    EVAL_LIVE=1 pytest
+    ```
 
 A passing run shows the score alongside the test name:
 
@@ -115,3 +144,21 @@ tests/test_my_agent.py::test_booking_confirmation PASSED [score=1.00 threshold=0
 ```
 
 Use `-vv` for full turn-by-turn details including evaluator reasoning.
+
+## Run in parallel
+
+For large eval suites, install the `xdist` extra and pass `-n` to run tests across worker processes — results from every worker are aggregated into the report:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-llm-eval[xdist]"
+    pytest --llm-eval-live -n auto --llm-eval-report=eval.md
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-llm-eval[xdist]"
+    uv run pytest --llm-eval-live -n auto --llm-eval-report=eval.md
+    ```

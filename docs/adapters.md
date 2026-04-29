@@ -42,9 +42,17 @@ def llm_eval_agent():
 
 Install the optional extra for LangChain support:
 
-```bash
-pip install pytest-llm-eval[langchain]
-```
+=== "pip"
+
+    ```bash
+    pip install "pytest-llm-eval[langchain]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-llm-eval[langchain]"
+    ```
 
 The adapter calls `ainvoke({"messages": history})` and extracts `content` and `tool_calls` from the result. It handles both direct `AIMessage` returns and `{"messages": [...]}` dict returns from compiled graphs.
 
@@ -75,9 +83,17 @@ def llm_eval_agent():
 
 Install the optional extra for OpenAI support:
 
-```bash
-pip install pytest-llm-eval[openai]
-```
+=== "pip"
+
+    ```bash
+    pip install "pytest-llm-eval[openai]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-llm-eval[openai]"
+    ```
 
 **Constructor:**
 
