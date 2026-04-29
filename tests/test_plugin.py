@@ -91,3 +91,29 @@ def test_cli_options_exist(pytester: pytest.Pytester):
     result = pytester.runpytest("--help")
     result.stdout.fnmatch_lines(["*--llm-eval-live*"])
     result.stdout.fnmatch_lines(["*--llm-eval-report*"])
+
+
+def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
+    """threshold=0.0 must not fall back to config default (falsy trap)."""
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makepyfile(
+        """
+        import pytest
+        from pytest_llm_eval.models import Turn
+        from pytest_llm_eval.evaluators.contains import ContainsEvaluator
+
+        async def _agent(history):
+            return "wrong answer", []
+
+        @pytest.mark.llm_eval(threshold=0.0, runs=1)
+        async def test_zero_threshold(llm_eval):
+            # ContainsEvaluator will fail, but threshold=0.0 means 0% must pass
+            result = await llm_eval.run(
+                agent=_agent,
+                turns=[Turn(user="hi")],
+            )
+            result.assert_threshold()  # should NOT raise because threshold=0.0
+        """
+    )
+    result = pytester.runpytest("--llm-eval-live", "-v")
+    assert result.ret == 0

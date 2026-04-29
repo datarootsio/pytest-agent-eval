@@ -59,6 +59,6 @@ def llm_eval(request: pytest.FixtureRequest):
     from pytest_llm_eval.runner import EvalSession
     cfg = load_config(request.config)
     marker = request.node.get_closest_marker("llm_eval")
-    threshold = (marker.kwargs.get("threshold") if marker else None) or cfg.threshold
-    runs = (marker.kwargs.get("runs") if marker else None) or cfg.runs
+    threshold = marker.kwargs["threshold"] if (marker and "threshold" in marker.kwargs) else cfg.threshold
+    runs = marker.kwargs["runs"] if (marker and "runs" in marker.kwargs) else cfg.runs
     return EvalSession(threshold=threshold, runs=runs, config_model=cfg.model, _item=request.node)
