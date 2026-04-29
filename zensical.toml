@@ -1,0 +1,12 @@
+[project]
+site_name = "pytest-llm-eval"
+site_description = "LLM evaluation plugin for pytest"
+site_author = "Dataroots"
+
+[project.plugins.mkdocstrings]
+enabled = true
+
+[project.plugins.mkdocstrings.config.handlers.python.options]
+docstring_style = "google"
+show_source = true
+show_signature_annotations = true
