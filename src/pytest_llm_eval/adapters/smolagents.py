@@ -42,5 +42,8 @@ class SmolagentsAdapter:
         """Run the agent against the latest user message and return (reply, tool_calls)."""
         user_msg = history[-1]["content"] if history else ""
         reset = len(history) == 1
+        prev = len(self._agent.memory.steps)
         result = await asyncio.to_thread(self._agent.run, user_msg, reset=reset)
-        return str(result), []
+        new_steps = self._agent.memory.steps[prev:] if not reset else self._agent.memory.steps
+        tool_calls = [tc.name for step in new_steps for tc in getattr(step, "tool_calls", None) or []]
+        return str(result), tool_calls
