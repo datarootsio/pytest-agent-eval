@@ -1,5 +1,6 @@
 """Evaluators for pytest-llm-eval."""
-from pytest_llm_eval.evaluators.base import Evaluator, EvalResult
+from pytest_llm_eval.models import EvalResult
+from pytest_llm_eval.evaluators.base import Evaluator
 from pytest_llm_eval.evaluators.contains import ContainsEvaluator
 from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
 

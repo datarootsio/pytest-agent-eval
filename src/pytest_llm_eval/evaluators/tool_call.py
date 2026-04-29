@@ -32,9 +32,10 @@ class ToolCallEvaluator:
         """Evaluate tool call presence and ordering."""
         failures: list[str] = []
 
-        for tool in self.must_include:
-            if tool not in ctx.tool_calls:
-                failures.append(f"Expected tool {tool!r} not in {ctx.tool_calls!r}")
+        if not self.ordered:
+            for tool in self.must_include:
+                if tool not in ctx.tool_calls:
+                    failures.append(f"Expected tool {tool!r} not in {ctx.tool_calls!r}")
 
         for tool in self.must_exclude:
             if tool in ctx.tool_calls:
