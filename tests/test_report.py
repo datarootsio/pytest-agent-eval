@@ -197,3 +197,23 @@ def test_logreport_ignores_non_call_phases():
         plugin.pytest_runtest_logreport(report)
 
     assert plugin._results == []
+
+
+def test_xdist_active_returns_false_when_no_dist_option():
+    cfg = types.SimpleNamespace()
+    # config.option does not have a 'dist' attribute
+    cfg.option = types.SimpleNamespace()
+    plugin = LLMEvalReportPlugin(cfg)
+    assert plugin._xdist_active() is False
+
+
+def test_logreport_ignores_reports_without_llm_eval_result():
+    cfg = _make_mock_config(dist="load")
+    plugin = LLMEvalReportPlugin(cfg)
+    report = types.SimpleNamespace(
+        when="call",
+        nodeid="tests/foo.yaml::bar",
+        user_properties=[("some_other_key", "value")],
+    )
+    plugin.pytest_runtest_logreport(report)
+    assert plugin._results == []
