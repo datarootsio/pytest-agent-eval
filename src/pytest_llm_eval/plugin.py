@@ -27,6 +27,8 @@ def pytest_configure(config: pytest.Config) -> None:
         "llm_eval(threshold=None, runs=None): mark test as an LLM evaluation test. "
         "Skipped unless --llm-eval-live or EVAL_LIVE=1.",
     )
+    from pytest_llm_eval.report import LLMEvalReportPlugin
+    config.pluginmanager.register(LLMEvalReportPlugin(config), "llm_eval_report")
 
 
 def pytest_collection_modifyitems(
