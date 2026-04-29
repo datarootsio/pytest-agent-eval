@@ -37,12 +37,15 @@ uv add pytest-llm-eval
 | [pydantic-ai](https://ai.pydantic.dev/) | _(default)_ | `pytest_llm_eval.adapters.pydantic_ai.PydanticAIAdapter` |
 | [LangChain / LangGraph](https://python.langchain.com/) | `langchain` | `pytest_llm_eval.adapters.langchain.LangChainAdapter` |
 | [OpenAI SDK](https://github.com/openai/openai-python) | `openai` | `pytest_llm_eval.adapters.openai.OpenAIAdapter` |
+| [smolagents](https://github.com/huggingface/smolagents) | `smolagents` | `pytest_llm_eval.adapters.smolagents.SmolagentsAdapter` |
 
 ```bash
 pip install "pytest-llm-eval[langchain]"
 pip install "pytest-llm-eval[openai]"
+pip install "pytest-llm-eval[smolagents]"
 # or with uv:
 uv add "pytest-llm-eval[langchain]"
+uv add "pytest-llm-eval[smolagents]"
 ```
 
 Bringing your own framework? Any `async def agent(messages) -> (reply, tool_calls)` callable works directly — no base class needed.

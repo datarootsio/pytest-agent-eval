@@ -158,6 +158,31 @@ For framework-specific adapters, install one of the optional extras shown in the
         return OpenAIAdapter(AsyncOpenAI(), model="gpt-4o")
     ```
 
+=== "Smolagents"
+
+    === "pip"
+
+        ```bash
+        pip install "pytest-llm-eval[smolagents]"
+        ```
+
+    === "uv"
+
+        ```bash
+        uv add "pytest-llm-eval[smolagents]"
+        ```
+
+    ```python
+    from smolagents import ToolCallingAgent, InferenceClientModel
+    from pytest_llm_eval.adapters.smolagents import SmolagentsAdapter
+
+    agent = ToolCallingAgent(tools=[...], model=InferenceClientModel(model_id="..."))
+
+    @pytest.fixture
+    def llm_eval_agent():
+        return SmolagentsAdapter(agent)
+    ```
+
 === "Custom"
 
     Any `async def agent(messages) -> tuple[reply: str, tool_calls: list[str]]` callable works as-is — no base class, no inheritance.
