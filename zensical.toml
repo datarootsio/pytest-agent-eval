@@ -3,6 +3,8 @@ site_name = "pytest-llm-eval"
 site_description = "LLM evaluation plugin for pytest — multi-turn YAML transcripts, threshold-based scoring, LLM-as-judge"
 site_author = "Dataroots"
 site_url = "https://datarootsio.github.io/pytest-llm-eval"
+repo_url = "https://github.com/datarootsio/pytest-llm-eval"
+repo_name = "datarootsio/pytest-llm-eval"
 
 [project.theme]
 features = [
@@ -33,6 +35,11 @@ primary = "indigo"
 accent = "indigo"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to light mode"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/datarootsio/pytest-llm-eval"
+name = "pytest-llm-eval on GitHub"
 
 [project.plugins.mkdocstrings]
 enabled = true
