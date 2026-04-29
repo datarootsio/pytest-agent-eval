@@ -75,14 +75,14 @@ def load_config(pytest_config: pytest.Config) -> LLMEvalConfig:
     try:
         if pytest_config.getoption("--llm-eval-live"):
             cfg.live = True
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError, pytest.UsageError):
         pass
 
     try:
         report = pytest_config.getoption("--llm-eval-report")
         if report:
             cfg.report_path = report
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError, pytest.UsageError):
         pass
 
     return cfg

@@ -1,7 +1,8 @@
 import os
 import pytest
 from pathlib import Path
-from pytest_llm_eval.config import LLMEvalConfig, load_config_from_toml
+from unittest.mock import MagicMock
+from pytest_llm_eval.config import LLMEvalConfig, load_config_from_toml, load_config
 
 
 def test_default_config():
@@ -50,3 +51,32 @@ def test_yaml_dirs_list(tmp_path: Path):
     pyproject.write_text('[tool.llm_eval]\nyaml_dirs = ["tests/a", "tests/b"]\n')
     cfg = load_config_from_toml(pyproject)
     assert cfg.yaml_dirs == ["tests/a", "tests/b"]
+
+
+def test_load_config_env_var_sets_live(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    """EVAL_LIVE=1 env var enables live mode even when TOML says live=false."""
+    monkeypatch.setenv("EVAL_LIVE", "1")
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.llm_eval]\nlive = false\n")
+
+    mock_config = MagicMock()
+    mock_config.rootdir = tmp_path
+    mock_config.getoption.side_effect = pytest.UsageError("No option named: --llm-eval-live")
+
+    cfg = load_config(mock_config)
+    assert cfg.live is True
+
+
+def test_load_config_cli_flag_sets_live(tmp_path: Path):
+    """--llm-eval-live CLI flag enables live mode."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.llm_eval]\nlive = false\n")
+
+    mock_config = MagicMock()
+    mock_config.rootdir = tmp_path
+    mock_config.getoption.side_effect = lambda name, **kw: (
+        True if name == "--llm-eval-live" else None
+    )
+
+    cfg = load_config(mock_config)
+    assert cfg.live is True
