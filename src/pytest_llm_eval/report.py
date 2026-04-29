@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -13,9 +14,22 @@ from pytest_llm_eval.models import EvalResult, RunResult, TranscriptResult, Turn
 
 def _serialize_result(result: TranscriptResult) -> dict[str, Any]:
     """Convert TranscriptResult to a plain dict (for xdist user_properties forwarding)."""
-    import dataclasses
-
     return dataclasses.asdict(result)
+
+
+def _deserialize_run(r: dict[str, Any]) -> RunResult:
+    return RunResult(
+        run_index=r["run_index"],
+        passed=r["passed"],
+        turn_results=[
+            TurnResult(
+                turn_index=t["turn_index"],
+                passed=t["passed"],
+                eval_results=[EvalResult(passed=e["passed"], reasoning=e["reasoning"]) for e in t["eval_results"]],
+            )
+            for t in r["turn_results"]
+        ],
+    )
 
 
 def _deserialize_result(data: dict[str, Any]) -> TranscriptResult:
@@ -24,21 +38,7 @@ def _deserialize_result(data: dict[str, Any]) -> TranscriptResult:
         passed=data["passed"],
         score=data["score"],
         threshold=data["threshold"],
-        runs=[
-            RunResult(
-                run_index=r["run_index"],
-                passed=r["passed"],
-                turn_results=[
-                    TurnResult(
-                        turn_index=t["turn_index"],
-                        passed=t["passed"],
-                        eval_results=[EvalResult(**e) for e in t["eval_results"]],
-                    )
-                    for t in r["turn_results"]
-                ],
-            )
-            for r in data["runs"]
-        ],
+        runs=[_deserialize_run(r) for r in data["runs"]],
     )
 
 
