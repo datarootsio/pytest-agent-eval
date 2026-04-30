@@ -1,6 +1,6 @@
 # Adapters
 
-Adapters bridge your existing agent framework to the `pytest-llm-eval` callable contract: an async function that accepts a list of OpenAI-style message dicts and returns a `(reply: str, tool_calls: list[str])` tuple.
+Adapters bridge your existing agent framework to the `pytest-agent-eval` callable contract: an async function that accepts a list of OpenAI-style message dicts and returns a `(reply: str, tool_calls: list[str])` tuple.
 
 ## `PydanticAIAdapter`
 
@@ -8,7 +8,7 @@ Wraps a pydantic-ai `Agent` instance.
 
 ```python
 from pydantic_ai import Agent
-from pytest_llm_eval.adapters.pydantic_ai import PydanticAIAdapter
+from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
 import pytest
 
 my_agent = Agent("openai:gpt-4o", system_prompt="You are a helpful booking assistant.")
@@ -31,7 +31,7 @@ The adapter forwards the last message as the user prompt and the preceding messa
 Wraps a LangChain Runnable (compiled graph, chain, etc.).
 
 ```python
-from pytest_llm_eval.adapters.langchain import LangChainAdapter
+from pytest_agent_eval.adapters.langchain import LangChainAdapter
 import pytest
 
 # my_langchain_graph is any LangChain Runnable
@@ -45,13 +45,13 @@ Install the optional extra for LangChain support:
 === "pip"
 
     ```bash
-    pip install "pytest-llm-eval[langchain]"
+    pip install "pytest-agent-eval[langchain]"
     ```
 
 === "uv"
 
     ```bash
-    uv add "pytest-llm-eval[langchain]"
+    uv add "pytest-agent-eval[langchain]"
     ```
 
 The adapter calls `ainvoke({"messages": history})` and extracts `content` and `tool_calls` from the result. It handles both direct `AIMessage` returns and `{"messages": [...]}` dict returns from compiled graphs.
@@ -68,7 +68,7 @@ Wraps the raw `AsyncOpenAI` or `AsyncAzureOpenAI` client.
 
 ```python
 from openai import AsyncOpenAI
-from pytest_llm_eval.adapters.openai import OpenAIAdapter
+from pytest_agent_eval.adapters.openai import OpenAIAdapter
 import pytest
 
 @pytest.fixture
@@ -86,13 +86,13 @@ Install the optional extra for OpenAI support:
 === "pip"
 
     ```bash
-    pip install "pytest-llm-eval[openai]"
+    pip install "pytest-agent-eval[openai]"
     ```
 
 === "uv"
 
     ```bash
-    uv add "pytest-llm-eval[openai]"
+    uv add "pytest-agent-eval[openai]"
     ```
 
 **Constructor:**
@@ -109,7 +109,7 @@ Wraps a [smolagents](https://github.com/huggingface/smolagents) agent — `ToolC
 
 ```python
 from smolagents import ToolCallingAgent, InferenceClientModel
-from pytest_llm_eval.adapters.smolagents import SmolagentsAdapter
+from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
 import pytest
 
 model = InferenceClientModel(model_id="meta-llama/Llama-3.3-70B-Instruct")
@@ -125,13 +125,13 @@ Install the optional extra for smolagents support:
 === "pip"
 
     ```bash
-    pip install "pytest-llm-eval[smolagents]"
+    pip install "pytest-agent-eval[smolagents]"
     ```
 
 === "uv"
 
     ```bash
-    uv add "pytest-llm-eval[smolagents]"
+    uv add "pytest-agent-eval[smolagents]"
     ```
 
 The adapter offloads the sync `agent.run` to a worker thread with `asyncio.to_thread`. It detects the first turn of a transcript via `len(history) == 1` and passes `reset=True` so each transcript starts with fresh agent memory; subsequent turns pass `reset=False` to continue the conversation.

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from pytest_llm_eval.models import EvalResult, TurnContext
+from pytest_agent_eval.models import EvalResult, TurnContext
 
 
 def _is_ordered_subsequence(needle: list[str], haystack: list[str]) -> bool:

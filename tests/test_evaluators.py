@@ -2,11 +2,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from pytest_llm_eval.evaluators.base import Evaluator
-from pytest_llm_eval.evaluators.contains import ContainsEvaluator
-from pytest_llm_eval.evaluators.judge import JudgeEvaluator
-from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
-from pytest_llm_eval.models import TurnContext
+from pytest_agent_eval.evaluators.base import Evaluator
+from pytest_agent_eval.evaluators.contains import ContainsEvaluator
+from pytest_agent_eval.evaluators.judge import JudgeEvaluator
+from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
+from pytest_agent_eval.models import TurnContext
 
 
 def _ctx(reply: str = "", tool_calls: list[str] | None = None) -> TurnContext:
@@ -136,7 +136,7 @@ async def test_judge_evaluator_passes_on_positive_verdict():
     mock_result = MagicMock()
     mock_result.output = mock_output
 
-    with patch("pytest_llm_eval.evaluators.judge.Agent") as MockAgent:
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
         instance = AsyncMock()
         instance.run = AsyncMock(return_value=mock_result)
         MockAgent.return_value = instance
@@ -157,7 +157,7 @@ async def test_judge_evaluator_fails_on_negative_verdict():
     mock_result = MagicMock()
     mock_result.output = mock_output
 
-    with patch("pytest_llm_eval.evaluators.judge.Agent") as MockAgent:
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
         instance = AsyncMock()
         instance.run = AsyncMock(return_value=mock_result)
         MockAgent.return_value = instance
@@ -171,7 +171,7 @@ async def test_judge_evaluator_fails_on_negative_verdict():
 
 @pytest.mark.asyncio
 async def test_judge_evaluator_returns_failure_after_retries_exhausted():
-    with patch("pytest_llm_eval.evaluators.judge.Agent") as MockAgent:
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
         instance = AsyncMock()
         instance.run = AsyncMock(side_effect=Exception("API error"))
         MockAgent.return_value = instance

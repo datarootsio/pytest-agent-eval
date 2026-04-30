@@ -1,4 +1,4 @@
-"""Shared data types for pytest-llm-eval."""
+"""Shared data types for pytest-agent-eval."""
 
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ class JudgeConfig:
     Args:
         rubric: The rubric string passed to the LLM judge.
         model: Optional pydantic-ai model ID override (e.g. "openai:gpt-4o").
-            Falls back to [tool.llm_eval] model if None.
+            Falls back to [tool.agent_eval] model if None.
     """
 
     rubric: str

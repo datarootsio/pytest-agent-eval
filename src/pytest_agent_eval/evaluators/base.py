@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from pytest_llm_eval.models import EvalResult, TurnContext
+from pytest_agent_eval.models import EvalResult, TurnContext
 
 
 @runtime_checkable

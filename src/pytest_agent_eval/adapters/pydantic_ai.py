@@ -14,7 +14,7 @@ class PydanticAIAdapter:
     Example:
         ```python
         from pydantic_ai import Agent
-        from pytest_llm_eval.adapters.pydantic_ai import PydanticAIAdapter
+        from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
 
         my_agent = Agent("openai:gpt-4o", system_prompt="You are helpful.")
 

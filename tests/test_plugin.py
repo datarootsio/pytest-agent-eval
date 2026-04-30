@@ -7,7 +7,7 @@ import pytest
 
 def test_plugin_registers_marker(pytester: pytest.Pytester):
     result = pytester.runpytest("--markers")
-    result.stdout.fnmatch_lines(["*llm_eval*"])
+    result.stdout.fnmatch_lines(["*agent_eval*"])
 
 
 def test_llm_eval_tests_skipped_by_default(pytester: pytest.Pytester):
@@ -15,8 +15,8 @@ def test_llm_eval_tests_skipped_by_default(pytester: pytest.Pytester):
         """
         import pytest
 
-        @pytest.mark.llm_eval
-        async def test_something(llm_eval):
+        @pytest.mark.agent_eval
+        async def test_something(agent_eval):
             pass
         """
     )
@@ -30,18 +30,18 @@ def test_llm_eval_tests_run_with_live_flag(pytester: pytest.Pytester):
     pytester.makepyfile(
         """
         import pytest
-        from pytest_llm_eval.models import Turn
+        from pytest_agent_eval.models import Turn
 
         async def _agent(history):
             return "hello", []
 
-        @pytest.mark.llm_eval(threshold=0.0, runs=1)
-        async def test_something(llm_eval):
-            result = await llm_eval.run(agent=_agent, turns=[Turn(user="hi")])
+        @pytest.mark.agent_eval(threshold=0.0, runs=1)
+        async def test_something(agent_eval):
+            result = await agent_eval.run(agent=_agent, turns=[Turn(user="hi")])
             result.assert_threshold()
         """
     )
-    result = pytester.runpytest("--llm-eval-live", "-v")
+    result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*test_something*PASSED*"])
     assert result.ret == 0
 
@@ -52,14 +52,14 @@ def test_llm_eval_runs_with_eval_live_env(pytester: pytest.Pytester, monkeypatch
     pytester.makepyfile(
         """
         import pytest
-        from pytest_llm_eval.models import Turn
+        from pytest_agent_eval.models import Turn
 
         async def _agent(history):
             return "ok", []
 
-        @pytest.mark.llm_eval(threshold=0.0)
-        async def test_env(llm_eval):
-            result = await llm_eval.run(agent=_agent, turns=[Turn(user="hi")])
+        @pytest.mark.agent_eval(threshold=0.0)
+        async def test_env(agent_eval):
+            result = await agent_eval.run(agent=_agent, turns=[Turn(user="hi")])
             result.assert_threshold()
         """
     )
@@ -72,28 +72,28 @@ def test_marker_threshold_overrides_config(pytester: pytest.Pytester):
     pytester.makepyfile(
         """
         import pytest
-        from pytest_llm_eval.models import Turn
+        from pytest_agent_eval.models import Turn
 
         async def _agent(history):
             return "nope", []
 
-        @pytest.mark.llm_eval(threshold=0.0, runs=1)
-        async def test_always_passes(llm_eval):
-            result = await llm_eval.run(
+        @pytest.mark.agent_eval(threshold=0.0, runs=1)
+        async def test_always_passes(agent_eval):
+            result = await agent_eval.run(
                 agent=_agent,
                 turns=[Turn(user="hi")],
             )
             result.assert_threshold()
         """
     )
-    result = pytester.runpytest("--llm-eval-live", "-v")
+    result = pytester.runpytest("--agent-eval-live", "-v")
     assert result.ret == 0
 
 
 def test_cli_options_exist(pytester: pytest.Pytester):
     result = pytester.runpytest("--help")
-    result.stdout.fnmatch_lines(["*--llm-eval-live*"])
-    result.stdout.fnmatch_lines(["*--llm-eval-report*"])
+    result.stdout.fnmatch_lines(["*--agent-eval-live*"])
+    result.stdout.fnmatch_lines(["*--agent-eval-report*"])
 
 
 def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
@@ -102,23 +102,23 @@ def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
     pytester.makepyfile(
         """
         import pytest
-        from pytest_llm_eval.models import Turn
-        from pytest_llm_eval.evaluators.contains import ContainsEvaluator
+        from pytest_agent_eval.models import Turn
+        from pytest_agent_eval.evaluators.contains import ContainsEvaluator
 
         async def _agent(history):
             return "wrong answer", []
 
-        @pytest.mark.llm_eval(threshold=0.0, runs=1)
-        async def test_zero_threshold(llm_eval):
+        @pytest.mark.agent_eval(threshold=0.0, runs=1)
+        async def test_zero_threshold(agent_eval):
             # ContainsEvaluator will fail, but threshold=0.0 means 0% must pass
-            result = await llm_eval.run(
+            result = await agent_eval.run(
                 agent=_agent,
                 turns=[Turn(user="hi")],
             )
             result.assert_threshold()  # should NOT raise because threshold=0.0
         """
     )
-    result = pytester.runpytest("--llm-eval-live", "-v")
+    result = pytester.runpytest("--agent-eval-live", "-v")
     assert result.ret == 0
 
 
@@ -126,7 +126,7 @@ def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
 
 
 def test_pydantic_ai_adapter_normalises_output():
-    from pytest_llm_eval.adapters.pydantic_ai import PydanticAIAdapter
+    from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
 
     mock_agent = MagicMock()
     mock_result = MagicMock()
@@ -144,7 +144,7 @@ def test_pydantic_ai_adapter_normalises_output():
 
 
 def test_openai_adapter_normalises_output():
-    from pytest_llm_eval.adapters.openai import OpenAIAdapter
+    from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
     mock_client = MagicMock()
     mock_message = MagicMock()

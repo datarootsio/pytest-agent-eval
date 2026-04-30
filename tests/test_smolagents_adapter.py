@@ -3,7 +3,7 @@ from __future__ import annotations
 import types
 from typing import Any
 
-from pytest_llm_eval.adapters.smolagents import SmolagentsAdapter
+from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
 
 
 def _make_fake_agent(reply: Any = "ok", new_steps: list[Any] | None = None) -> types.SimpleNamespace:

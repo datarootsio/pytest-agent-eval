@@ -7,7 +7,7 @@ Evaluators decide whether an agent's reply passes or fails a turn. All evaluator
 Checks that the reply contains expected substrings (case-insensitive).
 
 ```python
-from pytest_llm_eval import ContainsEvaluator
+from pytest_agent_eval import ContainsEvaluator
 
 # Pass if reply contains at least one of these
 ContainsEvaluator(any_of=["confirmed", "booked"])
@@ -34,7 +34,7 @@ ContainsEvaluator(
 Validates that specific tools were (or were not) called during a turn.
 
 ```python
-from pytest_llm_eval import ToolCallEvaluator
+from pytest_agent_eval import ToolCallEvaluator
 
 # Require a tool and forbid another
 ToolCallEvaluator(
@@ -62,14 +62,14 @@ ToolCallEvaluator(
 Uses an LLM (via pydantic-ai) to evaluate the reply against a natural-language rubric. Good for open-ended quality checks that are hard to express as string patterns.
 
 ```python
-from pytest_llm_eval import JudgeEvaluator
+from pytest_agent_eval import JudgeEvaluator
 
 JudgeEvaluator(
     rubric=(
         "The reply must confirm the booking, include a reference number, "
         "mention the date and time, and have a friendly professional tone."
     ),
-    model="openai:gpt-4o",      # optional — falls back to [tool.llm_eval] model
+    model="openai:gpt-4o",      # optional — falls back to [tool.agent_eval] model
     retries=2,                   # retry API failures
     timeout=30.0,                # per-call timeout in seconds
 )
@@ -80,7 +80,7 @@ JudgeEvaluator(
 | Parameter | Type           | Default       | Description                                                       |
 |-----------|----------------|---------------|-------------------------------------------------------------------|
 | `rubric`  | `str`          | required      | Natural-language description of what a passing reply looks like   |
-| `model`   | `str \| None`  | `None`        | pydantic-ai model ID; falls back to `[tool.llm_eval] model`       |
+| `model`   | `str \| None`  | `None`        | pydantic-ai model ID; falls back to `[tool.agent_eval] model`       |
 | `retries` | `int`          | `2`           | Number of retries on API failure before returning a FAIL verdict  |
 | `timeout` | `float`        | `30.0`        | Seconds before the judge call times out                           |
 
@@ -89,7 +89,7 @@ JudgeEvaluator(
 Implement the `Evaluator` protocol: an object with an async `evaluate` method.
 
 ```python
-from pytest_llm_eval.models import TurnContext, EvalResult
+from pytest_agent_eval.models import TurnContext, EvalResult
 
 class SentimentEvaluator:
     """Fail if the reply has negative sentiment."""
@@ -114,7 +114,7 @@ class SentimentEvaluator:
 Then use it like any built-in evaluator:
 
 ```python
-from pytest_llm_eval import Turn, Expect
+from pytest_agent_eval import Turn, Expect
 
 Turn(
     user="How was your experience?",

@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from pytest_llm_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
+from pytest_agent_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
 
 
 def _serialize_result(result: TranscriptResult) -> dict[str, Any]:
@@ -94,7 +94,7 @@ _XDIST_RESULT_KEY = "llm_eval_result"
 _XDIST_NAME_KEY = "llm_eval_name"
 
 
-class LLMEvalReportPlugin:
+class AgentEvalReportPlugin:
     """Pytest plugin that collects results and writes the report."""
 
     def __init__(self, config: pytest.Config) -> None:
@@ -157,7 +157,7 @@ class LLMEvalReportPlugin:
 
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         """Write the markdown report to disk if a path was configured."""
-        from pytest_llm_eval.config import load_config
+        from pytest_agent_eval.config import load_config
 
         cfg = load_config(self._config)
         if cfg.report_path and self._results:

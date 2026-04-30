@@ -1,11 +1,11 @@
 # Configuration
 
-All configuration lives under `[tool.llm_eval]` in `pyproject.toml`.
+All configuration lives under `[tool.agent_eval]` in `pyproject.toml`.
 
 ## Complete example
 
 ```toml
-[tool.llm_eval]
+[tool.agent_eval]
 model     = "openai:gpt-4o"
 threshold = 0.8
 runs      = 3
@@ -36,7 +36,7 @@ Format is `provider:model-name`, e.g.:
 
 The default pass fraction across runs. A test passes when `passed_runs / total_runs >= threshold`.
 
-Individual tests override this via `@pytest.mark.llm_eval(threshold=0.9)` or the YAML `threshold` field.
+Individual tests override this via `@pytest.mark.agent_eval(threshold=0.9)` or the YAML `threshold` field.
 
 ### `runs`
 
@@ -45,7 +45,7 @@ Individual tests override this via `@pytest.mark.llm_eval(threshold=0.9)` or the
 
 The default number of times each transcript is executed. Higher values reduce the impact of nondeterminism but increase cost.
 
-Individual tests override this via `@pytest.mark.llm_eval(runs=5)` or the YAML `runs` field.
+Individual tests override this via `@pytest.mark.agent_eval(runs=5)` or the YAML `runs` field.
 
 ### `retries`
 
@@ -73,10 +73,10 @@ Directories to search recursively for `*.yaml` evaluation transcripts. Paths are
 **Type:** `bool`
 **Default:** `false`
 
-When `true`, eval tests run without needing `--llm-eval-live` or `EVAL_LIVE=1`. Useful for local development but should remain `false` in shared/CI config.
+When `true`, eval tests run without needing `--agent-eval-live` or `EVAL_LIVE=1`. Useful for local development but should remain `false` in shared/CI config.
 
 ## Precedence
 
-Command-line flag `--llm-eval-live` > `EVAL_LIVE=1` env var > `live = true` in config > default (skip).
+Command-line flag `--agent-eval-live` > `EVAL_LIVE=1` env var > `live = true` in config > default (skip).
 
 Per-test `threshold`/`runs` in the mark or YAML always override the global config values.

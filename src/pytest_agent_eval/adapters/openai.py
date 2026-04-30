@@ -16,7 +16,7 @@ class OpenAIAdapter:
     Example:
         ```python
         from openai import AsyncOpenAI
-        from pytest_llm_eval.adapters.openai import OpenAIAdapter
+        from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
         @pytest.fixture
         def llm_eval_agent():

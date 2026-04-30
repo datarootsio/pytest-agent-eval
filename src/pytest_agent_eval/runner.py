@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Awaitable, Callable
 
-from pytest_llm_eval.evaluators.contains import ContainsEvaluator
-from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
-from pytest_llm_eval.models import (
+from pytest_agent_eval.evaluators.contains import ContainsEvaluator
+from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
+from pytest_agent_eval.models import (
     Expect,
     RunResult,
     Transcript,
@@ -63,7 +63,7 @@ async def _run_turn(
     evaluators = list(turn.expect.evaluators) + _build_yaml_evaluators(turn.expect)
 
     if turn.expect.judge is not None:
-        from pytest_llm_eval.evaluators.judge import JudgeEvaluator
+        from pytest_agent_eval.evaluators.judge import JudgeEvaluator
 
         resolved_judge_model = turn.expect.judge.model or judge_model or config_model
         evaluators.append(JudgeEvaluator(rubric=turn.expect.judge.rubric, model=resolved_judge_model))
@@ -126,7 +126,7 @@ async def run_transcript(
 
 
 class EvalSession:
-    """Fixture object provided by the llm_eval fixture.
+    """Fixture object provided by the agent_eval fixture.
 
     Args:
         threshold: Pass threshold for this session (overrides config).

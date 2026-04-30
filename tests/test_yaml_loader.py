@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pytest_llm_eval.yaml_loader import load_transcript
+from pytest_agent_eval.yaml_loader import load_transcript
 
 SAMPLE = Path(__file__).parent / "fixtures" / "sample_transcript.yaml"
 
@@ -36,7 +36,7 @@ def test_yaml_discovery_and_collection(pytester: pytest.Pytester):
             return agent
         """
     )
-    result = pytester.runpytest("--llm-eval-live", "--collect-only", "-q")
+    result = pytester.runpytest("--agent-eval-live", "--collect-only", "-q")
     result.stdout.fnmatch_lines(["*hello_test*"])
 
 
@@ -68,7 +68,7 @@ def test_yaml_item_passes_with_matching_agent(pytester: pytest.Pytester):
             return agent
         """
     )
-    result = pytester.runpytest("--llm-eval-live", "-v")
+    result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*booking_ok*PASSED*"])
     assert result.ret == 0
 
@@ -101,6 +101,6 @@ def test_yaml_item_fails_with_non_matching_agent(pytester: pytest.Pytester):
             return agent
         """
     )
-    result = pytester.runpytest("--llm-eval-live", "-v")
+    result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*fail_case*FAILED*"])
     assert result.ret != 0

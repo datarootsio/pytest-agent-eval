@@ -1,19 +1,19 @@
 # Getting Started
 
-This guide walks you through installing `pytest-llm-eval` and writing your first passing evaluation test.
+This guide walks you through installing `pytest-agent-eval` and writing your first passing evaluation test.
 
 ## Installation
 
 === "pip"
 
     ```bash
-    pip install pytest-llm-eval
+    pip install pytest-agent-eval
     ```
 
 === "uv"
 
     ```bash
-    uv add pytest-llm-eval
+    uv add pytest-agent-eval
     ```
 
 For framework-specific adapters, install the matching optional extra:
@@ -21,25 +21,25 @@ For framework-specific adapters, install the matching optional extra:
 === "pip"
 
     ```bash
-    pip install "pytest-llm-eval[langchain]"   # LangChain / LangGraph support
-    pip install "pytest-llm-eval[openai]"      # OpenAI SDK support
-    pip install "pytest-llm-eval[xdist]"       # parallel test execution
+    pip install "pytest-agent-eval[langchain]"   # LangChain / LangGraph support
+    pip install "pytest-agent-eval[openai]"      # OpenAI SDK support
+    pip install "pytest-agent-eval[xdist]"       # parallel test execution
     ```
 
 === "uv"
 
     ```bash
-    uv add "pytest-llm-eval[langchain]"
-    uv add "pytest-llm-eval[openai]"
-    uv add "pytest-llm-eval[xdist]"
+    uv add "pytest-agent-eval[langchain]"
+    uv add "pytest-agent-eval[openai]"
+    uv add "pytest-agent-eval[xdist]"
     ```
 
 ## Configure pyproject.toml
 
-Add a `[tool.llm_eval]` section to your `pyproject.toml`:
+Add a `[tool.agent_eval]` section to your `pyproject.toml`:
 
 ```toml
-[tool.llm_eval]
+[tool.agent_eval]
 model       = "openai:gpt-4o"   # default judge + agent-fallback model
 threshold   = 0.8
 runs        = 3
@@ -55,15 +55,15 @@ Create `tests/test_my_agent.py`:
 
 ```python
 import pytest
-from pytest_llm_eval import Turn, Expect, ContainsEvaluator
+from pytest_agent_eval import Turn, Expect, ContainsEvaluator
 
 async def my_agent(messages):
     """Your agent callable — receives OpenAI-style messages, returns (reply, tool_calls)."""
     return "Your booking is confirmed for tomorrow at 10am.", []
 
-@pytest.mark.llm_eval(threshold=0.8, runs=3)
-async def test_booking_confirmation(llm_eval):
-    result = await llm_eval.run(
+@pytest.mark.agent_eval(threshold=0.8, runs=3)
+async def test_booking_confirmation(agent_eval):
+    result = await agent_eval.run(
         agent=my_agent,
         turns=[
             Turn(
@@ -104,7 +104,7 @@ turns:
 Then register the YAML directory in `pyproject.toml`:
 
 ```toml
-[tool.llm_eval]
+[tool.agent_eval]
 yaml_dirs = ["tests/evals"]
 ```
 
@@ -128,7 +128,7 @@ By default, eval tests are **skipped** in CI to avoid unexpected API calls. Enab
 === "Flag"
 
     ```bash
-    pytest --llm-eval-live
+    pytest --agent-eval-live
     ```
 
 === "Environment"
@@ -152,13 +152,13 @@ For large eval suites, install the `xdist` extra and pass `-n` to run tests acro
 === "pip"
 
     ```bash
-    pip install "pytest-llm-eval[xdist]"
-    pytest --llm-eval-live -n auto --llm-eval-report=eval.md
+    pip install "pytest-agent-eval[xdist]"
+    pytest --agent-eval-live -n auto --agent-eval-report=eval.md
     ```
 
 === "uv"
 
     ```bash
-    uv add "pytest-llm-eval[xdist]"
-    uv run pytest --llm-eval-live -n auto --llm-eval-report=eval.md
+    uv add "pytest-agent-eval[xdist]"
+    uv run pytest --agent-eval-live -n auto --agent-eval-report=eval.md
     ```

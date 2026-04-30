@@ -24,7 +24,7 @@ class SmolagentsAdapter:
     Example:
         ```python
         from smolagents import ToolCallingAgent, InferenceClientModel
-        from pytest_llm_eval.adapters.smolagents import SmolagentsAdapter
+        from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
 
         model = InferenceClientModel(model_id="meta-llama/Llama-3.3-70B-Instruct")
         agent = ToolCallingAgent(tools=[...], model=model)

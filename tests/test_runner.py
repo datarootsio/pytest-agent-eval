@@ -1,14 +1,14 @@
 import pytest
 
-from pytest_llm_eval.evaluators.contains import ContainsEvaluator
-from pytest_llm_eval.evaluators.tool_call import ToolCallEvaluator
-from pytest_llm_eval.models import (
+from pytest_agent_eval.evaluators.contains import ContainsEvaluator
+from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
+from pytest_agent_eval.models import (
     Expect,
     Transcript,
     TranscriptResult,
     Turn,
 )
-from pytest_llm_eval.runner import EvalSession, run_transcript
+from pytest_agent_eval.runner import EvalSession, run_transcript
 
 
 async def _echo_agent(history: list[dict]) -> tuple[str, list[str]]:

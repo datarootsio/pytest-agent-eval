@@ -1,6 +1,6 @@
 # Reporting
 
-`pytest-llm-eval` adds score information to pytest's standard terminal output and can optionally write a full markdown report.
+`pytest-agent-eval` adds score information to pytest's standard terminal output and can optionally write a full markdown report.
 
 ## Verbosity levels
 
@@ -42,12 +42,12 @@ tests/test_booking.py::test_booking_flow PASSED
       All tool call checks passed
 ```
 
-## The `--llm-eval-report` flag
+## The `--agent-eval-report` flag
 
 Pass a file path to write a full markdown report after the session:
 
 ```bash
-pytest --llm-eval-live --llm-eval-report=eval-report.md
+pytest --agent-eval-live --agent-eval-report=eval-report.md
 ```
 
 ## Markdown report format
@@ -62,7 +62,7 @@ The details section shows every run with turn-level evaluator reasoning.
 You can set a default report path in `pyproject.toml` so you do not need to pass the flag every time:
 
 ```toml
-[tool.llm_eval]
+[tool.agent_eval]
 report_path = "eval-report.md"
 ```
 

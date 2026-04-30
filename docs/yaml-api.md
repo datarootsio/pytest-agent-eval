@@ -6,7 +6,7 @@ YAML transcripts let you define evaluation tests without writing Python. They ar
 
 ```toml
 # pyproject.toml
-[tool.llm_eval]
+[tool.agent_eval]
 yaml_dirs = ["tests/evals"]
 ```
 
@@ -53,12 +53,12 @@ turns:
       tool_calls_exclude:
         - cancel_booking
 
-      # LLM-as-judge rubric (requires a model in [tool.llm_eval])
+      # LLM-as-judge rubric (requires a model in [tool.agent_eval])
       judge:
         rubric: >
           The reply must confirm a booking with a date, time, and
           reference number. The tone should be friendly and professional.
-        model: "openai:gpt-4o"   # optional — overrides [tool.llm_eval] model
+        model: "openai:gpt-4o"   # optional — overrides [tool.agent_eval] model
 
   - user: "Can you email me the confirmation?"
     expect:
@@ -74,8 +74,8 @@ turns:
 | Field       | Type         | Required | Default                      | Description                                   |
 |-------------|--------------|----------|------------------------------|-----------------------------------------------|
 | `id`        | `str`        | yes      | —                            | Unique test identifier, used as the test name |
-| `threshold` | `float`      | no       | `[tool.llm_eval]` threshold  | Pass fraction required                        |
-| `runs`      | `int`        | no       | `[tool.llm_eval]` runs       | Number of executions                          |
+| `threshold` | `float`      | no       | `[tool.agent_eval]` threshold  | Pass fraction required                        |
+| `runs`      | `int`        | no       | `[tool.agent_eval]` runs       | Number of executions                          |
 | `tags`      | `list[str]`  | no       | `[]`                         | Quality-gate tags for filtering               |
 | `turns`     | `list[Turn]` | yes      | —                            | Ordered list of turns                         |
 

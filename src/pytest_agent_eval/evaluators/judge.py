@@ -9,7 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from pydantic_ai import Agent
 
-from pytest_llm_eval.models import EvalResult, TurnContext
+from pytest_agent_eval.models import EvalResult, TurnContext
 
 _SYSTEM_PROMPT = (
     "You are a strict rubric evaluator for an LLM agent. "
@@ -39,7 +39,7 @@ class JudgeEvaluator:
     Args:
         rubric: Natural language rubric describing what a passing reply looks like.
         model: pydantic-ai model string (e.g. ``"openai:gpt-4o"``). Falls back to
-            ``[tool.llm_eval] model`` in pyproject.toml if None.
+            ``[tool.agent_eval] model`` in pyproject.toml if None.
         retries: Number of retry attempts on API failure before returning a FAIL verdict.
         timeout: Seconds before the judge call times out.
 
@@ -60,7 +60,7 @@ class JudgeEvaluator:
 
     def _get_agent(self) -> "Agent[None, _JudgeOutput]":
         if self._agent is None:
-            from pytest_llm_eval.config import load_config_from_toml
+            from pytest_agent_eval.config import load_config_from_toml
 
             model_id = self.model or load_config_from_toml(Path("pyproject.toml")).model
             self._agent = Agent(model_id, output_type=_JudgeOutput, system_prompt=_SYSTEM_PROMPT)

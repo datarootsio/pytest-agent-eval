@@ -16,7 +16,7 @@ class LangChainAdapter:
 
     Example:
         ```python
-        from pytest_llm_eval.adapters.langchain import LangChainAdapter
+        from pytest_agent_eval.adapters.langchain import LangChainAdapter
 
         @pytest.fixture
         def llm_eval_agent():

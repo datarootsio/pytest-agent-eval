@@ -2,15 +2,15 @@
 
 The Python API lets you write LLM evaluation tests as ordinary async pytest functions.
 
-## The `@pytest.mark.llm_eval` marker
+## The `@pytest.mark.agent_eval` marker
 
 Decorate any async test function to mark it as an LLM evaluation:
 
 ```python
 import pytest
 
-@pytest.mark.llm_eval(threshold=0.8, runs=3)
-async def test_my_agent(llm_eval):
+@pytest.mark.agent_eval(threshold=0.8, runs=3)
+async def test_my_agent(agent_eval):
     ...
 ```
 
@@ -18,20 +18,20 @@ async def test_my_agent(llm_eval):
 
 | Parameter   | Type    | Default                   | Description                                 |
 |-------------|---------|---------------------------|---------------------------------------------|
-| `threshold` | `float` | from `[tool.llm_eval]`    | Fraction of runs that must pass (0.0–1.0)   |
-| `runs`      | `int`   | from `[tool.llm_eval]`    | Number of times to execute the transcript   |
+| `threshold` | `float` | from `[tool.agent_eval]`    | Fraction of runs that must pass (0.0–1.0)   |
+| `runs`      | `int`   | from `[tool.agent_eval]`    | Number of times to execute the transcript   |
 
-Without `--llm-eval-live` or `EVAL_LIVE=1`, marked tests are automatically skipped.
+Without `--agent-eval-live` or `EVAL_LIVE=1`, marked tests are automatically skipped.
 
-## The `llm_eval` fixture
+## The `agent_eval` fixture
 
-The `llm_eval` fixture is injected by the plugin. Call `.run()` to execute your transcript:
+The `agent_eval` fixture is injected by the plugin. Call `.run()` to execute your transcript:
 
 ```python
-result = await llm_eval.run(agent=my_agent, turns=[...])
+result = await agent_eval.run(agent=my_agent, turns=[...])
 ```
 
-**`llm_eval.run()` parameters:**
+**`agent_eval.run()` parameters:**
 
 | Parameter   | Type            | Description                              |
 |-------------|-----------------|------------------------------------------|
@@ -45,7 +45,7 @@ Returns a `TranscriptResult`.
 ## `Turn`
 
 ```python
-from pytest_llm_eval import Turn, Expect
+from pytest_agent_eval import Turn, Expect
 
 turn = Turn(
     user="Book me a slot for tomorrow.",
@@ -64,7 +64,7 @@ turn = Turn(
 ## `Expect`
 
 ```python
-from pytest_llm_eval import Expect
+from pytest_agent_eval import Expect
 
 expect = Expect(
     evaluators=[...],               # programmatic evaluators
@@ -89,7 +89,7 @@ expect = Expect(
 ### `ContainsEvaluator`
 
 ```python
-from pytest_llm_eval import ContainsEvaluator
+from pytest_agent_eval import ContainsEvaluator
 
 ContainsEvaluator(any_of=["confirmed", "booked"])
 ContainsEvaluator(all_of=["booking", "reference number"])
@@ -98,7 +98,7 @@ ContainsEvaluator(all_of=["booking", "reference number"])
 ### `ToolCallEvaluator`
 
 ```python
-from pytest_llm_eval import ToolCallEvaluator
+from pytest_agent_eval import ToolCallEvaluator
 
 ToolCallEvaluator(include=["create_booking"], exclude=["cancel_booking"])
 ```
@@ -106,18 +106,18 @@ ToolCallEvaluator(include=["create_booking"], exclude=["cancel_booking"])
 ### `JudgeEvaluator`
 
 ```python
-from pytest_llm_eval import JudgeEvaluator
+from pytest_agent_eval import JudgeEvaluator
 
 JudgeEvaluator(
     rubric="The reply must confirm a booking with a date and reference number.",
-    model="openai:gpt-4o",   # optional — falls back to [tool.llm_eval] model
+    model="openai:gpt-4o",   # optional — falls back to [tool.agent_eval] model
 )
 ```
 
 ## `TranscriptResult` and `assert_threshold()`
 
 ```python
-result = await llm_eval.run(agent=my_agent, turns=[...])
+result = await agent_eval.run(agent=my_agent, turns=[...])
 
 # Manual inspection
 print(result.score)      # e.g. 0.67
@@ -133,7 +133,7 @@ result.assert_threshold()
 
 ```python
 import pytest
-from pytest_llm_eval import (
+from pytest_agent_eval import (
     Turn, Expect,
     ContainsEvaluator, ToolCallEvaluator, JudgeEvaluator,
 )
@@ -142,9 +142,9 @@ async def booking_agent(messages):
     # Your real agent implementation here
     return "Booking confirmed! Reference: BK-1234 for tomorrow at 10am."
 
-@pytest.mark.llm_eval(threshold=0.8, runs=3)
-async def test_full_booking_flow(llm_eval):
-    result = await llm_eval.run(
+@pytest.mark.agent_eval(threshold=0.8, runs=3)
+async def test_full_booking_flow(agent_eval):
+    result = await agent_eval.run(
         agent=booking_agent,
         turns=[
             Turn(

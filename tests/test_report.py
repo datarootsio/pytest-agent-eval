@@ -4,8 +4,13 @@ from typing import Any
 
 import pytest
 
-from pytest_llm_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
-from pytest_llm_eval.report import LLMEvalReportPlugin, _deserialize_result, _serialize_result, build_markdown_report
+from pytest_agent_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
+from pytest_agent_eval.report import (
+    AgentEvalReportPlugin,
+    _deserialize_result,
+    _serialize_result,
+    build_markdown_report,
+)
 
 
 def _make_full_result() -> TranscriptResult:
@@ -109,7 +114,7 @@ def test_report_written_to_file_with_flag(pytester: pytest.Pytester, tmp_path: P
         """
     )
     report_path = tmp_path / "report.md"
-    pytester.runpytest("--llm-eval-live", f"--llm-eval-report={report_path}")
+    pytester.runpytest("--agent-eval-live", f"--agent-eval-report={report_path}")
     assert report_path.exists()
     content = report_path.read_text()
     assert "simple_test" in content
@@ -131,7 +136,7 @@ def test_verbose_output_shows_run_details(pytester: pytest.Pytester):
             return agent
         """
     )
-    result = pytester.runpytest("--llm-eval-live", "-v")
+    result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*verbose_case*"])
 
 
@@ -145,31 +150,31 @@ def _make_mock_config(*, has_workerinput: bool = False, dist: str = "no") -> Any
 
 def test_is_xdist_worker_when_workerinput_present():
     cfg = _make_mock_config(has_workerinput=True, dist="load")
-    plugin = LLMEvalReportPlugin(cfg)
+    plugin = AgentEvalReportPlugin(cfg)
     assert plugin._is_xdist_worker() is True
 
 
 def test_is_not_xdist_worker_normally():
     cfg = _make_mock_config()
-    plugin = LLMEvalReportPlugin(cfg)
+    plugin = AgentEvalReportPlugin(cfg)
     assert plugin._is_xdist_worker() is False
 
 
 def test_is_xdist_controller_when_dist_active_and_not_worker():
     cfg = _make_mock_config(dist="load")
-    plugin = LLMEvalReportPlugin(cfg)
+    plugin = AgentEvalReportPlugin(cfg)
     assert plugin._is_xdist_controller() is True
 
 
 def test_is_not_xdist_controller_when_dist_no():
     cfg = _make_mock_config(dist="no")
-    plugin = LLMEvalReportPlugin(cfg)
+    plugin = AgentEvalReportPlugin(cfg)
     assert plugin._is_xdist_controller() is False
 
 
 def test_logreport_collects_result_on_controller():
     cfg = _make_mock_config(dist="load")
-    plugin = LLMEvalReportPlugin(cfg)
+    plugin = AgentEvalReportPlugin(cfg)
     result = _make_full_result()
 
     report = types.SimpleNamespace(
@@ -190,7 +195,7 @@ def test_logreport_collects_result_on_controller():
 
 def test_logreport_ignores_non_call_phases():
     cfg = _make_mock_config(dist="load")
-    plugin = LLMEvalReportPlugin(cfg)
+    plugin = AgentEvalReportPlugin(cfg)
 
     for phase in ("setup", "teardown"):
         report = types.SimpleNamespace(when=phase, nodeid="foo::bar", user_properties=[])
@@ -203,13 +208,13 @@ def test_xdist_active_returns_false_when_no_dist_option():
     cfg = types.SimpleNamespace()
     # config.option does not have a 'dist' attribute
     cfg.option = types.SimpleNamespace()
-    plugin = LLMEvalReportPlugin(cfg)
+    plugin = AgentEvalReportPlugin(cfg)
     assert plugin._xdist_active() is False
 
 
 def test_logreport_ignores_reports_without_llm_eval_result():
     cfg = _make_mock_config(dist="load")
-    plugin = LLMEvalReportPlugin(cfg)
+    plugin = AgentEvalReportPlugin(cfg)
     report = types.SimpleNamespace(
         when="call",
         nodeid="tests/foo.yaml::bar",
@@ -241,7 +246,7 @@ def test_xdist_report_collects_all_workers(pytester: pytest.Pytester, tmp_path: 
         """
     )
     report_path = tmp_path / "xdist_report.md"
-    result = pytester.runpytest("--llm-eval-live", f"--llm-eval-report={report_path}", "-n2")
+    result = pytester.runpytest("--agent-eval-live", f"--agent-eval-report={report_path}", "-n2")
     result.assert_outcomes(passed=2)
     assert report_path.exists()
     content = report_path.read_text()

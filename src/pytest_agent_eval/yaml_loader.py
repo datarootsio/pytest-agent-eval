@@ -9,9 +9,9 @@ from typing import Any, Generator
 import pytest
 import yaml
 
-from pytest_llm_eval.config import load_config
-from pytest_llm_eval.models import Expect, JudgeConfig, Transcript, Turn
-from pytest_llm_eval.runner import run_transcript
+from pytest_agent_eval.config import load_config
+from pytest_agent_eval.models import Expect, JudgeConfig, Transcript, Turn
+from pytest_agent_eval.runner import run_transcript
 
 
 def _parse_turn(raw_turn: dict[str, Any]) -> Turn:
@@ -66,33 +66,33 @@ def pytest_collect_file(parent: pytest.Collector, file_path: Path) -> pytest.Col
     for yaml_dir in yaml_dirs:
         try:
             file_path.relative_to(yaml_dir.resolve())
-            return LLMEvalFile.from_parent(parent, path=file_path)
+            return AgentEvalFile.from_parent(parent, path=file_path)
         except ValueError:
             continue
     return None
 
 
-class LLMEvalFile(pytest.File):
+class AgentEvalFile(pytest.File):
     """Pytest collector for a single YAML transcript file."""
 
     def collect(self) -> Generator[pytest.Item, None, None]:
-        """Yield a single LLMEvalItem for this YAML transcript."""
+        """Yield a single AgentEvalItem for this YAML transcript."""
         transcript = load_transcript(self.path)
-        yield LLMEvalItem.from_parent(self, name=transcript.id, transcript=transcript)
+        yield AgentEvalItem.from_parent(self, name=transcript.id, transcript=transcript)
 
 
-class LLMEvalItem(pytest.Item):
+class AgentEvalItem(pytest.Item):
     """Pytest item representing one YAML transcript test."""
 
     # Tell pytest not to inspect a function for argnames — we wire fixtures manually.
     nofuncargs = True
 
     def __init__(self, *, transcript: Transcript, **kwargs: Any) -> None:
-        """Wire transcript fixtures and the llm_eval marker onto the pytest item."""
+        """Wire transcript fixtures and the agent_eval marker onto the pytest item."""
         super().__init__(**kwargs)
         self.transcript = transcript
         self.add_marker(
-            pytest.mark.llm_eval(
+            pytest.mark.agent_eval(
                 threshold=transcript.threshold,
                 runs=transcript.runs,
             )
@@ -141,4 +141,4 @@ class LLMEvalItem(pytest.Item):
 
     def reportinfo(self) -> tuple[Any, int | None, str]:
         """Provide the location string pytest shows for this item."""
-        return self.fspath, None, f"llm_eval: {self.transcript.id}"
+        return self.fspath, None, f"agent_eval: {self.transcript.id}"

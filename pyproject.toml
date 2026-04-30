@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pytest-llm-eval"
+name = "pytest-agent-eval"
 version = "0.1.0"
 description = "A pytest plugin for LLM evaluation tests with threshold-based pass/fail"
 readme = "README.md"
@@ -32,12 +32,12 @@ smolagents = ["smolagents>=1.0"]
 xdist = ["pytest-xdist>=3.0"]
 
 [project.entry-points.pytest11]
-llm_eval = "pytest_llm_eval.plugin"
+agent_eval = "pytest_agent_eval.plugin"
 
 [project.urls]
-Homepage = "https://github.com/datarootsio/pytest-llm-eval"
-Documentation = "https://datarootsio.github.io/pytest-llm-eval"
-Repository = "https://github.com/datarootsio/pytest-llm-eval"
+Homepage = "https://github.com/datarootsio/pytest-agent-eval"
+Documentation = "https://datarootsio.github.io/pytest-agent-eval"
+Repository = "https://github.com/datarootsio/pytest-agent-eval"
 
 [dependency-groups]
 dev = [
@@ -53,7 +53,7 @@ docs = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pytest_llm_eval"]
+packages = ["src/pytest_agent_eval"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

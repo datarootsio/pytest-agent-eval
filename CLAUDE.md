@@ -1,4 +1,4 @@
-# pytest-llm-eval — Claude Code Guidelines
+# pytest-agent-eval — Claude Code Guidelines
 
 ## Python Style
 

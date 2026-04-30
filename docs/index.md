@@ -1,37 +1,37 @@
-# pytest-llm-eval
+# pytest-agent-eval
 
-[![PyPI version](https://img.shields.io/pypi/v/pytest-llm-eval.svg)](https://pypi.org/project/pytest-llm-eval/)
-[![Python versions](https://img.shields.io/pypi/pyversions/pytest-llm-eval.svg)](https://pypi.org/project/pytest-llm-eval/)
-[![License](https://img.shields.io/pypi/l/pytest-llm-eval.svg)](https://github.com/datarootsio/pytest-llm-eval/blob/main/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/pytest-agent-eval.svg)](https://pypi.org/project/pytest-agent-eval/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pytest-agent-eval.svg)](https://pypi.org/project/pytest-agent-eval/)
+[![License](https://img.shields.io/pypi/l/pytest-agent-eval.svg)](https://github.com/datarootsio/pytest-agent-eval/blob/main/LICENSE)
 [![pytest plugin](https://img.shields.io/badge/pytest-plugin-0A9EDC?logo=pytest&logoColor=white)](https://docs.pytest.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com/)
 
 **LLM evaluation tests that actually mean something.**
 
-`pytest-llm-eval` is a pytest plugin for testing LLM agents and applications with threshold-based pass/fail scoring, multi-turn YAML transcripts, and an LLM-as-judge rubric system — without breaking your CI bill.
+`pytest-agent-eval` is a pytest plugin for testing LLM agents and applications with threshold-based pass/fail scoring, multi-turn YAML transcripts, and an LLM-as-judge rubric system — without breaking your CI bill.
 
 ## Highlights
 
 - 🎯 **Threshold-based pass/fail** — run each test N times, pass when ≥ threshold% succeed
 - 📝 **YAML or Python transcripts** — pick the authoring style your team prefers
 - 🔍 **YAML auto-discovery** — drop `*.yaml` files in any configured directory and they become pytest tests automatically
-- 🛡 **CI-safe by default** — eval tests skip unless `--llm-eval-live` or `EVAL_LIVE=1`
+- 🛡 **CI-safe by default** — eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1`
 - ⚡ **Parallel-ready** — `pytest -n auto` (via [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)) just works
-- 📄 **Markdown reports** — full per-run trace with `--llm-eval-report=eval.md`
+- 📄 **Markdown reports** — full per-run trace with `--agent-eval-report=eval.md`
 
 ## Install
 
 === "pip"
 
     ```bash
-    pip install pytest-llm-eval
+    pip install pytest-agent-eval
     ```
 
 === "uv"
 
     ```bash
-    uv add pytest-llm-eval
+    uv add pytest-agent-eval
     ```
 
 For framework-specific adapters, install one of the optional extras shown in the [Frameworks](#supported-frameworks) section.
@@ -46,7 +46,7 @@ For framework-specific adapters, install one of the optional extras shown in the
     Substring / pattern assertions over the agent's reply. Cheap, fast, deterministic.
 
     ```python
-    from pytest_llm_eval import ContainsEvaluator
+    from pytest_agent_eval import ContainsEvaluator
 
     ContainsEvaluator(any_of=["confirmed", "booked"])
     ContainsEvaluator(all_of=["reference", "tomorrow"])
@@ -57,7 +57,7 @@ For framework-specific adapters, install one of the optional extras shown in the
     Assert that the agent invoked the right tools — optionally in a specific order, with disallowed tools.
 
     ```python
-    from pytest_llm_eval import ToolCallEvaluator
+    from pytest_agent_eval import ToolCallEvaluator
 
     ToolCallEvaluator(
         must_include=["authenticate", "fetch_availability", "create_booking"],
@@ -71,20 +71,20 @@ For framework-specific adapters, install one of the optional extras shown in the
     Open-ended quality checks. The judge (a separate model) returns a verdict + reasoning against your rubric.
 
     ```python
-    from pytest_llm_eval import JudgeEvaluator
+    from pytest_agent_eval import JudgeEvaluator
 
     JudgeEvaluator(
         rubric=(
             "The reply must confirm the booking, include a reference "
             "number, and have a friendly professional tone."
         ),
-        model="openai:gpt-4o",   # optional override; falls back to [tool.llm_eval] judge_model
+        model="openai:gpt-4o",   # optional override; falls back to [tool.agent_eval] judge_model
     )
     ```
 
 ## Supported frameworks
 
-`pytest-llm-eval` ships first-class adapters for the major Python agent frameworks. Each is an optional extra so you only install what you use.
+`pytest-agent-eval` ships first-class adapters for the major Python agent frameworks. Each is an optional extra so you only install what you use.
 
 === "pydantic-ai"
 
@@ -93,18 +93,18 @@ For framework-specific adapters, install one of the optional extras shown in the
     === "pip"
 
         ```bash
-        pip install pytest-llm-eval
+        pip install pytest-agent-eval
         ```
 
     === "uv"
 
         ```bash
-        uv add pytest-llm-eval
+        uv add pytest-agent-eval
         ```
 
     ```python
     from pydantic_ai import Agent
-    from pytest_llm_eval.adapters.pydantic_ai import PydanticAIAdapter
+    from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
 
     my_agent = Agent("openai:gpt-4o", system_prompt="You are a helpful assistant.")
 
@@ -118,17 +118,17 @@ For framework-specific adapters, install one of the optional extras shown in the
     === "pip"
 
         ```bash
-        pip install "pytest-llm-eval[langchain]"
+        pip install "pytest-agent-eval[langchain]"
         ```
 
     === "uv"
 
         ```bash
-        uv add "pytest-llm-eval[langchain]"
+        uv add "pytest-agent-eval[langchain]"
         ```
 
     ```python
-    from pytest_llm_eval.adapters.langchain import LangChainAdapter
+    from pytest_agent_eval.adapters.langchain import LangChainAdapter
 
     @pytest.fixture
     def llm_eval_agent():
@@ -140,18 +140,18 @@ For framework-specific adapters, install one of the optional extras shown in the
     === "pip"
 
         ```bash
-        pip install "pytest-llm-eval[openai]"
+        pip install "pytest-agent-eval[openai]"
         ```
 
     === "uv"
 
         ```bash
-        uv add "pytest-llm-eval[openai]"
+        uv add "pytest-agent-eval[openai]"
         ```
 
     ```python
     from openai import AsyncOpenAI
-    from pytest_llm_eval.adapters.openai import OpenAIAdapter
+    from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
     @pytest.fixture
     def llm_eval_agent():
@@ -163,18 +163,18 @@ For framework-specific adapters, install one of the optional extras shown in the
     === "pip"
 
         ```bash
-        pip install "pytest-llm-eval[smolagents]"
+        pip install "pytest-agent-eval[smolagents]"
         ```
 
     === "uv"
 
         ```bash
-        uv add "pytest-llm-eval[smolagents]"
+        uv add "pytest-agent-eval[smolagents]"
         ```
 
     ```python
     from smolagents import ToolCallingAgent, InferenceClientModel
-    from pytest_llm_eval.adapters.smolagents import SmolagentsAdapter
+    from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
 
     agent = ToolCallingAgent(tools=[...], model=InferenceClientModel(model_id="..."))
 
@@ -199,11 +199,11 @@ For framework-specific adapters, install one of the optional extras shown in the
 ## YAML auto-discovery
 
 !!! info "Zero-boilerplate evals"
-    Point `pytest-llm-eval` at any directory of `*.yaml` files and every transcript becomes a pytest test — no Python wrapper required. Add files, run `pytest`, see results.
+    Point `pytest-agent-eval` at any directory of `*.yaml` files and every transcript becomes a pytest test — no Python wrapper required. Add files, run `pytest`, see results.
 
 ```toml
 # pyproject.toml
-[tool.llm_eval]
+[tool.agent_eval]
 yaml_dirs = ["tests/evals"]
 ```
 
@@ -227,11 +227,11 @@ Provide one shared `llm_eval_agent` fixture (in `conftest.py`) and the loader ha
 
 ```python
 import pytest
-from pytest_llm_eval import Turn, Expect, ContainsEvaluator, ToolCallEvaluator, JudgeEvaluator
+from pytest_agent_eval import Turn, Expect, ContainsEvaluator, ToolCallEvaluator, JudgeEvaluator
 
-@pytest.mark.llm_eval(threshold=0.8, runs=3)
-async def test_booking(llm_eval):
-    result = await llm_eval.run(
+@pytest.mark.agent_eval(threshold=0.8, runs=3)
+async def test_booking(agent_eval):
+    result = await agent_eval.run(
         agent=my_agent,
         turns=[
             Turn(
@@ -248,7 +248,7 @@ async def test_booking(llm_eval):
 ```
 
 ```bash
-pytest --llm-eval-live
+pytest --agent-eval-live
 ```
 
 See [Getting Started](getting-started.md) for a full walkthrough.

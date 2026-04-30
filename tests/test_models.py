@@ -1,6 +1,6 @@
 import pytest
 
-from pytest_llm_eval.models import (
+from pytest_agent_eval.models import (
     EvalResult,
     Expect,
     JudgeConfig,
