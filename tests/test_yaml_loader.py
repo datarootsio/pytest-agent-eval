@@ -19,6 +19,28 @@ def test_load_transcript_parses_fields():
     assert t.turns[0].expect.tool_calls_include == ["book_slot"]
 
 
+def test_audio_field_defaults_to_none(tmp_path: Path):
+    yaml_path = tmp_path / "no_audio.yaml"
+    yaml_path.write_text("id: t\nturns:\n  - user: hi\n")
+    transcript = load_transcript(yaml_path)
+    assert transcript.turns[0].audio is None
+
+
+def test_audio_field_resolves_relative_to_yaml_dir(tmp_path: Path):
+    yaml_path = tmp_path / "with_audio.yaml"
+    yaml_path.write_text("id: t\nturns:\n  - user: hi\n    audio: turn1.wav\n")
+    transcript = load_transcript(yaml_path)
+    assert transcript.turns[0].audio == tmp_path / "turn1.wav"
+
+
+def test_audio_field_keeps_absolute_path(tmp_path: Path):
+    abs_audio = tmp_path / "elsewhere" / "x.wav"
+    yaml_path = tmp_path / "abs.yaml"
+    yaml_path.write_text(f"id: t\nturns:\n  - user: hi\n    audio: {abs_audio}\n")
+    transcript = load_transcript(yaml_path)
+    assert transcript.turns[0].audio == abs_audio
+
+
 def test_yaml_discovery_and_collection(pytester: pytest.Pytester):
     pytester.makeini("[pytest]\nasyncio_mode = auto\n")
     pytester.makefile(

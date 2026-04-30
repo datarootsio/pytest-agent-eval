@@ -14,7 +14,7 @@ from pytest_agent_eval.models import Expect, JudgeConfig, Transcript, Turn
 from pytest_agent_eval.runner import run_transcript
 
 
-def _parse_turn(raw_turn: dict[str, Any]) -> Turn:
+def _parse_turn(raw_turn: dict[str, Any], yaml_dir: Path) -> Turn:
     raw_expect = raw_turn.get("expect", {})
     judge_cfg: JudgeConfig | None = None
     if "judge" in raw_expect:
@@ -27,7 +27,12 @@ def _parse_turn(raw_turn: dict[str, Any]) -> Turn:
         reply_contains_any=raw_expect.get("reply_contains_any", []),
         reply_contains_all=raw_expect.get("reply_contains_all", []),
     )
-    return Turn(user=raw_turn["user"], expect=expect)
+    audio_raw = raw_turn.get("audio")
+    audio: Path | None = None
+    if audio_raw is not None:
+        audio_path = Path(audio_raw)
+        audio = audio_path if audio_path.is_absolute() else (yaml_dir / audio_path)
+    return Turn(user=raw_turn["user"], audio=audio, expect=expect)
 
 
 def load_transcript(path: Path) -> Transcript:
@@ -45,9 +50,10 @@ def load_transcript(path: Path) -> Transcript:
     with open(path) as f:
         data: dict[str, Any] = yaml.safe_load(f)
 
+    yaml_dir = path.parent
     return Transcript(
         id=data["id"],
-        turns=[_parse_turn(t) for t in data.get("turns", [])],
+        turns=[_parse_turn(t, yaml_dir) for t in data.get("turns", [])],
         threshold=data.get("threshold", 0.8),
         runs=data.get("runs", 1),
         tags=data.get("tags", []),

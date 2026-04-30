@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
+
+
+_PathLike = str | Path
 
 
 @dataclass
@@ -123,11 +127,14 @@ class Turn:
     """A single turn in a transcript.
 
     Args:
-        user: The user message.
+        user: The user message (also used as the transcript when ``audio`` is set).
+        audio: Optional path to a WAV file for voice adapters. Resolved relative to
+            the YAML file's directory when loaded from YAML.
         expect: Expectations for the agent's reply.
     """
 
     user: str
+    audio: _PathLike | None = None
     expect: Expect = field(default_factory=Expect)
 
 
