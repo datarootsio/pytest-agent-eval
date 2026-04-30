@@ -16,6 +16,7 @@
 - 🎯 **Threshold-based pass/fail** — run each test N times, pass when ≥ threshold% succeed
 - 📝 **YAML or Python transcripts** — pick the authoring style your team prefers
 - 🔍 **YAML auto-discovery** — drop `*.yaml` files in any configured directory and they become pytest tests automatically
+- 🎙 **Voice agents (LiveKit)** — drive a real `AgentSession` with a WAV per turn; same evaluator surface as text agents
 - 🛡 **CI-safe by default** — eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1`
 - ⚡ **Parallel-ready** — `pytest -n auto` (via [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)) just works
 - 📄 **Markdown reports** — full per-run trace with `--agent-eval-report=eval.md`
@@ -182,6 +183,45 @@ For framework-specific adapters, install one of the optional extras shown in the
     def llm_eval_agent():
         return SmolagentsAdapter(agent)
     ```
+
+=== "LiveKit (voice)"
+
+    === "pip"
+
+        ```bash
+        pip install "pytest-agent-eval[livekit]"
+        ```
+
+    === "uv"
+
+        ```bash
+        uv add "pytest-agent-eval[livekit]"
+        ```
+
+    Each turn declares an `audio: turn.wav` path; the adapter streams it through a fresh `AgentSession` and captures tool calls + transcript on the same evaluator surface as text agents.
+
+    ```python
+    from livekit.agents.voice import Agent, AgentSession
+    from livekit.plugins import openai
+    from pytest_agent_eval.adapters.livekit import LiveKitAdapter
+
+    def make_session():
+        session = AgentSession(llm=openai.realtime.RealtimeModel())
+        agent = Agent(instructions="You are a booking assistant.", tools=[...])
+        return session, agent
+
+    @pytest.fixture
+    def llm_eval_agent():
+        return LiveKitAdapter(make_session)
+    ```
+
+    Generate WAV fixtures from your YAML transcripts (hash-cached, idempotent):
+
+    ```bash
+    python -m pytest_agent_eval.synthesize_audio
+    ```
+
+    See the [LiveKit adapter docs](adapters.md#livekit-voice) for full options.
 
 === "Custom"
 

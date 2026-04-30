@@ -14,6 +14,7 @@
 - 🎯 **Threshold-based pass/fail** — run each test N times, pass when ≥ threshold% succeed
 - 📝 **YAML or Python transcripts** — pick the authoring style your team prefers
 - 🔍 **YAML auto-discovery** — drop `*.yaml` files in any configured directory and they become pytest tests automatically
+- 🎙 **Voice agents (LiveKit)** — drive a real `AgentSession` with a WAV per turn; same evaluator surface as text agents
 - 🛡 **CI-safe by default** — eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1`
 - ⚡ **Parallel-ready** — `pytest -n auto` (via [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)) just works
 - 📄 **Markdown reports** — full per-run trace with `--agent-eval-report=eval.md`
@@ -163,7 +164,48 @@ turns:
 
 Each turn's full conversation history is built up as the test runs — your agent receives all prior `(user, assistant)` pairs as context, the same way it would in production. Failures point at the exact turn that broke, not just "the test failed."
 
-> **Voice agents** are supported via the `[livekit]` extra — see [Voice testing](docs/adapters.md#livekit-voice). Each turn declares an `audio: turn.wav` path; the adapter streams it through a real LiveKit `AgentSession` and asserts on the same surface (tool calls, reply, judge rubric).
+## Voice agents (LiveKit)
+
+The `[livekit]` extra adds a `LiveKitAdapter` that drives a real LiveKit `AgentSession` from a WAV per turn. Every turn declares an `audio:` path — the adapter streams it at real-time pace, captures `function_tools_executed` and `conversation_item_added` events, and returns `(reply, tool_calls)` to the same evaluators you already use for text agents:
+
+```yaml
+# tests/evals/booking_voice.yaml
+id: booking_voice
+turns:
+  - user: "Book me a slot tomorrow at 10am."
+    audio: booking_t1.wav            # resolved relative to this YAML's directory
+    expect:
+      tool_calls_include: [create_booking]
+      reply_contains_any: [confirmed, booked]
+```
+
+```python
+# tests/conftest.py
+from livekit.agents.voice import Agent, AgentSession
+from livekit.plugins import openai
+from pytest_agent_eval.adapters.livekit import LiveKitAdapter
+
+def make_session():
+    session = AgentSession(llm=openai.realtime.RealtimeModel())
+    agent = Agent(instructions="You are a booking assistant.", tools=[...])
+    return session, agent
+
+@pytest.fixture
+def llm_eval_agent():
+    return LiveKitAdapter(make_session)
+```
+
+A bundled CLI generates the WAVs from each turn's `user:` text via OpenAI Realtime — hash-cached so unchanged transcripts skip re-synthesis, and idempotent enough for CI prebuilds:
+
+```bash
+python -m pytest_agent_eval.synthesize_audio                    # walks [tool.agent_eval].yaml_dirs
+python -m pytest_agent_eval.synthesize_audio tests/evals/      # explicit dir
+python -m pytest_agent_eval.synthesize_audio --force            # ignore cache
+```
+
+The CLI auto-writes a `.gitignore` next to every WAV (`*.wav`, `*.wav.hash`) so generated audio stays local — commit YAML transcripts only. Real recordings work too: drop a hand-recorded WAV at the same path and the adapter doesn't care how it got there.
+
+See [Voice testing](docs/adapters.md#livekit-voice) for the full reference (sample rate, frame size, grace period, custom session factories).
 
 ## Sample report
 

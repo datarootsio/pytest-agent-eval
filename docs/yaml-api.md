@@ -81,7 +81,27 @@ turns:
 
 ### `turns[].user`
 
-The user message string for this turn. Required for every turn.
+The user message string for this turn. Required for every turn. Also acts as the transcript when an `audio:` fixture is generated for this turn.
+
+### `turns[].audio`
+
+Optional path to a WAV file used by voice adapters (e.g. [`LiveKitAdapter`](adapters.md#livekit-voice)). Resolved relative to the YAML file's directory unless absolute. Text adapters ignore this field — turns can mix audio and non-audio freely.
+
+```yaml
+turns:
+  - user: "Book me a slot tomorrow at 10am."
+    audio: booking_t1.wav        # → tests/evals/booking_t1.wav
+    expect:
+      tool_calls_include: [create_booking]
+```
+
+Generate the WAV from `user:` text via:
+
+```bash
+python -m pytest_agent_eval.synthesize_audio
+```
+
+The CLI hashes `turn.user` into a `<wav>.hash` sidecar and only re-synthesises when the transcript changes. See the [LiveKit adapter docs](adapters.md#livekit-voice) for the full pipeline.
 
 ### `turns[].expect`
 

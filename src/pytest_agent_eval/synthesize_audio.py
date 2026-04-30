@@ -347,7 +347,9 @@ def main() -> int:
     parser.add_argument(
         "paths",
         nargs="*",
-        help=("YAML files or directories containing them. Defaults to [tool.agent_eval].yaml_dirs from pyproject.toml."),
+        help=(
+            "YAML files or directories containing them. Defaults to [tool.agent_eval].yaml_dirs from pyproject.toml."
+        ),
     )
     parser.add_argument("--force", action="store_true", help="Re-synthesise every WAV even if the hash matches.")
     parser.add_argument("--voice", default=_DEFAULT_VOICE, help=f"OpenAI Realtime voice (default: {_DEFAULT_VOICE}).")
