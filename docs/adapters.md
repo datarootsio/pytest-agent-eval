@@ -148,6 +148,89 @@ Tool-call names are collected from new entries in `agent.memory.steps`. Smolagen
 | `agent`                  | `Any`  | required | A smolagents agent (`ToolCallingAgent`, `CodeAgent`, or duck-typed equivalent) |
 | `include_internal_tools` | `bool` | `False`  | When `True`, return `python_interpreter` and `final_answer` in tool calls    |
 
+## `LiveKitAdapter` (voice) {#livekit-voice}
+
+Wraps a [LiveKit Agents](https://docs.livekit.io/agents) `AgentSession` so you can drive a real voice agent from a WAV file per turn. The adapter:
+
+1. Reads the WAV path from each turn's `audio:` field (resolved relative to the YAML directory).
+2. Builds a fresh `(AgentSession, Agent)` pair via the user-supplied factory.
+3. Streams the WAV at real-time pace into `session.input.audio`.
+4. Captures `function_tools_executed` events as tool calls and `conversation_item_added` events (filtered to `assistant` items) as the reply.
+5. Returns `(reply, tool_calls)` to the same evaluator surface used by text adapters.
+
+```python
+import pytest
+from livekit.agents.voice import Agent, AgentSession
+from livekit.plugins import openai
+from pytest_agent_eval.adapters.livekit import LiveKitAdapter
+
+def make_session():
+    session = AgentSession(llm=openai.realtime.RealtimeModel())
+    agent = Agent(instructions="You are a booking assistant.", tools=[...])
+    return session, agent
+
+@pytest.fixture
+def llm_eval_agent():
+    return LiveKitAdapter(make_session)
+```
+
+YAML transcript with WAV references — paths resolve relative to the YAML file's directory:
+
+```yaml
+# tests/evals/booking_voice.yaml
+id: booking_voice
+turns:
+  - user: "Book me a slot tomorrow at 10am."
+    audio: booking_t1.wav
+    expect:
+      tool_calls_include: [create_booking]
+      reply_contains_any: [confirmed, booked]
+```
+
+Install the optional extra:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-agent-eval[livekit]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-agent-eval[livekit]"
+    ```
+
+The extra pulls `livekit-agents>=0.12`, `livekit-plugins-openai>=0.10`, and `openai>=1.0`.
+
+### Generating audio fixtures
+
+A bundled CLI synthesises WAVs from each turn's `user:` text via OpenAI Realtime (text-in, audio-out). Hash sidecars (`<wav>.hash` = `sha256(turn.user)`) skip re-synthesis when the transcript hasn't changed. Real recordings work just as well — the adapter doesn't care how the WAV was produced.
+
+```bash
+# Synthesise every YAML under [tool.agent_eval].yaml_dirs
+python -m pytest_agent_eval.synthesize_audio
+
+# Explicit paths (file or directory)
+python -m pytest_agent_eval.synthesize_audio tests/evals/
+python -m pytest_agent_eval.synthesize_audio tests/evals/booking_voice.yaml
+
+# Re-synth everything regardless of cache
+python -m pytest_agent_eval.synthesize_audio --force
+```
+
+The CLI requires `OPENAI_API_KEY` and writes a `.gitignore` next to every WAV (`*.wav`, `*.wav.hash`) so generated audio stays local — commit YAML transcripts only.
+
+**Constructor:**
+
+| Parameter         | Type                                | Default | Description                                                                |
+|-------------------|-------------------------------------|---------|----------------------------------------------------------------------------|
+| `session_factory` | `Callable[[], (AgentSession, Agent)]` | required | Returns a fresh session + agent on every call (one per turn)             |
+| `sample_rate`     | `int`                               | `24000` | WAV sample rate in Hz — must match the input file                         |
+| `frame_ms`        | `int`                               | `20`    | Frame size in ms; default matches OpenAI Realtime's preferred chunk size  |
+| `grace_period_s`  | `float`                             | `8.0`   | Seconds to wait after WAV exhaustion for trailing tool calls              |
+| `timeout_s`       | `float`                             | `30.0`  | Maximum seconds to wait for WAV exhaustion before forcibly closing        |
+
 ## Writing a custom adapter
 
 Any async callable that accepts `list[dict]` and returns `(str, list[str])` works directly — no base class needed:

@@ -49,7 +49,10 @@ async def _run_turn(
     judge_model: str | None = None,
 ) -> tuple[TurnResult, str, list[str]]:
     """Execute one turn and evaluate results."""
-    history.append({"role": "user", "content": turn.user})
+    msg: dict[str, Any] = {"role": "user", "content": turn.user}
+    if turn.audio is not None:
+        msg["audio"] = str(turn.audio)
+    history.append(msg)
     reply, tool_calls = await agent(history)
     history.append({"role": "assistant", "content": reply})
 

@@ -38,15 +38,18 @@ uv add pytest-agent-eval
 | [LangChain / LangGraph](https://python.langchain.com/) | `langchain` | `pytest_agent_eval.adapters.langchain.LangChainAdapter` |
 | [OpenAI SDK](https://github.com/openai/openai-python) | `openai` | `pytest_agent_eval.adapters.openai.OpenAIAdapter` |
 | [smolagents](https://github.com/huggingface/smolagents) | `smolagents` | `pytest_agent_eval.adapters.smolagents.SmolagentsAdapter` |
+| [LiveKit (voice)](https://docs.livekit.io/agents) | `livekit` | `pytest_agent_eval.adapters.livekit.LiveKitAdapter` |
 
 ```bash
 pip install "pytest-agent-eval[langchain]"
 pip install "pytest-agent-eval[openai]"
 pip install "pytest-agent-eval[smolagents]"
+pip install "pytest-agent-eval[livekit]"
 # or with uv:
 uv add "pytest-agent-eval[langchain]"
 uv add "pytest-agent-eval[openai]"
 uv add "pytest-agent-eval[smolagents]"
+uv add "pytest-agent-eval[livekit]"
 ```
 
 Bringing your own framework? Any `async def agent(messages) -> (reply, tool_calls)` callable works directly — no base class needed.
@@ -159,6 +162,8 @@ turns:
 ```
 
 Each turn's full conversation history is built up as the test runs — your agent receives all prior `(user, assistant)` pairs as context, the same way it would in production. Failures point at the exact turn that broke, not just "the test failed."
+
+> **Voice agents** are supported via the `[livekit]` extra — see [Voice testing](docs/adapters.md#livekit-voice). Each turn declares an `audio: turn.wav` path; the adapter streams it through a real LiveKit `AgentSession` and asserts on the same surface (tool calls, reply, judge rubric).
 
 ## Sample report
 

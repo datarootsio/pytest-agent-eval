@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from pytest_agent_eval.models import (
@@ -7,6 +9,7 @@ from pytest_agent_eval.models import (
     RunResult,
     Transcript,
     TranscriptResult,
+    Turn,
     TurnContext,
     TurnResult,
 )
@@ -16,6 +19,21 @@ def test_eval_result_defaults():
     r = EvalResult(passed=True)
     assert r.passed is True
     assert r.reasoning == ""
+
+
+def test_turn_audio_defaults_none():
+    t = Turn(user="hello")
+    assert t.audio is None
+
+
+def test_turn_audio_accepts_path():
+    t = Turn(user="hello", audio=Path("foo.wav"))
+    assert t.audio == Path("foo.wav")
+
+
+def test_turn_audio_accepts_str():
+    t = Turn(user="hello", audio="foo.wav")
+    assert t.audio == "foo.wav"
 
 
 def test_turn_context_fields():
