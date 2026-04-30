@@ -7,6 +7,7 @@ repo_url = "https://github.com/datarootsio/pytest-agent-eval"
 repo_name = "datarootsio/pytest-agent-eval"
 
 [project.theme]
+icon.repo = "fontawesome/brands/github"
 features = [
     "content.code.copy",
     "content.code.annotate",

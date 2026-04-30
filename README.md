@@ -63,6 +63,144 @@ Mix and match per turn — every evaluator participates in the threshold score.
 
 ## Quick start
 
+You can author evals two ways. **YAML is the recommended starting point** — it lets non-Python contributors (PMs, QA, domain experts) write tests, keeps eval data readable in code review, and turns each `.yaml` file into a pytest test automatically.
+
+### 1 — Configure where YAMLs live
+
+```toml
+# pyproject.toml
+[tool.agent_eval]
+model     = "openai:gpt-4o"   # used by the LLM-as-judge
+threshold = 0.8               # default pass fraction
+runs      = 3                 # default reps per transcript
+yaml_dirs = ["tests/evals"]
+```
+
+### 2 — Wire up your agent once
+
+```python
+# tests/conftest.py
+import pytest
+from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
+from my_app import build_agent
+
+@pytest.fixture
+def llm_eval_agent():
+    return PydanticAIAdapter(build_agent())
+```
+
+### 3 — Write transcripts as YAML
+
+```yaml
+# tests/evals/booking_single_turn.yaml
+id: booking_single_turn
+threshold: 0.8
+runs: 3
+
+turns:
+  - user: "Book me a slot tomorrow at 10am."
+    expect:
+      reply_contains_any: ["confirmed", "booked"]
+      tool_calls_include: ["create_booking"]
+      judge:
+        rubric: "Reply must confirm the booking and include a reference number."
+```
+
+### 4 — Run it
+
+```bash
+pytest --agent-eval-live
+```
+
+```text
+============================ test session starts =============================
+plugins: agent-eval-0.1.0, asyncio-1.0.0
+collected 2 items
+
+tests/evals/booking_single_turn.yaml::booking_single_turn PASSED       [ 50%]
+tests/evals/booking_multi_turn.yaml::booking_multi_turn PASSED         [100%]
+
+============================== 2 passed in 14.03s ============================
+```
+
+By default eval tests are **skipped** outside of explicit live runs (so a missed `pytest .` doesn't burn API credits). Flip `--agent-eval-live` on, set `EVAL_LIVE=1`, or `live = true` in `[tool.agent_eval]` for local-only auto-on. See [Configuration](https://datarootsio.github.io/pytest-agent-eval/configuration/) for the full precedence rules.
+
+## Multi-turn conversations
+
+Real agents fail on context, not single-shot replies. A model that nails turn 1 might forget the user's name by turn 3, or call the wrong tool once the user changes their mind. Multi-turn YAML transcripts test the **whole conversation arc**, with each turn asserting against the agent's state at that point:
+
+```yaml
+# tests/evals/booking_multi_turn.yaml
+id: booking_multi_turn
+threshold: 0.66          # tolerate 1/3 flaky runs
+runs: 3
+tags: [gate:booking, smoke]
+
+turns:
+  # Turn 1 — initial booking
+  - user: "Book me a slot tomorrow at 10am."
+    expect:
+      reply_contains_any: ["confirmed", "booked"]
+      tool_calls_include: ["create_booking"]
+
+  # Turn 2 — agent must remember the booking from turn 1
+  - user: "Actually, can you move it to 11am instead?"
+    expect:
+      tool_calls_include: ["update_booking"]
+      tool_calls_exclude: ["create_booking"]   # must update, not double-book
+      judge:
+        rubric: "Confirms the new time AND references the original 10am booking."
+
+  # Turn 3 — context propagates further
+  - user: "Email me the confirmation."
+    expect:
+      tool_calls_include: ["send_email"]
+      reply_contains_any: ["sent", "email"]
+```
+
+Each turn's full conversation history is built up as the test runs — your agent receives all prior `(user, assistant)` pairs as context, the same way it would in production. Failures point at the exact turn that broke, not just "the test failed."
+
+## Sample report
+
+Add `--agent-eval-report=eval.md` to get a human-readable trail of every run, every turn, and every evaluator's reasoning. Useful for CI artifacts and PR diffs:
+
+```bash
+pytest --agent-eval-live --agent-eval-report=eval.md
+```
+
+```markdown
+# LLM Eval Report — 2026-04-30
+
+## Summary
+
+| Transcript            | Runs | Passed | Score | Threshold | Status  |
+|-----------------------|------|--------|-------|-----------|---------|
+| booking_single_turn   | 3    | 3      | 1.00  | 0.80      | ✅ PASS |
+| booking_multi_turn    | 3    | 2      | 0.67  | 0.66      | ✅ PASS |
+
+## Details
+
+### booking_multi_turn
+**Run 1** ✅
+- Turn 1: PASS
+- Turn 2: PASS
+  - Judge: Reply confirmed move to 11am and acknowledged original 10am slot.
+- Turn 3: PASS
+**Run 2** ❌
+- Turn 1: PASS
+- Turn 2: FAIL
+  - Tool calls expected to include 'update_booking', got ['create_booking']
+- Turn 3: PASS
+**Run 3** ✅
+- ...
+```
+
+The two-out-of-three pass still clears the `0.66` threshold, so the suite passes — that's the point of running each transcript multiple times instead of treating LLM tests as binary.
+
+## Python API
+
+YAML covers most cases; drop into Python when you need parametrization, programmatic test generation, or per-test fixtures:
+
 ```python
 import pytest
 from pytest_agent_eval import Turn, Expect, ContainsEvaluator, ToolCallEvaluator, JudgeEvaluator
@@ -85,11 +223,7 @@ async def test_booking(agent_eval):
     result.assert_threshold()
 ```
 
-```bash
-pytest --agent-eval-live
-```
-
-See the [full documentation](https://datarootsio.github.io/pytest-agent-eval) for the YAML authoring style, configuration, and reporting options.
+See the [full documentation](https://datarootsio.github.io/pytest-agent-eval) for the complete YAML reference, configuration options, parallel execution, and CI patterns. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
