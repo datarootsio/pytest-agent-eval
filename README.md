@@ -127,7 +127,7 @@ tests/evals/booking_multi_turn.yaml::booking_multi_turn PASSED         [100%]
 ============================== 2 passed in 14.03s ============================
 ```
 
-By default eval tests are **skipped** outside of explicit live runs (so a missed `pytest .` doesn't burn API credits). Flip `--agent-eval-live` on, set `EVAL_LIVE=1`, or `live = true` in `[tool.agent_eval]` for local-only auto-on. See [Configuration](https://datarootsio.github.io/pytest-agent-eval/configuration/) for the full precedence rules.
+By default eval tests are **skipped** outside of explicit live runs (so a missed `pytest .` doesn't burn API credits). Flip `--agent-eval-live` on, set `EVAL_LIVE=1`, or `live = true` in `[tool.agent_eval]` for local-only auto-on. See [Configuration](https://datarootsio.github.io/pytest-agent-eval/latest/configuration/) for the full precedence rules.
 
 ## Multi-turn conversations
 
@@ -270,7 +270,7 @@ async def test_booking(agent_eval):
     result.assert_threshold()
 ```
 
-See the [full documentation](https://datarootsio.github.io/pytest-agent-eval) for the complete YAML reference, configuration options, parallel execution, and CI patterns. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+See the [full documentation](https://datarootsio.github.io/pytest-agent-eval/latest/) (or [`/main/`](https://datarootsio.github.io/pytest-agent-eval/main/) for the in-development version) for the complete YAML reference, configuration options, parallel execution, and CI patterns. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

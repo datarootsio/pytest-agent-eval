@@ -182,6 +182,27 @@ The new version appears at <https://pypi.org/project/pytest-agent-eval/> within 
 
 `pytest_agent_eval.__version__` is read at import time from `importlib.metadata.version("pytest-agent-eval")`, which resolves to whatever was baked into the package metadata at build. The single source of truth is `pyproject.toml` `version` — there is no second literal to keep in sync.
 
+## Backfilling docs for old releases
+
+Documentation is published per-version to `gh-pages` via [`mike`](https://github.com/squidfunk/mike) (a fork maintained by squidfunk that integrates with zensical's version provider). The `docs.yml` workflow only runs on *future* pushes — pre-existing tags don't auto-publish. To populate the version dropdown with releases that were tagged before versioned docs were turned on, run a one-time backfill locally from a clean checkout:
+
+```bash
+uv sync --group docs
+uv pip install git+https://github.com/squidfunk/mike.git
+
+for tag in v0.1.0 v0.2.0; do
+  git checkout "$tag"
+  uv run mike deploy --push "$tag" $( [[ "$tag" == "v0.2.0" ]] && echo "latest" )
+done
+git checkout main
+uv run mike deploy --push main
+uv run mike set-default --push main
+```
+
+`--push` writes commits to the `gh-pages` branch directly, so push permissions on the repo are required. The newest tag is also aliased as `latest`, matching what `docs.yml` does on future tag pushes.
+
+If an old tag's docs deps are no longer installable (e.g. zensical version drift), skip it — the dropdown will start at the oldest version that still builds.
+
 ## Community guidelines
 
 This is an open, welcoming project. Specifically:
