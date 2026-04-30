@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytest-agent-eval"
-version = "0.1.0"
+version = "0.2.0"
 description = "A pytest plugin for LLM evaluation tests with threshold-based pass/fail"
 readme = "README.md"
 requires-python = ">=3.11"
