@@ -42,6 +42,10 @@ icon = "fontawesome/brands/github"
 link = "https://github.com/datarootsio/pytest-agent-eval"
 name = "pytest-agent-eval on GitHub"
 
+[project.extra.version]
+provider = "mike"
+default = "main"
+
 [project.plugins.mkdocstrings]
 enabled = true
 

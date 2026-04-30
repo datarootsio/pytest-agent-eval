@@ -3,25 +3,46 @@ name: Deploy Docs
 on:
   push:
     branches: [main]
+    tags: ['v*']
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
+
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group docs
-      - run: uv run zensical build --clean
-      - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
-      - uses: actions/deploy-pages@v4
-        id: deployment
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+      - name: Configure git author
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+      - name: Install docs deps + mike fork
+        run: |
+          uv sync --group docs
+          uv pip install git+https://github.com/squidfunk/mike.git
+      - name: Resolve version label
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "kind=tag" >> "$GITHUB_OUTPUT"
+            echo "label=v${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=branch" >> "$GITHUB_OUTPUT"
+            echo "label=main" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Deploy with mike
+        run: |
+          if [[ "${{ steps.ver.outputs.kind }}" == "tag" ]]; then
+            uv run mike deploy --push --update-aliases ${{ steps.ver.outputs.label }} latest
+          else
+            uv run mike deploy --push main
+            uv run mike set-default --push main
+          fi

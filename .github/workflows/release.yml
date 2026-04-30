@@ -1,5 +1,7 @@
 name: Release
 
+# Docs publishing for the same tag is handled by docs.yml.
+
 on:
   push:
     tags:
