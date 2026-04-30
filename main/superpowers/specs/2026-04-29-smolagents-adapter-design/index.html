@@ -12,36 +12,34 @@
         <meta name="author" content="Dataroots">
       
       
-        <link rel="canonical" href="https://datarootsio.github.io/main/configuration/">
+        <link rel="canonical" href="https://datarootsio.github.io/main/superpowers/specs/2026-04-29-smolagents-adapter-design/">
       
       
-        <link rel="prev" href="../adapters/">
+        <link rel="prev" href="../../plans/2026-04-29-smolagents-adapter/">
       
-      
-        <link rel="next" href="../evaluators/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.37">
     
     
       
-        <title>Configuration - pytest-agent-eval</title>
+        <title>Smolagents Adapter — Design - pytest-agent-eval</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.1e981d71.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.1e981d71.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.dfe2e883.min.css">
       
       
 
@@ -60,7 +58,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -85,7 +83,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#configuration" class="md-skip">
+        <a href="#smolagents-adapter-design" class="md-skip">
           Skip to content
         </a>
       
@@ -105,7 +103,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="./.." title="pytest-agent-eval" class="md-header__button md-logo" aria-label="pytest-agent-eval" data-md-component="logo">
+    <a href="../../.." title="pytest-agent-eval" class="md-header__button md-logo" aria-label="pytest-agent-eval" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -125,7 +123,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Configuration
+              Smolagents Adapter — Design
             
           </span>
         </div>
@@ -214,7 +212,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="./.." title="pytest-agent-eval" class="md-nav__button md-logo" aria-label="pytest-agent-eval" data-md-component="logo">
+    <a href="../../.." title="pytest-agent-eval" class="md-nav__button md-logo" aria-label="pytest-agent-eval" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -244,7 +242,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -271,7 +269,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../adapters/" class="md-nav__link">
+      <a href="../../../adapters/" class="md-nav__link">
         
   
   
@@ -295,37 +293,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configuration
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../configuration/" class="md-nav__link">
         
   
   
@@ -341,143 +312,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#complete-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Complete example
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fields" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Fields
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Fields">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#model" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>model</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#threshold" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>threshold</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#runs" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>runs</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#retries" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>retries</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#timeout" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>timeout</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#yaml_dirs" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>yaml_dirs</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#live" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>live</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#precedence" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Precedence
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -489,7 +323,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../evaluators/" class="md-nav__link">
+      <a href="../../../evaluators/" class="md-nav__link">
         
   
   
@@ -516,7 +350,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
+      <a href="../../../getting-started/" class="md-nav__link">
         
   
   
@@ -543,7 +377,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../python-api/" class="md-nav__link">
+      <a href="../../../python-api/" class="md-nav__link">
         
   
   
@@ -570,7 +404,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reporting/" class="md-nav__link">
+      <a href="../../../reporting/" class="md-nav__link">
         
   
   
@@ -597,7 +431,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../yaml-api/" class="md-nav__link">
+      <a href="../../../yaml-api/" class="md-nav__link">
         
   
   
@@ -653,7 +487,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../api-reference/" class="md-nav__link ">
+            <a href="../../../api-reference/" class="md-nav__link ">
               
   
   
@@ -697,7 +531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api-reference/adapters/" class="md-nav__link">
+      <a href="../../../api-reference/adapters/" class="md-nav__link">
         
   
   
@@ -725,7 +559,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api-reference/evaluators/" class="md-nav__link">
+      <a href="../../../api-reference/evaluators/" class="md-nav__link">
         
   
   
@@ -753,7 +587,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api-reference/models/" class="md-nav__link">
+      <a href="../../../api-reference/models/" class="md-nav__link">
         
   
   
@@ -785,8 +619,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -803,11 +639,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" checked>
         
           
           <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
@@ -828,7 +664,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             
@@ -899,7 +735,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../superpowers/plans/2026-04-29-smolagents-adapter/" class="md-nav__link">
+      <a href="../../plans/2026-04-29-smolagents-adapter/" class="md-nav__link">
         
   
   
@@ -932,8 +768,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -945,11 +783,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10_2" checked>
         
           
           <label class="md-nav__link" for="__nav_10_2" id="__nav_10_2_label" tabindex="0">
@@ -970,7 +808,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_10_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_10_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_10_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -985,10 +823,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../superpowers/specs/2026-04-29-smolagents-adapter-design/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Smolagents Adapter — Design
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1004,6 +869,154 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Goal
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#background" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Background
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Architecture
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#per-call-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Per-call flow
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-asyncioto_thread" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Why <code>asyncio.to_thread</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-lenhistory-1-for-reset-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Why <code>len(history) == 1</code> for reset detection
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Configuration
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Testing
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Documentation
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Error handling
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Out of scope
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1065,10 +1078,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#complete-example" class="md-nav__link">
+  <a href="#goal" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Complete example
+        Goal
       </span>
     </span>
   </a>
@@ -1076,22 +1089,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fields" class="md-nav__link">
+  <a href="#background" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Fields
+        Background
       </span>
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Fields">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Architecture
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#model" class="md-nav__link">
+  <a href="#per-call-flow" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code>model</code>
+        Per-call flow
       </span>
     </span>
   </a>
@@ -1099,10 +1123,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#threshold" class="md-nav__link">
+  <a href="#why-asyncioto_thread" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code>threshold</code>
+        Why <code>asyncio.to_thread</code>
       </span>
     </span>
   </a>
@@ -1110,54 +1134,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#runs" class="md-nav__link">
+  <a href="#why-lenhistory-1-for-reset-detection" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code>runs</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#retries" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>retries</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#timeout" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>timeout</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#yaml_dirs" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>yaml_dirs</code>
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#live" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>live</code>
+        Why <code>len(history) == 1</code> for reset detection
       </span>
     </span>
   </a>
@@ -1170,10 +1150,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#precedence" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Precedence
+        Configuration
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Testing
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Documentation
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Error handling
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Out of scope
       </span>
     </span>
   </a>
@@ -1198,6 +1222,72 @@
   
 
 
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    pytest-agent-eval
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../../plans/2026-04-29-smolagents-adapter/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Superpowers
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="././" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Specs
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
               
               <article class="md-content__inner md-typeset">
                 
@@ -1206,58 +1296,118 @@
   
 
 
-<h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<p>All configuration lives under <code>[tool.agent_eval]</code> in <code>pyproject.toml</code>.</p>
-<h2 id="complete-example">Complete example<a class="headerlink" href="#complete-example" title="Permanent link">&para;</a></h2>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[tool.agent_eval]</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">model</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;openai:gpt-4o&quot;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.8</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">runs</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">retries</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">timeout</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">30</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">yaml_dirs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests/evals&quot;</span><span class="p">]</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">live</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<h1 id="smolagents-adapter-design">Smolagents Adapter — Design<a class="headerlink" href="#smolagents-adapter-design" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-04-29
+<strong>Status:</strong> Approved</p>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p>Add a first-class adapter for <a href="https://github.com/huggingface/smolagents">smolagents</a> so users testing a smolagents-based agent can drop it into <code>pytest-llm-eval</code> the same way they would a pydantic-ai, LangChain, or OpenAI agent.</p>
+<h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h2>
+<p><code>pytest-llm-eval</code> already exposes adapters for three frameworks (<code>PydanticAIAdapter</code>, <code>LangChainAdapter</code>, <code>OpenAIAdapter</code>). Each adapter wraps a framework-native agent so it conforms to the plugin's callable contract:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">agent</span><span class="p">(</span><span class="n">history</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
 </span></code></pre></div>
-<h2 id="fields">Fields<a class="headerlink" href="#fields" title="Permanent link">&para;</a></h2>
-<h3 id="model"><code>model</code><a class="headerlink" href="#model" title="Permanent link">&para;</a></h3>
-<p><strong>Type:</strong> <code>str</code>
-<strong>Default:</strong> <code>"openai:gpt-4o"</code></p>
-<p>The pydantic-ai model ID used by <code>JudgeEvaluator</code> and for YAML-defined judge rubrics.
-Format is <code>provider:model-name</code>, e.g.:</p>
+<p><code>history</code> is OpenAI-style messages. The return tuple is <code>(reply, tool_call_names)</code>. The runner calls this once per turn, with the accumulated conversation history.</p>
+<p>Smolagents differs from the existing frameworks in three ways:</p>
+<ol>
+<li><strong>It owns its memory.</strong> Conversations continue via <code>agent.run(msg, reset=False)</code>; passing <code>reset=True</code> (default) clears memory before running.</li>
+<li><strong><code>agent.run()</code> is synchronous.</strong> Our adapter contract is async.</li>
+<li><strong>Tool calls are recorded in <code>agent.memory.steps</code>.</strong> <code>ToolCallingAgent</code> records structured <code>tool_calls</code>; <code>CodeAgent</code> invokes tools via Python code so its recorded calls are dominated by the smolagents-internal <code>python_interpreter</code>. Both agent types also record a final <code>final_answer</code> "tool call" to terminate.</li>
+</ol>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<p>A single new module <code>src/pytest_llm_eval/adapters/smolagents.py</code> exporting one class:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">SmolagentsAdapter</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">include_internal_tools</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">history</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p>The adapter is <strong>duck-typed</strong>. It depends on:</p>
 <ul>
-<li><code>"openai:gpt-4o"</code></li>
-<li><code>"openai:gpt-4o-mini"</code></li>
-<li><code>"anthropic:claude-3-5-sonnet-latest"</code></li>
+<li><code>agent.run(task: str, reset: bool) -&gt; Any</code></li>
+<li><code>agent.memory.steps</code> — an iterable; each item <em>may</em> have a <code>tool_calls</code> attribute that is itself an iterable of objects with a <code>.name</code> string.</li>
 </ul>
-<h3 id="threshold"><code>threshold</code><a class="headerlink" href="#threshold" title="Permanent link">&para;</a></h3>
-<p><strong>Type:</strong> <code>float</code>
-<strong>Default:</strong> <code>0.8</code></p>
-<p>The default pass fraction across runs. A test passes when <code>passed_runs / total_runs &gt;= threshold</code>.</p>
-<p>Individual tests override this via <code>@pytest.mark.agent_eval(threshold=0.9)</code> or the YAML <code>threshold</code> field.</p>
-<h3 id="runs"><code>runs</code><a class="headerlink" href="#runs" title="Permanent link">&para;</a></h3>
-<p><strong>Type:</strong> <code>int</code>
-<strong>Default:</strong> <code>3</code></p>
-<p>The default number of times each transcript is executed. Higher values reduce the impact of nondeterminism but increase cost.</p>
-<p>Individual tests override this via <code>@pytest.mark.agent_eval(runs=5)</code> or the YAML <code>runs</code> field.</p>
-<h3 id="retries"><code>retries</code><a class="headerlink" href="#retries" title="Permanent link">&para;</a></h3>
-<p><strong>Type:</strong> <code>int</code>
-<strong>Default:</strong> <code>2</code></p>
-<p>Number of times to retry a single run if the agent raises an exception (network error, rate limit, etc.).</p>
-<h3 id="timeout"><code>timeout</code><a class="headerlink" href="#timeout" title="Permanent link">&para;</a></h3>
-<p><strong>Type:</strong> <code>int</code>
-<strong>Default:</strong> <code>30</code></p>
-<p>Per-turn timeout in seconds. If the agent callable does not return within this window, the turn is marked as failed.</p>
-<h3 id="yaml_dirs"><code>yaml_dirs</code><a class="headerlink" href="#yaml_dirs" title="Permanent link">&para;</a></h3>
-<p><strong>Type:</strong> <code>list[str]</code>
-<strong>Default:</strong> <code>[]</code></p>
-<p>Directories to search recursively for <code>*.yaml</code> evaluation transcripts. Paths are relative to the project root (where <code>pyproject.toml</code> lives).</p>
-<h3 id="live"><code>live</code><a class="headerlink" href="#live" title="Permanent link">&para;</a></h3>
-<p><strong>Type:</strong> <code>bool</code>
-<strong>Default:</strong> <code>false</code></p>
-<p>When <code>true</code>, eval tests run without needing <code>--agent-eval-live</code> or <code>EVAL_LIVE=1</code>. Useful for local development but should remain <code>false</code> in shared/CI config.</p>
-<h2 id="precedence">Precedence<a class="headerlink" href="#precedence" title="Permanent link">&para;</a></h2>
-<p>Command-line flag <code>--agent-eval-live</code> &gt; <code>EVAL_LIVE=1</code> env var &gt; <code>live = true</code> in config &gt; default (skip).</p>
-<p>Per-test <code>threshold</code>/<code>runs</code> in the mark or YAML always override the global config values.</p>
+<p>It does <strong>not</strong> import smolagents at runtime. This keeps the adapter usable with mocks/fakes in tests and forward-compatible with new smolagents agent classes.</p>
+<h3 id="per-call-flow">Per-call flow<a class="headerlink" href="#per-call-flow" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Extract the latest user message: <code>user_msg = history[-1]["content"]</code>.</li>
+<li>Decide reset behaviour: <code>reset = (len(history) == 1)</code>.</li>
+<li>First turn of a transcript (only one user message in history) ⇒ fresh memory.</li>
+<li>Subsequent turns ⇒ continue the existing conversation.</li>
+<li>Snapshot the existing step count: <code>prev = len(agent.memory.steps)</code>.</li>
+<li>Run the agent off the event loop:
+   <code>result = await asyncio.to_thread(agent.run, user_msg, reset=reset)</code>.</li>
+<li>Walk the new step slice (<code>agent.memory.steps[prev:]</code>) and collect <code>step.tool_calls[*].name</code> from steps that have a <code>tool_calls</code> attribute.</li>
+<li>If <code>include_internal_tools is False</code>, drop names equal to <code>"python_interpreter"</code> or <code>"final_answer"</code>.</li>
+<li>Return <code>(str(result), tool_call_names)</code>.</li>
+</ol>
+<h3 id="why-asyncioto_thread">Why <code>asyncio.to_thread</code><a class="headerlink" href="#why-asyncioto_thread" title="Permanent link">&para;</a></h3>
+<p>Smolagents agents are synchronous. Other adapters in this project wrap async-native frameworks. To keep the contract consistent and avoid blocking the event loop (which matters under <code>pytest-xdist</code> and concurrent runs via <code>asyncio.gather</code>), the adapter runs the agent in a worker thread.</p>
+<h3 id="why-lenhistory-1-for-reset-detection">Why <code>len(history) == 1</code> for reset detection<a class="headerlink" href="#why-lenhistory-1-for-reset-detection" title="Permanent link">&para;</a></h3>
+<p>Our runner builds up <code>history</code> turn-by-turn within a single transcript run. Across runs of the same transcript (when <code>runs &gt; 1</code>), it restarts at turn 1 with a single-message history. So <code>len(history) == 1</code> is the precise marker for "first turn of a fresh conversation". Subsequent runs are isolated because each first turn resets memory.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>A new optional dependency in <code>pyproject.toml</code>:</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[project.optional-dependencies]</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">smolagents</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;smolagents&gt;=1.0&quot;</span><span class="p">]</span>
+</span></code></pre></div>
+<p>Users install via <code>pip install "pytest-llm-eval[smolagents]"</code> or <code>uv add "pytest-llm-eval[smolagents]"</code>.</p>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<p>All tests are unit tests against a hand-rolled fake agent. Smolagents itself is <strong>not</strong> added to dev dependencies — this matches the project's pattern (langchain/openai/pydantic-ai aren't in the dev group either).</p>
+<p>Tests live in a new <code>tests/adapters/test_smolagents.py</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>What it asserts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_first_turn_passes_reset_true</code></td>
+<td>history of length 1 ⇒ fake records <code>reset=True</code></td>
+</tr>
+<tr>
+<td><code>test_subsequent_turn_passes_reset_false</code></td>
+<td>history of length &gt; 1 ⇒ fake records <code>reset=False</code></td>
+</tr>
+<tr>
+<td><code>test_returns_reply_string</code></td>
+<td>The agent's return value is stringified into the first tuple element</td>
+</tr>
+<tr>
+<td><code>test_extracts_new_tool_calls_only</code></td>
+<td>Pre-existing steps in <code>memory.steps</code> are ignored; only new steps' tool calls are returned</td>
+</tr>
+<tr>
+<td><code>test_filters_python_interpreter_and_final_answer_by_default</code></td>
+<td>Internal pseudo-tools are filtered</td>
+</tr>
+<tr>
+<td><code>test_include_internal_tools_returns_them</code></td>
+<td>With <code>include_internal_tools=True</code>, internals appear in the result</td>
+</tr>
+<tr>
+<td><code>test_handles_steps_without_tool_calls</code></td>
+<td>Steps lacking a <code>tool_calls</code> attribute are skipped without raising</td>
+</tr>
+</tbody>
+</table>
+<p>The fake agent uses <code>types.SimpleNamespace</code> to mirror the duck-typed surface (<code>memory.steps</code>, <code>tool_calls[*].name</code>).</p>
+<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>docs/adapters.md</code> — add a <code>SmolagentsAdapter</code> section with the install snippet (pip + uv tabs), a fixture example, and the constructor parameter table including <code>include_internal_tools</code>.</li>
+<li><code>docs/index.md</code> — add a <code>Smolagents</code> entry to the "Supported frameworks" tabbed block.</li>
+<li><code>README.md</code> — add a row to the framework table and an <code>[smolagents]</code> install line.</li>
+</ul>
+<h2 id="error-handling">Error handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<p>No defensive guards in the adapter:</p>
+<ul>
+<li>If <code>agent</code> lacks <code>.run</code> or <code>.memory.steps</code>, an <code>AttributeError</code> propagates. That is the correct signal — the user passed in a wrong object.</li>
+<li>If <code>agent.run</code> raises, the exception propagates to the runner, where the existing retry layer (configured via <code>[tool.llm_eval] retries</code>) handles transient failures.</li>
+</ul>
+<p>This matches the posture of the existing adapters.</p>
+<h2 id="out-of-scope">Out of scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Parsing CodeAgent's executed Python to extract per-tool calls. Smolagents records only the <code>python_interpreter</code> step for CodeAgent; getting at the inner tools would require AST-walking the executed code. Document this limitation; users wanting fine-grained tool-call assertions should use <code>ToolCallingAgent</code>.</li>
+<li>An async agent factory pattern. Sharing a single agent across parallel tests is a known limitation that applies to every adapter in the project — out of scope for this design.</li>
+<li>Streaming or step-by-step inspection. The adapter consumes only the final <code>result</code> of <code>agent.run</code>.</li>
+</ul>
 
 
 
@@ -1297,7 +1447,7 @@ Format is <code>provider:model-name</code>, e.g.:</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../adapters/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Adapters">
+          <a href="../../plans/2026-04-29-smolagents-adapter/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Smolagents Adapter Implementation Plan">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -1307,27 +1457,11 @@ Format is <code>provider:model-name</code>, e.g.:</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Adapters
+                Smolagents Adapter Implementation Plan
               </div>
             </div>
           </a>
         
-        
-          
-          <a href="../evaluators/" class="md-footer__link md-footer__link--next" aria-label="Next: Evaluators">
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              <div class="md-ellipsis">
-                Evaluators
-              </div>
-            </div>
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </div>
-          </a>
         
       </nav>
     
@@ -1370,10 +1504,10 @@ Format is <code>provider:model-name</code>, e.g.:</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.code.annotate","content.tabs.link","navigation.footer","navigation.indexes","navigation.instant","navigation.path","navigation.sections","navigation.top","navigation.tracking","search.highlight","toc.follow"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"default":"main","provider":"mike"}}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["content.code.copy","content.code.annotate","content.tabs.link","navigation.footer","navigation.indexes","navigation.instant","navigation.path","navigation.sections","navigation.top","navigation.tracking","search.highlight","toc.follow"],"search":"../../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"default":"main","provider":"mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.dbc0afdc.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.dbc0afdc.min.js"></script>
       
     
   </body>
