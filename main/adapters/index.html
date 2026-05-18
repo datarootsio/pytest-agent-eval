@@ -748,249 +748,6 @@
   
 
     
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
-        
-          
-          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Superpowers
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Superpowers
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-    
-    
-    
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10_1" >
-        
-          
-          <label class="md-nav__link" for="__nav_10_1" id="__nav_10_1_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Plans
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_10_1_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10_1">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Plans
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../superpowers/plans/2026-04-29-smolagents-adapter/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Smolagents Adapter Implementation Plan
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-    
-    
-    
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_10_2" id="__nav_10_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Specs
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_10_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Specs
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../superpowers/specs/2026-04-29-smolagents-adapter-design/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Smolagents Adapter — Design
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
   </ul>
 </nav>
                   </div>
@@ -1269,7 +1026,7 @@
 </tbody>
 </table>
 <h2 id="smolagentsadapter"><code>SmolagentsAdapter</code><a class="headerlink" href="#smolagentsadapter" title="Permanent link">&para;</a></h2>
-<p>Wraps a <a href="https://github.com/huggingface/smolagents">smolagents</a> agent — <code>ToolCallingAgent</code>, <code>CodeAgent</code>, or any duck-typed agent exposing <code>.run()</code> and <code>.memory.steps</code>.</p>
+<p>Wraps a <a href="https://github.com/huggingface/smolagents">smolagents</a> agent: <code>ToolCallingAgent</code>, <code>CodeAgent</code>, or any duck-typed agent exposing <code>.run()</code> and <code>.memory.steps</code>.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smolagents</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolCallingAgent</span><span class="p">,</span> <span class="n">InferenceClientModel</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval.adapters.smolagents</span><span class="w"> </span><span class="kn">import</span> <span class="n">SmolagentsAdapter</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
@@ -1295,7 +1052,7 @@
 </div>
 </div>
 <p>The adapter offloads the sync <code>agent.run</code> to a worker thread with <code>asyncio.to_thread</code>. It detects the first turn of a transcript via <code>len(history) == 1</code> and passes <code>reset=True</code> so each transcript starts with fresh agent memory; subsequent turns pass <code>reset=False</code> to continue the conversation.</p>
-<p>Tool-call names are collected from new entries in <code>agent.memory.steps</code>. Smolagents-internal pseudo-tools (<code>python_interpreter</code>, used by <code>CodeAgent</code>, and <code>final_answer</code>, the termination tool) are filtered by default — pass <code>include_internal_tools=True</code> to see them.</p>
+<p>Tool-call names are collected from new entries in <code>agent.memory.steps</code>. Smolagents-internal pseudo-tools (<code>python_interpreter</code>, used by <code>CodeAgent</code>, and <code>final_answer</code>, the termination tool) are filtered by default. Pass <code>include_internal_tools=True</code> to see them.</p>
 <div class="admonition note">
 <p class="admonition-title">CodeAgent and tool-call assertions</p>
 <p><code>CodeAgent</code> runs tools by executing generated Python; smolagents records only the <code>python_interpreter</code> step, not the inner tool calls. If you need fine-grained tool-call assertions with <code>ToolCallEvaluator</code>, use <code>ToolCallingAgent</code>.</p>
@@ -1348,7 +1105,7 @@
 </span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="k">def</span><span class="w"> </span><span class="nf">llm_eval_agent</span><span class="p">():</span>
 </span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="k">return</span> <span class="n">LiveKitAdapter</span><span class="p">(</span><span class="n">make_session</span><span class="p">)</span>
 </span></code></pre></div>
-<p>YAML transcript with WAV references — paths resolve relative to the YAML file's directory:</p>
+<p>YAML transcript with WAV references (paths resolve relative to the YAML file's directory):</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># tests/evals/booking_voice.yaml</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">booking_voice</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nt">turns</span><span class="p">:</span>
@@ -1373,7 +1130,7 @@
 </div>
 <p>The extra pulls <code>livekit-agents&gt;=0.12</code>, <code>livekit-plugins-openai&gt;=0.10</code>, and <code>openai&gt;=1.0</code>.</p>
 <h3 id="generating-audio-fixtures">Generating audio fixtures<a class="headerlink" href="#generating-audio-fixtures" title="Permanent link">&para;</a></h3>
-<p>A bundled CLI synthesises WAVs from each turn's <code>user:</code> text via OpenAI Realtime (text-in, audio-out). Hash sidecars (<code>&lt;wav&gt;.hash</code> = <code>sha256(turn.user)</code>) skip re-synthesis when the transcript hasn't changed. Real recordings work just as well — the adapter doesn't care how the WAV was produced.</p>
+<p>A bundled CLI synthesises WAVs from each turn's <code>user:</code> text via OpenAI Realtime (text-in, audio-out). Hash sidecars (<code>&lt;wav&gt;.hash</code> = <code>sha256(turn.user)</code>) skip re-synthesis when the transcript hasn't changed. Real recordings work just as well; the adapter doesn't care how the WAV was produced.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Synthesise every YAML under [tool.agent_eval].yaml_dirs</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest_agent_eval.synthesize_audio
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
@@ -1384,7 +1141,7 @@
 </span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="c1"># Re-synth everything regardless of cache</span>
 </span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest_agent_eval.synthesize_audio<span class="w"> </span>--force
 </span></code></pre></div>
-<p>The CLI requires <code>OPENAI_API_KEY</code> and writes a <code>.gitignore</code> next to every WAV (<code>*.wav</code>, <code>*.wav.hash</code>) so generated audio stays local — commit YAML transcripts only.</p>
+<p>The CLI requires <code>OPENAI_API_KEY</code> and writes a <code>.gitignore</code> next to every WAV (<code>*.wav</code>, <code>*.wav.hash</code>) so generated audio stays local. Commit YAML transcripts only.</p>
 <p><strong>Constructor:</strong></p>
 <table>
 <thead>
@@ -1406,7 +1163,7 @@
 <td><code>sample_rate</code></td>
 <td><code>int</code></td>
 <td><code>24000</code></td>
-<td>WAV sample rate in Hz — must match the input file</td>
+<td>WAV sample rate in Hz; must match the input file</td>
 </tr>
 <tr>
 <td><code>frame_ms</code></td>
@@ -1429,7 +1186,7 @@
 </tbody>
 </table>
 <h2 id="writing-a-custom-adapter">Writing a custom adapter<a class="headerlink" href="#writing-a-custom-adapter" title="Permanent link">&para;</a></h2>
-<p>Any async callable that accepts <code>list[dict]</code> and returns <code>(str, list[str])</code> works directly — no base class needed:</p>
+<p>Any async callable that accepts <code>list[dict]</code> and returns <code>(str, list[str])</code> works directly. No base class needed:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">my_custom_agent</span><span class="p">(</span><span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
