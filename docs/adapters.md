@@ -105,7 +105,7 @@ Install the optional extra for OpenAI support:
 
 ## `SmolagentsAdapter`
 
-Wraps a [smolagents](https://github.com/huggingface/smolagents) agent — `ToolCallingAgent`, `CodeAgent`, or any duck-typed agent exposing `.run()` and `.memory.steps`.
+Wraps a [smolagents](https://github.com/huggingface/smolagents) agent: `ToolCallingAgent`, `CodeAgent`, or any duck-typed agent exposing `.run()` and `.memory.steps`.
 
 ```python
 from smolagents import ToolCallingAgent, InferenceClientModel
@@ -136,7 +136,7 @@ Install the optional extra for smolagents support:
 
 The adapter offloads the sync `agent.run` to a worker thread with `asyncio.to_thread`. It detects the first turn of a transcript via `len(history) == 1` and passes `reset=True` so each transcript starts with fresh agent memory; subsequent turns pass `reset=False` to continue the conversation.
 
-Tool-call names are collected from new entries in `agent.memory.steps`. Smolagents-internal pseudo-tools (`python_interpreter`, used by `CodeAgent`, and `final_answer`, the termination tool) are filtered by default — pass `include_internal_tools=True` to see them.
+Tool-call names are collected from new entries in `agent.memory.steps`. Smolagents-internal pseudo-tools (`python_interpreter`, used by `CodeAgent`, and `final_answer`, the termination tool) are filtered by default. Pass `include_internal_tools=True` to see them.
 
 !!! note "CodeAgent and tool-call assertions"
     `CodeAgent` runs tools by executing generated Python; smolagents records only the `python_interpreter` step, not the inner tool calls. If you need fine-grained tool-call assertions with `ToolCallEvaluator`, use `ToolCallingAgent`.
@@ -174,7 +174,7 @@ def llm_eval_agent():
     return LiveKitAdapter(make_session)
 ```
 
-YAML transcript with WAV references — paths resolve relative to the YAML file's directory:
+YAML transcript with WAV references (paths resolve relative to the YAML file's directory):
 
 ```yaml
 # tests/evals/booking_voice.yaml
@@ -205,7 +205,7 @@ The extra pulls `livekit-agents>=0.12`, `livekit-plugins-openai>=0.10`, and `ope
 
 ### Generating audio fixtures
 
-A bundled CLI synthesises WAVs from each turn's `user:` text via OpenAI Realtime (text-in, audio-out). Hash sidecars (`<wav>.hash` = `sha256(turn.user)`) skip re-synthesis when the transcript hasn't changed. Real recordings work just as well — the adapter doesn't care how the WAV was produced.
+A bundled CLI synthesises WAVs from each turn's `user:` text via OpenAI Realtime (text-in, audio-out). Hash sidecars (`<wav>.hash` = `sha256(turn.user)`) skip re-synthesis when the transcript hasn't changed. Real recordings work just as well; the adapter doesn't care how the WAV was produced.
 
 ```bash
 # Synthesise every YAML under [tool.agent_eval].yaml_dirs
@@ -219,21 +219,21 @@ python -m pytest_agent_eval.synthesize_audio tests/evals/booking_voice.yaml
 python -m pytest_agent_eval.synthesize_audio --force
 ```
 
-The CLI requires `OPENAI_API_KEY` and writes a `.gitignore` next to every WAV (`*.wav`, `*.wav.hash`) so generated audio stays local — commit YAML transcripts only.
+The CLI requires `OPENAI_API_KEY` and writes a `.gitignore` next to every WAV (`*.wav`, `*.wav.hash`) so generated audio stays local. Commit YAML transcripts only.
 
 **Constructor:**
 
 | Parameter         | Type                                | Default | Description                                                                |
 |-------------------|-------------------------------------|---------|----------------------------------------------------------------------------|
 | `session_factory` | `Callable[[], (AgentSession, Agent)]` | required | Returns a fresh session + agent on every call (one per turn)             |
-| `sample_rate`     | `int`                               | `24000` | WAV sample rate in Hz — must match the input file                         |
+| `sample_rate`     | `int`                               | `24000` | WAV sample rate in Hz; must match the input file                          |
 | `frame_ms`        | `int`                               | `20`    | Frame size in ms; default matches OpenAI Realtime's preferred chunk size  |
 | `grace_period_s`  | `float`                             | `8.0`   | Seconds to wait after WAV exhaustion for trailing tool calls              |
 | `timeout_s`       | `float`                             | `30.0`  | Maximum seconds to wait for WAV exhaustion before forcibly closing        |
 
 ## Writing a custom adapter
 
-Any async callable that accepts `list[dict]` and returns `(str, list[str])` works directly — no base class needed:
+Any async callable that accepts `list[dict]` and returns `(str, list[str])` works directly. No base class needed:
 
 ```python
 import pytest

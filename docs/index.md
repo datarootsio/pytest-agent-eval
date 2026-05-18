@@ -9,17 +9,17 @@
 
 **LLM evaluation tests that actually mean something.**
 
-`pytest-agent-eval` is a pytest plugin for testing LLM agents and applications with threshold-based pass/fail scoring, multi-turn YAML transcripts, and an LLM-as-judge rubric system — without breaking your CI bill.
+`pytest-agent-eval` is a pytest plugin for testing LLM agents and applications with threshold-based pass/fail scoring, multi-turn YAML transcripts, and an LLM-as-judge rubric system, without breaking your CI bill.
 
 ## Highlights
 
-- 🎯 **Threshold-based pass/fail** — run each test N times, pass when ≥ threshold% succeed
-- 📝 **YAML or Python transcripts** — pick the authoring style your team prefers
-- 🔍 **YAML auto-discovery** — drop `*.yaml` files in any configured directory and they become pytest tests automatically
-- 🎙 **Voice agents (LiveKit)** — drive a real `AgentSession` with a WAV per turn; same evaluator surface as text agents
-- 🛡 **CI-safe by default** — eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1`
-- ⚡ **Parallel-ready** — `pytest -n auto` (via [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)) just works
-- 📄 **Markdown reports** — full per-run trace with `--agent-eval-report=eval.md`
+- 🎯 **Threshold-based pass/fail**: run each test N times, pass when ≥ threshold% succeed
+- 📝 **YAML or Python transcripts**: pick the authoring style your team prefers
+- 🔍 **YAML auto-discovery**: drop `*.yaml` files in any configured directory and they become pytest tests automatically
+- 🎙 **Voice agents (LiveKit)**: drive a real `AgentSession` with a WAV per turn; same evaluator surface as text agents
+- 🛡 **CI-safe by default**: eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1`
+- ⚡ **Parallel-ready**: `pytest -n auto` (via [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)) just works
+- 📄 **Markdown reports**: full per-run trace with `--agent-eval-report=eval.md`
 
 ## Install
 
@@ -40,7 +40,7 @@ For framework-specific adapters, install one of the optional extras shown in the
 ## What you can test
 
 !!! tip "Three layers of checks, freely composable"
-    Each evaluator runs against every turn and contributes to the threshold score. Mix the strict ones with the judgmental ones — there is no priority.
+    Each evaluator runs against every turn and contributes to the threshold score. Mix the strict ones with the judgmental ones; there is no priority.
 
 === "Deterministic"
 
@@ -55,7 +55,7 @@ For framework-specific adapters, install one of the optional extras shown in the
 
 === "Tool calling"
 
-    Assert that the agent invoked the right tools — optionally in a specific order, with disallowed tools.
+    Assert that the agent invoked the right tools, optionally in a specific order, with disallowed tools.
 
     ```python
     from pytest_agent_eval import ToolCallEvaluator
@@ -89,7 +89,7 @@ For framework-specific adapters, install one of the optional extras shown in the
 
 === "pydantic-ai"
 
-    No extra needed — pydantic-ai support ships with the base install.
+    No extra needed: pydantic-ai support ships with the base install.
 
     === "pip"
 
@@ -225,7 +225,7 @@ For framework-specific adapters, install one of the optional extras shown in the
 
 === "Custom"
 
-    Any `async def agent(messages) -> tuple[reply: str, tool_calls: list[str]]` callable works as-is — no base class, no inheritance.
+    Any `async def agent(messages) -> tuple[reply: str, tool_calls: list[str]]` callable works as-is. No base class, no inheritance.
 
     ```python
     @pytest.fixture
@@ -239,7 +239,7 @@ For framework-specific adapters, install one of the optional extras shown in the
 ## YAML auto-discovery
 
 !!! info "Zero-boilerplate evals"
-    Point `pytest-agent-eval` at any directory of `*.yaml` files and every transcript becomes a pytest test — no Python wrapper required. Add files, run `pytest`, see results.
+    Point `pytest-agent-eval` at any directory of `*.yaml` files and every transcript becomes a pytest test. No Python wrapper required: add files, run `pytest`, see results.
 
 ```toml
 # pyproject.toml

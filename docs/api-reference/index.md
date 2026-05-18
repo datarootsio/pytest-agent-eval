@@ -2,6 +2,6 @@
 
 Auto-generated API reference from source code docstrings.
 
-- [Models](models.md) — Core data types
-- [Evaluators](evaluators.md) — Built-in evaluators
-- [Adapters](adapters.md) — Framework adapters
+- [Models](models.md): core data types
+- [Evaluators](evaluators.md): built-in evaluators
+- [Adapters](adapters.md): framework adapters

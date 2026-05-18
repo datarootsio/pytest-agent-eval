@@ -17,7 +17,7 @@ Any `*.yaml` file inside `tests/evals/` (searched recursively) becomes a test.
 ```yaml
 # tests/evals/booking.yaml
 
-# Unique ID — used as the pytest test name
+# Unique ID, used as the pytest test name
 id: booking_confirmation
 
 # Fraction of runs that must pass (0.0 – 1.0)
@@ -58,7 +58,7 @@ turns:
         rubric: >
           The reply must confirm a booking with a date, time, and
           reference number. The tone should be friendly and professional.
-        model: "openai:gpt-4o"   # optional — overrides [tool.agent_eval] model
+        model: "openai:gpt-4o"   # optional; overrides [tool.agent_eval] model
 
   - user: "Can you email me the confirmation?"
     expect:
@@ -73,11 +73,11 @@ turns:
 
 | Field       | Type         | Required | Default                      | Description                                   |
 |-------------|--------------|----------|------------------------------|-----------------------------------------------|
-| `id`        | `str`        | yes      | —                            | Unique test identifier, used as the test name |
+| `id`        | `str`        | yes      | n/a                          | Unique test identifier, used as the test name |
 | `threshold` | `float`      | no       | `[tool.agent_eval]` threshold  | Pass fraction required                        |
 | `runs`      | `int`        | no       | `[tool.agent_eval]` runs       | Number of executions                          |
 | `tags`      | `list[str]`  | no       | `[]`                         | Quality-gate tags for filtering               |
-| `turns`     | `list[Turn]` | yes      | —                            | Ordered list of turns                         |
+| `turns`     | `list[Turn]` | yes      | n/a                          | Ordered list of turns                         |
 
 ### `turns[].user`
 
@@ -85,7 +85,7 @@ The user message string for this turn. Required for every turn. Also acts as the
 
 ### `turns[].audio`
 
-Optional path to a WAV file used by voice adapters (e.g. [`LiveKitAdapter`](adapters.md#livekit-voice)). Resolved relative to the YAML file's directory unless absolute. Text adapters ignore this field — turns can mix audio and non-audio freely.
+Optional path to a WAV file used by voice adapters (e.g. [`LiveKitAdapter`](adapters.md#livekit-voice)). Resolved relative to the YAML file's directory unless absolute. Text adapters ignore this field; turns can mix audio and non-audio freely.
 
 ```yaml
 turns:

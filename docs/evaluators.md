@@ -69,7 +69,7 @@ JudgeEvaluator(
         "The reply must confirm the booking, include a reference number, "
         "mention the date and time, and have a friendly professional tone."
     ),
-    model="openai:gpt-4o",      # optional — falls back to [tool.agent_eval] model
+    model="openai:gpt-4o",      # optional; falls back to [tool.agent_eval] model
     retries=2,                   # retry API failures
     timeout=30.0,                # per-call timeout in seconds
 )
@@ -98,10 +98,10 @@ class SentimentEvaluator:
         self.threshold = threshold
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
-        # ctx.reply  — the agent's string reply
-        # ctx.user   — the user message for this turn
-        # ctx.tool_calls — list of tool names called
-        # ctx.history    — OpenAI-format message history
+        # ctx.reply:      the agent's string reply
+        # ctx.user:       the user message for this turn
+        # ctx.tool_calls: list of tool names called
+        # ctx.history:    OpenAI-format message history
 
         score = await compute_sentiment(ctx.reply)   # your own logic
         passed = score >= self.threshold

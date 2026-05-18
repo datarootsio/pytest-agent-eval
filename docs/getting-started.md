@@ -47,9 +47,9 @@ yaml_dirs   = ["tests/evals"]   # enables YAML auto-discovery
 ```
 
 !!! tip "Use a separate judge model"
-    Set `judge_model = "openai:gpt-4o"` independently from the agent-under-test model — you typically want a stronger model judging a cheaper agent.
+    Set `judge_model = "openai:gpt-4o"` independently from the agent-under-test model; you typically want a stronger model judging a cheaper agent.
 
-## Write your first test — Python API
+## Write your first test: Python API
 
 Create `tests/test_my_agent.py`:
 
@@ -58,7 +58,7 @@ import pytest
 from pytest_agent_eval import Turn, Expect, ContainsEvaluator
 
 async def my_agent(messages):
-    """Your agent callable — receives OpenAI-style messages, returns (reply, tool_calls)."""
+    """Your agent callable: receives OpenAI-style messages, returns (reply, tool_calls)."""
     return "Your booking is confirmed for tomorrow at 10am.", []
 
 @pytest.mark.agent_eval(threshold=0.8, runs=3)
@@ -80,10 +80,10 @@ async def test_booking_confirmation(agent_eval):
     result.assert_threshold()
 ```
 
-## Write your first test — YAML style
+## Write your first test: YAML style
 
 !!! info "YAML auto-discovery"
-    Any `*.yaml` file inside a directory listed in `yaml_dirs` becomes a pytest test automatically — no Python wrapper, no decorator. Drop a file, run `pytest`, see the result.
+    Any `*.yaml` file inside a directory listed in `yaml_dirs` becomes a pytest test automatically. No Python wrapper, no decorator: drop a file, run `pytest`, see the result.
 
 Create `tests/evals/booking.yaml`:
 
@@ -147,7 +147,7 @@ Use `-vv` for full turn-by-turn details including evaluator reasoning.
 
 ## Run in parallel
 
-For large eval suites, install the `xdist` extra and pass `-n` to run tests across worker processes — results from every worker are aggregated into the report:
+For large eval suites, install the `xdist` extra and pass `-n` to run tests across worker processes; results from every worker are aggregated into the report:
 
 === "pip"
 

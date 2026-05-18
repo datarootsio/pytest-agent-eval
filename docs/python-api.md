@@ -110,7 +110,7 @@ from pytest_agent_eval import JudgeEvaluator
 
 JudgeEvaluator(
     rubric="The reply must confirm a booking with a date and reference number.",
-    model="openai:gpt-4o",   # optional — falls back to [tool.agent_eval] model
+    model="openai:gpt-4o",   # optional; falls back to [tool.agent_eval] model
 )
 ```
 
