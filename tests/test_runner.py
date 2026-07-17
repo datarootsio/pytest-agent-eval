@@ -72,6 +72,32 @@ async def test_run_transcript_with_tool_call_evaluator():
 
 
 @pytest.mark.asyncio
+async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
+    transcript = Transcript(
+        id="regex",
+        turns=[
+            Turn(
+                user="book me",
+                expect=Expect(reply_matches_any=[r"\bconfirmed\b"], reply_matches_all=[r"\d{1,2}am"]),
+            )
+        ],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(transcript, _booking_agent)
+    assert result.passed is True
+
+    failing = Transcript(
+        id="regex_fail",
+        turns=[Turn(user="book me", expect=Expect(reply_matches_all=[r"BK-\d+"]))],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(failing, _booking_agent)
+    assert result.passed is False
+
+
+@pytest.mark.asyncio
 async def test_run_transcript_fails_when_evaluator_fails():
     transcript = Transcript(
         id="test",

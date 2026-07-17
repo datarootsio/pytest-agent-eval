@@ -30,11 +30,13 @@ def _build_yaml_evaluators(expect: Expect) -> list[Any]:
                 must_exclude=expect.tool_calls_exclude,
             )
         )
-    if expect.reply_contains_any or expect.reply_contains_all:
+    if expect.reply_contains_any or expect.reply_contains_all or expect.reply_matches_any or expect.reply_matches_all:
         evaluators.append(
             ContainsEvaluator(
                 any_of=expect.reply_contains_any,
                 all_of=expect.reply_contains_all,
+                matches_any=expect.reply_matches_any,
+                matches_all=expect.reply_matches_all,
             )
         )
     return evaluators

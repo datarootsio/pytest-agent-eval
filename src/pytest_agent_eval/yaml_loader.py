@@ -26,6 +26,8 @@ def _parse_turn(raw_turn: dict[str, Any], yaml_dir: Path) -> Turn:
         tool_calls_exclude=raw_expect.get("tool_calls_exclude", []),
         reply_contains_any=raw_expect.get("reply_contains_any", []),
         reply_contains_all=raw_expect.get("reply_contains_all", []),
+        reply_matches_any=raw_expect.get("reply_matches_any", []),
+        reply_matches_all=raw_expect.get("reply_matches_all", []),
     )
     audio_raw = raw_turn.get("audio")
     audio: Path | None = None

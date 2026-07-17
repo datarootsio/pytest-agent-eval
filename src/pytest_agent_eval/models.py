@@ -112,6 +112,8 @@ class Expect:
         tool_calls_exclude: Tool names that must NOT appear in tool_calls.
         reply_contains_any: Reply must contain at least one of these strings.
         reply_contains_all: Reply must contain all of these strings.
+        reply_matches_any: Reply must match at least one of these regex patterns.
+        reply_matches_all: Reply must match all of these regex patterns.
     """
 
     evaluators: list[Any] = field(default_factory=list)
@@ -120,6 +122,8 @@ class Expect:
     tool_calls_exclude: list[str] = field(default_factory=list)
     reply_contains_any: list[str] = field(default_factory=list)
     reply_contains_all: list[str] = field(default_factory=list)
+    reply_matches_any: list[str] = field(default_factory=list)
+    reply_matches_all: list[str] = field(default_factory=list)
 
 
 @dataclass

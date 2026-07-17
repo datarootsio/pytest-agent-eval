@@ -19,6 +19,23 @@ def test_load_transcript_parses_fields():
     assert t.turns[0].expect.tool_calls_include == ["book_slot"]
 
 
+def test_load_transcript_parses_regex_expect_fields(tmp_path: Path):
+    yaml_path = tmp_path / "regex.yaml"
+    yaml_path.write_text(
+        "id: t\n"
+        "turns:\n"
+        "  - user: hi\n"
+        "    expect:\n"
+        "      reply_matches_any:\n"
+        '        - "BK-\\\\d+"\n'
+        "      reply_matches_all:\n"
+        '        - "tomorrow"\n'
+    )
+    transcript = load_transcript(yaml_path)
+    assert transcript.turns[0].expect.reply_matches_any == ["BK-\\d+"]
+    assert transcript.turns[0].expect.reply_matches_all == ["tomorrow"]
+
+
 def test_audio_field_defaults_to_none(tmp_path: Path):
     yaml_path = tmp_path / "no_audio.yaml"
     yaml_path.write_text("id: t\nturns:\n  - user: hi\n")
