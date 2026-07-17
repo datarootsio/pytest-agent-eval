@@ -11,7 +11,7 @@ from pytest_agent_eval.evaluators import (
     ToolCallArgsJudgeEvaluator,
     ToolCallEvaluator,
 )
-from pytest_agent_eval.models import Expect, JudgeConfig, ToolCall, Transcript, Turn
+from pytest_agent_eval.models import Expect, JudgeConfig, ToolCall, ToolCallArgsConfig, Transcript, Turn
 
 __version__ = _pkg_version("pytest-agent-eval")
 
@@ -21,6 +21,7 @@ __all__ = [
     "Transcript",
     "JudgeConfig",
     "ToolCall",
+    "ToolCallArgsConfig",
     "Evaluator",
     "EvalResult",
     "ContainsEvaluator",

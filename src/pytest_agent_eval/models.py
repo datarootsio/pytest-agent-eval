@@ -138,6 +138,33 @@ class JudgeConfig:
 
 
 @dataclass
+class ToolCallArgsConfig:
+    """One tool-argument assertion in a YAML transcript turn.
+
+    Args:
+        tool: Name of the tool whose arguments to check.
+        args: Expected arguments for the deterministic check, or None.
+        mode: "subset" or "exact" (deterministic check only).
+        judge: Optional LLM-judge config for the arguments.
+
+    Raises:
+        ValueError: If neither args nor judge is provided.
+    """
+
+    tool: str
+    args: dict[str, Any] | None = None
+    mode: str = "subset"
+    judge: JudgeConfig | None = None
+
+    def __post_init__(self) -> None:
+        if self.args is None and self.judge is None:
+            raise ValueError(
+                f"tool_calls_args entry for {self.tool!r} needs 'args' (deterministic check) "
+                "or 'judge' (LLM-judged rubric); got neither"
+            )
+
+
+@dataclass
 class Expect:
     """Expectations for a single transcript turn.
 
@@ -147,6 +174,7 @@ class Expect:
         tool_calls_include: Tool names that must appear in tool_calls.
         tool_calls_exclude: Tool names that must NOT appear in tool_calls.
         tool_calls_ordered: If True, tool_calls_include must appear in the given order.
+        tool_calls_args: Assertions on the arguments of specific tool calls.
         reply_contains_any: Reply must contain at least one of these strings.
         reply_contains_all: Reply must contain all of these strings.
         reply_matches_any: Reply must match at least one of these regex patterns.
@@ -158,6 +186,7 @@ class Expect:
     tool_calls_include: list[str] = field(default_factory=list)
     tool_calls_exclude: list[str] = field(default_factory=list)
     tool_calls_ordered: bool = False
+    tool_calls_args: list[ToolCallArgsConfig] = field(default_factory=list)
     reply_contains_any: list[str] = field(default_factory=list)
     reply_contains_all: list[str] = field(default_factory=list)
     reply_matches_any: list[str] = field(default_factory=list)

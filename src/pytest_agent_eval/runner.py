@@ -76,6 +76,19 @@ async def _run_turn(
         resolved_judge_model = turn.expect.judge.model or judge_model or config_model
         evaluators.append(JudgeEvaluator(rubric=turn.expect.judge.rubric, model=resolved_judge_model))
 
+    for args_cfg in turn.expect.tool_calls_args:
+        if args_cfg.args is not None:
+            from pytest_agent_eval.evaluators.tool_call import ToolCallArgsEvaluator
+
+            evaluators.append(ToolCallArgsEvaluator(tool=args_cfg.tool, args=args_cfg.args, mode=args_cfg.mode))
+        if args_cfg.judge is not None:
+            from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
+
+            resolved = args_cfg.judge.model or judge_model or config_model
+            evaluators.append(
+                ToolCallArgsJudgeEvaluator(tool=args_cfg.tool, rubric=args_cfg.judge.rubric, model=resolved)
+            )
+
     eval_results = list(await asyncio.gather(*(ev.evaluate(ctx) for ev in evaluators)))
     turn_passed = all(r.passed for r in eval_results)
     return TurnResult(turn_index=turn_idx, passed=turn_passed, eval_results=eval_results), reply, tool_calls

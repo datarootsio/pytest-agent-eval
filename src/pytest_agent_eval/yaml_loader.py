@@ -10,8 +10,24 @@ import pytest
 import yaml
 
 from pytest_agent_eval.config import load_config
-from pytest_agent_eval.models import Expect, JudgeConfig, Transcript, Turn
+from pytest_agent_eval.models import Expect, JudgeConfig, ToolCallArgsConfig, Transcript, Turn
 from pytest_agent_eval.runner import run_transcript
+
+
+def _parse_tool_calls_args(raw: list[dict[str, Any]]) -> list[ToolCallArgsConfig]:
+    return [
+        ToolCallArgsConfig(
+            tool=entry["tool"],
+            args=entry.get("args"),
+            mode=entry.get("mode", "subset"),
+            judge=(
+                JudgeConfig(rubric=entry["judge"]["rubric"], model=entry["judge"].get("model"))
+                if "judge" in entry
+                else None
+            ),
+        )
+        for entry in raw
+    ]
 
 
 def _parse_turn(raw_turn: dict[str, Any], yaml_dir: Path) -> Turn:
@@ -25,6 +41,7 @@ def _parse_turn(raw_turn: dict[str, Any], yaml_dir: Path) -> Turn:
         tool_calls_include=raw_expect.get("tool_calls_include", []),
         tool_calls_exclude=raw_expect.get("tool_calls_exclude", []),
         tool_calls_ordered=raw_expect.get("tool_calls_ordered", False),
+        tool_calls_args=_parse_tool_calls_args(raw_expect.get("tool_calls_args", [])),
         reply_contains_any=raw_expect.get("reply_contains_any", []),
         reply_contains_all=raw_expect.get("reply_contains_all", []),
         reply_matches_any=raw_expect.get("reply_matches_any", []),

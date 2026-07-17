@@ -51,6 +51,42 @@ def test_load_transcript_parses_tool_calls_ordered(tmp_path: Path):
     assert load_transcript(SAMPLE).turns[0].expect.tool_calls_ordered is False
 
 
+def test_load_transcript_parses_tool_calls_args(tmp_path: Path):
+    yaml_path = tmp_path / "args.yaml"
+    yaml_path.write_text(
+        "id: t\n"
+        "turns:\n"
+        "  - user: hi\n"
+        "    expect:\n"
+        "      tool_calls_args:\n"
+        "        - tool: book_slot\n"
+        "          args:\n"
+        "            time: 10am\n"
+        "          mode: exact\n"
+        "        - tool: book_slot\n"
+        "          judge:\n"
+        "            rubric: Time within business hours\n"
+    )
+    transcript = load_transcript(yaml_path)
+    entries = transcript.turns[0].expect.tool_calls_args
+    assert len(entries) == 2
+    assert entries[0].tool == "book_slot"
+    assert entries[0].args == {"time": "10am"}
+    assert entries[0].mode == "exact"
+    assert entries[0].judge is None
+    assert entries[1].args is None
+    assert entries[1].judge.rubric == "Time within business hours"
+
+
+def test_load_transcript_rejects_tool_calls_args_without_args_or_judge(tmp_path: Path):
+    yaml_path = tmp_path / "bad_args.yaml"
+    yaml_path.write_text(
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n        - tool: book_slot\n"
+    )
+    with pytest.raises(ValueError, match="needs 'args'"):
+        load_transcript(yaml_path)
+
+
 def test_audio_field_defaults_to_none(tmp_path: Path):
     yaml_path = tmp_path / "no_audio.yaml"
     yaml_path.write_text("id: t\nturns:\n  - user: hi\n")

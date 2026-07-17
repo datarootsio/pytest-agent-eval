@@ -193,6 +193,83 @@ async def test_runner_normalises_plain_strings_to_tool_calls():
 
 
 @pytest.mark.asyncio
+async def test_run_transcript_dispatches_tool_calls_args_deterministic():
+    from pytest_agent_eval.models import ToolCall, ToolCallArgsConfig
+
+    async def args_agent(history: list[dict]) -> tuple[str, list]:
+        return "done", [ToolCall("book_slot", {"time": "10am"})]
+
+    transcript = Transcript(
+        id="args_ok",
+        turns=[
+            Turn(
+                user="book",
+                expect=Expect(tool_calls_args=[ToolCallArgsConfig(tool="book_slot", args={"time": "10am"})]),
+            )
+        ],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(transcript, args_agent)
+    assert result.passed is True
+
+    mismatch = Transcript(
+        id="args_bad",
+        turns=[
+            Turn(
+                user="book",
+                expect=Expect(tool_calls_args=[ToolCallArgsConfig(tool="book_slot", args={"time": "11am"})]),
+            )
+        ],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(mismatch, args_agent)
+    assert result.passed is False
+
+
+@pytest.mark.asyncio
+async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallback():
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from pytest_agent_eval.models import JudgeConfig, ToolCall, ToolCallArgsConfig
+
+    async def args_agent(history: list[dict]) -> tuple[str, list]:
+        return "done", [ToolCall("book_slot", {"time": "10am"})]
+
+    mock_output = MagicMock()
+    mock_output.passed = True
+    mock_output.reasoning = "ok"
+    mock_result = MagicMock()
+    mock_result.output = mock_output
+
+    transcript = Transcript(
+        id="args_judge",
+        turns=[
+            Turn(
+                user="book",
+                expect=Expect(
+                    tool_calls_args=[
+                        ToolCallArgsConfig(tool="book_slot", judge=JudgeConfig(rubric="Business hours only"))
+                    ]
+                ),
+            )
+        ],
+        threshold=1.0,
+        runs=1,
+    )
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(return_value=mock_result)
+        MockAgent.return_value = instance
+        result = await run_transcript(transcript, args_agent, config_model="openai:fallback-model")
+
+    assert result.passed is True
+    assert MockAgent.call_args.args[0] == "openai:fallback-model"
+
+
+@pytest.mark.asyncio
 async def test_history_is_accumulated_across_turns():
     captured_histories: list[list[dict]] = []
 
