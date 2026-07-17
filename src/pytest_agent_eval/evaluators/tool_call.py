@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from pytest_agent_eval.models import EvalResult, TurnContext
 
