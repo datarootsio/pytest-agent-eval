@@ -69,6 +69,55 @@ ToolCallEvaluator(
 | `must_exclude` | `list[str]` | Tool names that must NOT appear in the turn's tool calls           |
 | `ordered`      | `bool`      | If `True`, `must_include` tools must appear in the specified order |
 
+## `ToolCallArgsEvaluator`
+
+Asserts the **arguments** a tool was called with. Requires an adapter (or custom agent) that captures arguments — all bundled adapters do; custom agents return `ToolCall(name, args)` instead of plain strings (see [Adapters](adapters.md#writing-a-custom-adapter)).
+
+```python
+from pytest_agent_eval import ToolCallArgsEvaluator
+
+# Subset (default): expected keys/values must appear; extra observed keys are fine
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+
+# Exact: observed args must equal the expected dict exactly
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am", "date": "tomorrow"}, mode="exact")
+```
+
+If the tool is called several times in a turn, the check passes when **any** call matches. Failure messages distinguish three cases: the tool was never called, the tool was called but no arguments were captured, and a genuine argument mismatch (which shows expected vs observed).
+
+**Parameters:**
+
+| Parameter | Type   | Default    | Description                                        |
+|-----------|--------|------------|----------------------------------------------------|
+| `tool`    | `str`  | required   | Name of the tool to check                          |
+| `args`    | `dict` | required   | Expected arguments                                 |
+| `mode`    | `str`  | `"subset"` | `"subset"` or `"exact"`                            |
+
+## `ToolCallArgsJudgeEvaluator`
+
+Uses an LLM to judge a tool's arguments against a natural-language rubric — for constraints that are awkward to express as exact values ("the time must be within business hours", "the query must mention the user's city").
+
+```python
+from pytest_agent_eval import ToolCallArgsJudgeEvaluator
+
+ToolCallArgsJudgeEvaluator(
+    tool="book_slot",
+    rubric="The booking time must be within business hours (9am-5pm).",
+)
+```
+
+The judge receives the tool name and the JSON arguments of every call to that tool in the turn, and passes if any call satisfies the rubric. Never-called and args-not-captured fail deterministically **before** any LLM call, so no judge tokens are spent on structural failures.
+
+**Parameters:**
+
+| Parameter | Type          | Default  | Description                                                  |
+|-----------|---------------|----------|--------------------------------------------------------------|
+| `tool`    | `str`         | required | Name of the tool whose arguments to judge                    |
+| `rubric`  | `str`         | required | Natural-language rubric for acceptable arguments             |
+| `model`   | `str \| None` | `None`   | pydantic-ai model ID; falls back to `[tool.agent_eval] model` |
+| `retries` | `int`         | `2`      | Retries on API failure                                       |
+| `timeout` | `float`       | `30.0`   | Per-call timeout in seconds                                  |
+
 ## `JudgeEvaluator`
 
 Uses an LLM (via pydantic-ai) to evaluate the reply against a natural-language rubric. Good for open-ended quality checks that are hard to express as string patterns.

@@ -84,6 +84,8 @@ expect = Expect(
 | `reply_matches_all`  | `list[str]`       | Reply must match all regex patterns                  |
 | `tool_calls_include` | `list[str]`       | These tool names must appear in the turn's calls     |
 | `tool_calls_exclude` | `list[str]`       | These tool names must NOT appear in the turn's calls |
+| `tool_calls_ordered` | `bool`            | If `True`, `tool_calls_include` must appear in order |
+| `tool_calls_args`    | `list[ToolCallArgsConfig]` | Assertions on specific tools' call arguments |
 | `judge`              | `JudgeConfig`     | LLM-as-judge rubric (see Evaluators)                 |
 
 ## Evaluators
@@ -105,6 +107,28 @@ ContainsEvaluator(all_of=["Booking"], case_sensitive=True)      # exact-case mat
 from pytest_agent_eval import ToolCallEvaluator
 
 ToolCallEvaluator(must_include=["create_booking"], must_exclude=["cancel_booking"])
+```
+
+### `ToolCallArgsEvaluator`
+
+```python
+from pytest_agent_eval import ToolCallArgsEvaluator
+
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})                 # subset (default)
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"}, mode="exact")   # full equality
+```
+
+Requires captured arguments: bundled adapters capture them automatically; custom agents return `ToolCall(name, args)` instead of plain strings.
+
+### `ToolCallArgsJudgeEvaluator`
+
+```python
+from pytest_agent_eval import ToolCallArgsJudgeEvaluator
+
+ToolCallArgsJudgeEvaluator(
+    tool="book_slot",
+    rubric="The booking time must be within business hours.",
+)
 ```
 
 ### `JudgeEvaluator`

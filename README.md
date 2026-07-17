@@ -61,6 +61,7 @@ Bringing your own framework? Any `async def agent(messages) -> (reply, tool_call
 
 - **Deterministic checks** — `ContainsEvaluator(any_of=["confirmed", "booked"], matches_all=[r"BK-\d+"])` for substring and regex assertions over the agent reply.
 - **Tool-call assertions** — `ToolCallEvaluator(must_include=["create_booking"], ordered=True)` to verify that the agent called the right tools, in the right order.
+- **Tool-argument assertions** — `ToolCallArgsEvaluator(tool="create_booking", args={"time": "10am"})` for deterministic subset/exact checks on call arguments, plus `ToolCallArgsJudgeEvaluator` for rubric-based judging of arguments.
 - **LLM-as-judge** — `JudgeEvaluator(rubric="Reply must be friendly, include a date, and confirm the booking.")` for open-ended quality checks the agent under test should meet.
 
 Mix and match per turn — every evaluator participates in the threshold score.

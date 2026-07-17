@@ -115,6 +115,8 @@ All `expect` fields are optional. Omit `expect` entirely for turns where you onl
 | `reply_matches_all`  | `list[str]`   | All regex patterns must match the reply              |
 | `tool_calls_include` | `list[str]`   | These tool names must be present in the turn's calls |
 | `tool_calls_exclude` | `list[str]`   | These tool names must be absent from the turn's calls|
+| `tool_calls_ordered` | `bool`        | If `true`, `tool_calls_include` must appear in order |
+| `tool_calls_args`    | `list`        | Assertions on the arguments of specific tool calls   |
 | `judge`              | `JudgeConfig` | LLM-as-judge rubric evaluation                       |
 
 String and regex checks are case-insensitive. Regex patterns use Python `re.search` semantics — quote them in YAML so `\d` and friends survive parsing:
@@ -125,6 +127,34 @@ expect:
     - "BK-\\d+"
     - "ref(erence)? number"
 ```
+
+### `turns[].expect.tool_calls_args`
+
+Each entry asserts the arguments of one tool. Provide `args` for a deterministic check, `judge` for an LLM-judged rubric, or both:
+
+```yaml
+expect:
+  tool_calls_args:
+    # Deterministic: these keys/values must appear in the call's arguments
+    - tool: book_slot
+      args:
+        time: "10am"
+      mode: subset          # subset (default) or exact
+
+    # LLM-judged: rubric evaluated against the JSON arguments
+    - tool: book_slot
+      judge:
+        rubric: "The booking time must be within business hours."
+```
+
+| Field   | Type          | Default    | Description                                                        |
+|---------|---------------|------------|--------------------------------------------------------------------|
+| `tool`  | `str`         | required   | Tool name to check                                                 |
+| `args`  | `dict`        | `null`     | Expected arguments (deterministic check)                           |
+| `mode`  | `str`         | `"subset"` | `subset`: expected items must appear; `exact`: full dict equality  |
+| `judge` | `JudgeConfig` | `null`     | Rubric + optional model, judged against the call's JSON arguments  |
+
+If the tool is called several times in the turn, the assertion passes when any call matches. Argument capture requires an adapter that records arguments — all bundled adapters do; custom agents must return `ToolCall(name, args)` (see [Adapters](adapters.md#writing-a-custom-adapter)).
 
 ### `turns[].expect.judge`
 

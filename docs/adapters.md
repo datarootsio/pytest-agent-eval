@@ -18,7 +18,7 @@ def llm_eval_agent():
     return PydanticAIAdapter(my_agent)
 ```
 
-The adapter forwards the last message as the user prompt and the preceding messages as `message_history`. Tool names are extracted from `result.all_messages()`.
+The adapter forwards the last message as the user prompt and the preceding messages as `message_history`. Tool calls (names and arguments) are extracted from the tool-call parts of `result.all_messages()`.
 
 **Constructor:**
 
@@ -251,6 +251,20 @@ async def my_custom_agent(messages: list[dict]) -> tuple[str, list[str]]:
 def llm_eval_agent():
     return my_custom_agent
 ```
+
+### Capturing tool-call arguments
+
+Plain tool-name strings support name assertions (`tool_calls_include`, `ordered`, ...) but not argument assertions. To enable `tool_calls_args` / `ToolCallArgsEvaluator`, return `ToolCall(name, args)` entries instead — `ToolCall` subclasses `str`, so everything that worked with names keeps working:
+
+```python
+from pytest_agent_eval import ToolCall
+
+async def my_custom_agent(messages):
+    reply, calls = await call_my_backend(messages[-1]["content"])
+    return reply, [ToolCall(c.name, c.arguments) for c in calls]
+```
+
+All bundled adapters already capture arguments. When arguments are not captured, argument evaluators fail with an explicit "no arguments were captured" message rather than a misleading mismatch.
 
 If your agent wraps a synchronous function, use `asyncio.to_thread`:
 
