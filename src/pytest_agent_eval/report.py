@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from pytest_agent_eval.groups import EvalOutcome
 from pytest_agent_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
 
 
@@ -92,15 +93,54 @@ def _score_line(result: TranscriptResult) -> str:
 
 _XDIST_RESULT_KEY = "llm_eval_result"
 _XDIST_NAME_KEY = "llm_eval_name"
+_XDIST_META_KEY = "llm_eval_meta"
 
 
 class AgentEvalReportPlugin:
     """Pytest plugin that collects results and writes the report."""
 
     def __init__(self, config: pytest.Config) -> None:
-        """Bind the plugin to a pytest config and initialise the result buffer."""
+        """Bind the plugin to a pytest config and initialise the result buffers."""
         self._config = config
         self._results: list[tuple[str, TranscriptResult]] = []
+        self._outcomes: dict[str, EvalOutcome] = {}
+        self._failed_nodeids: set[str] = set()
+        self._had_collect_error = False
+        self._deselected_count = 0
+        self._exit_overridden = False
+        self._cfg: Any = None
+
+    def _get_cfg(self) -> Any:
+        if self._cfg is None:
+            from pytest_agent_eval.config import load_config
+
+            self._cfg = load_config(self._config)
+        return self._cfg
+
+    @staticmethod
+    def _item_meta(item: pytest.Item) -> dict[str, Any]:
+        marker = item.get_closest_marker("agent_eval")
+        tags = list((marker.kwargs.get("tags") if marker else None) or [])
+        return {"identity": item.name, "tags": tags, "markers": [m.name for m in item.iter_markers()]}
+
+    def _record_outcome(self, nodeid: str, meta: dict[str, Any], when: str, outcome: str) -> None:
+        entry = self._outcomes.get(nodeid)
+        if entry is None:
+            entry = EvalOutcome(
+                identity=meta["identity"],
+                nodeid=nodeid,
+                outcome="passed",
+                tags=list(meta["tags"]),
+                markers=list(meta["markers"]),
+            )
+            self._outcomes[nodeid] = entry
+        if when == "setup":
+            if outcome in ("skipped", "failed"):
+                entry.outcome = outcome
+        elif when == "call":
+            entry.outcome = outcome
+        elif when == "teardown" and outcome == "failed" and entry.outcome == "passed":
+            entry.outcome = "failed"
 
     def add_result(self, name: str, result: TranscriptResult) -> None:
         """Append a transcript result to the in-memory report buffer."""
@@ -120,9 +160,21 @@ class AgentEvalReportPlugin:
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(self, item: pytest.Item, call: pytest.CallInfo) -> Any:
-        """Capture per-test eval results and forward them across xdist workers."""
+        """Capture per-test eval results and outcomes, forwarding across xdist workers."""
         outcome = yield
         report = outcome.get_result()
+
+        meta = self._item_meta(item)
+        if self._is_xdist_worker():
+            # user_properties is shared across phases, so the setup-phase append rides
+            # every report; gate on groups so junitxml isn't polluted for non-users.
+            if self._get_cfg().groups and not any(k == _XDIST_META_KEY for k, _ in report.user_properties):
+                report.user_properties.append((_XDIST_META_KEY, meta))
+        else:
+            self._record_outcome(item.nodeid, meta, report.when, report.outcome)
+            if report.failed:
+                self._failed_nodeids.add(item.nodeid)
+
         if call.when == "call":
             result: TranscriptResult | None = getattr(item, "_eval_result", None)
             if result is not None:
@@ -146,14 +198,32 @@ class AgentEvalReportPlugin:
                     report.sections.append(("LLM Eval", f"{score_info}\n" + "\n".join(details)))
 
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
-        """On the xdist controller, deserialise eval results forwarded by workers."""
-        if not self._is_xdist_controller() or report.when != "call":
+        """On the xdist controller, replay outcomes and deserialise forwarded eval results."""
+        if not self._is_xdist_controller():
+            return
+
+        if report.failed:
+            self._failed_nodeids.add(report.nodeid)
+        meta = next((v for k, v in report.user_properties if k == _XDIST_META_KEY), None)
+        if meta is not None:
+            self._record_outcome(report.nodeid, meta, report.when, report.outcome)
+
+        if report.when != "call":
             return
         result_data = next((v for k, v in report.user_properties if k == _XDIST_RESULT_KEY), None)
         if result_data is None:
             return
         name = next((v for k, v in report.user_properties if k == _XDIST_NAME_KEY), report.nodeid)
         self.add_result(name, _deserialize_result(result_data))
+
+    def pytest_collectreport(self, report: pytest.CollectReport) -> None:
+        """Remember collection errors — they veto any exit-code override."""
+        if report.failed:
+            self._had_collect_error = True
+
+    def pytest_deselected(self, items: Any) -> None:
+        """Track deselection so the group summary can flag partial selections."""
+        self._deselected_count += len(items)
 
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         """Write the markdown report to disk if a path was configured."""

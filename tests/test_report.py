@@ -180,6 +180,8 @@ def test_logreport_collects_result_on_controller():
     report = types.SimpleNamespace(
         when="call",
         nodeid="tests/evals/foo.yaml::my_transcript",
+        failed=False,
+        outcome="passed",
         user_properties=[
             ("llm_eval_name", "my_transcript"),
             ("llm_eval_result", _serialize_result(result)),
@@ -198,7 +200,9 @@ def test_logreport_ignores_non_call_phases():
     plugin = AgentEvalReportPlugin(cfg)
 
     for phase in ("setup", "teardown"):
-        report = types.SimpleNamespace(when=phase, nodeid="foo::bar", user_properties=[])
+        report = types.SimpleNamespace(
+            when=phase, nodeid="foo::bar", failed=False, outcome="passed", user_properties=[]
+        )
         plugin.pytest_runtest_logreport(report)
 
     assert plugin._results == []
@@ -218,10 +222,64 @@ def test_logreport_ignores_reports_without_llm_eval_result():
     report = types.SimpleNamespace(
         when="call",
         nodeid="tests/foo.yaml::bar",
+        failed=False,
+        outcome="passed",
         user_properties=[("some_other_key", "value")],
     )
     plugin.pytest_runtest_logreport(report)
     assert plugin._results == []
+
+
+def _meta(identity: str, tags: list[str] | None = None, markers: list[str] | None = None) -> dict:
+    return {"identity": identity, "tags": tags or [], "markers": markers or []}
+
+
+def test_record_outcome_phase_state_machine():
+    plugin = AgentEvalReportPlugin(_make_mock_config())
+
+    plugin._record_outcome("n1", _meta("t1"), "setup", "passed")
+    plugin._record_outcome("n1", _meta("t1"), "call", "passed")
+    plugin._record_outcome("n1", _meta("t1"), "teardown", "passed")
+    assert plugin._outcomes["n1"].outcome == "passed"
+
+    plugin._record_outcome("n2", _meta("t2"), "setup", "skipped")
+    plugin._record_outcome("n2", _meta("t2"), "teardown", "passed")
+    assert plugin._outcomes["n2"].outcome == "skipped"
+
+    plugin._record_outcome("n3", _meta("t3"), "setup", "passed")
+    plugin._record_outcome("n3", _meta("t3"), "call", "failed")
+    assert plugin._outcomes["n3"].outcome == "failed"
+
+    plugin._record_outcome("n4", _meta("t4"), "setup", "passed")
+    plugin._record_outcome("n4", _meta("t4"), "call", "passed")
+    plugin._record_outcome("n4", _meta("t4"), "teardown", "failed")
+    assert plugin._outcomes["n4"].outcome == "failed"
+
+
+def test_controller_replays_outcomes_from_user_properties():
+    plugin = AgentEvalReportPlugin(_make_mock_config(dist="load"))
+    meta = _meta("transcript_x", tags=["gate:x"])
+
+    for when, outcome_str in (("setup", "passed"), ("call", "failed"), ("teardown", "passed")):
+        report = types.SimpleNamespace(
+            when=when,
+            nodeid="tests/evals/x.yaml::transcript_x",
+            failed=outcome_str == "failed",
+            outcome=outcome_str,
+            user_properties=[("llm_eval_meta", meta)],
+        )
+        plugin.pytest_runtest_logreport(report)
+
+    entry = plugin._outcomes["tests/evals/x.yaml::transcript_x"]
+    assert entry.outcome == "failed"
+    assert entry.tags == ["gate:x"]
+    assert "tests/evals/x.yaml::transcript_x" in plugin._failed_nodeids
+
+
+def test_collect_error_flag_set():
+    plugin = AgentEvalReportPlugin(_make_mock_config())
+    plugin.pytest_collectreport(types.SimpleNamespace(failed=True))
+    assert plugin._had_collect_error is True
 
 
 def test_xdist_report_collects_all_workers(pytester: pytest.Pytester, tmp_path: Path):
