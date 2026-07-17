@@ -9,7 +9,13 @@ from typing import Any
 
 import pytest
 
-from pytest_agent_eval.groups import EvalOutcome
+from pytest_agent_eval.groups import (
+    EvalOutcome,
+    GroupResult,
+    build_group_markdown_lines,
+    evaluate_groups,
+    format_group_summary_lines,
+)
 from pytest_agent_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
 
 
@@ -44,12 +50,14 @@ def _deserialize_result(data: dict[str, Any]) -> TranscriptResult:
 def build_markdown_report(
     results: list[tuple[str, TranscriptResult]],
     run_date: str | None = None,
+    group_results: list[GroupResult] | None = None,
 ) -> str:
     """Build a markdown evaluation report from a list of (name, result) pairs.
 
     Args:
         results: List of (transcript_id, TranscriptResult) pairs.
         run_date: Optional date string for the report header.
+        group_results: Optional group aggregation results for a Groups section.
 
     Returns:
         Formatted markdown string.
@@ -63,6 +71,10 @@ def build_markdown_report(
         status = "✅ PASS" if result.passed else "❌ FAIL"
         n, p = len(result.runs), result.passed_run_count
         lines.append(f"| {name} | {n} | {p} | {result.score:.2f} | {result.threshold:.2f} | {status} |")
+
+    if group_results:
+        lines.append("")
+        lines.extend(build_group_markdown_lines(group_results))
 
     lines.append("")
     lines.append("## Details")
@@ -225,11 +237,28 @@ class AgentEvalReportPlugin:
         """Track deselection so the group summary can flag partial selections."""
         self._deselected_count += len(items)
 
+    def _group_results(self) -> list[GroupResult]:
+        return evaluate_groups(self._get_cfg().groups, list(self._outcomes.values()))
+
+    def pytest_terminal_summary(self, terminalreporter: Any) -> None:
+        """Render the group summary section after the run."""
+        cfg = self._get_cfg()
+        if not cfg.groups or not self._outcomes:
+            return
+        terminalreporter.section("group summary")
+        for line in format_group_summary_lines(self._group_results()):
+            terminalreporter.write_line(line, yellow="WARNING" in line)
+        if self._deselected_count:
+            terminalreporter.write_line(
+                f"note: {self._deselected_count} test(s) deselected — group pass rates reflect the selected subset"
+            )
+        if self._exit_overridden:
+            terminalreporter.write_line("exit code overridden to 0: all group thresholds met", green=True)
+
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         """Write the markdown report to disk if a path was configured."""
-        from pytest_agent_eval.config import load_config
-
-        cfg = load_config(self._config)
+        cfg = self._get_cfg()
         if cfg.report_path and self._results:
-            report_text = build_markdown_report(self._results)
+            group_results = self._group_results() if cfg.groups else None
+            report_text = build_markdown_report(self._results, group_results=group_results)
             Path(cfg.report_path).write_text(report_text)

@@ -286,6 +286,69 @@ def test_group_pytest_markers_are_auto_registered(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
+_GROUPS_CONFTEST = """
+import pytest
+
+@pytest.fixture
+def llm_eval_agent():
+    async def agent(history):
+        reply = "confirmed" if "good" in history[-1]["content"] else "nope"
+        return reply, []
+    return agent
+"""
+
+
+def _make_grouped_project(pytester: pytest.Pytester, threshold: float = 0.5, extra_toml: str = "") -> None:
+    pytester.makepyprojecttoml(
+        f"""
+        [tool.agent_eval]
+        yaml_dirs = ["tests/evals"]
+
+        [tool.agent_eval.groups.booking]
+        threshold = {threshold}
+        tags = ["gate:booking"]
+        {extra_toml}
+        """
+    )
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makeconftest(_GROUPS_CONFTEST)
+    pytester.makefile(
+        ".yaml",
+        **{
+            "tests/evals/good": (
+                "id: good_case\nthreshold: 1.0\ntags: [gate:booking]\nturns:\n"
+                "  - user: good\n    expect:\n      reply_contains_any: [confirmed]\n"
+            ),
+            "tests/evals/bad": (
+                "id: bad_case\nthreshold: 1.0\ntags: [gate:booking]\nturns:\n"
+                "  - user: bad\n    expect:\n      reply_contains_any: [confirmed]\n"
+            ),
+        },
+    )
+
+
+def test_terminal_group_summary_shows_rates_and_failures(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=0.5)
+    result = pytester.runpytest("--agent-eval-live")
+    result.stdout.fnmatch_lines(
+        [
+            "*group summary*",
+            "*booking: 1/2 passed (50%) >= 50% required -- PASSED*",
+            "*failures: bad_case*",
+        ]
+    )
+
+
+def test_markdown_report_includes_groups_section(pytester: pytest.Pytester, tmp_path):
+    _make_grouped_project(pytester, threshold=0.5)
+    report_path = tmp_path / "report.md"
+    pytester.runpytest("--agent-eval-live", f"--agent-eval-report={report_path}")
+    content = report_path.read_text()
+    assert "## Groups" in content
+    assert "| booking | 1 | 2 |" in content
+    assert content.index("## Groups") < content.index("## Details")
+
+
 def test_invalid_group_config_becomes_usage_error(pytester: pytest.Pytester):
     pytester.makepyprojecttoml(
         """
