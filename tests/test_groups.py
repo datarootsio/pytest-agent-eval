@@ -403,6 +403,44 @@ def test_all_skipped_group_renders_skipped_without_override(pytester: pytest.Pyt
     assert result.ret == 0
 
 
+# --- xdist and partial selection ---
+
+
+def test_group_override_works_under_xdist(pytester: pytest.Pytester):
+    pytest.importorskip("xdist")
+    _make_grouped_project(pytester, threshold=0.5)
+    result = pytester.runpytest("--agent-eval-live", "-n2")
+    result.assert_outcomes(passed=1, failed=1)
+    assert result.ret == 0
+    result.stdout.fnmatch_lines(["*booking: 1/2 passed (50%) >= 50% required -- PASSED*"])
+
+
+def test_group_failure_keeps_red_exit_under_xdist(pytester: pytest.Pytester):
+    pytest.importorskip("xdist")
+    _make_grouped_project(pytester, threshold=0.9)
+    result = pytester.runpytest("--agent-eval-live", "-n2")
+    assert result.ret == 1
+
+
+def test_partial_selection_denominator_is_what_ran(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=1.0)
+    result = pytester.runpytest("--agent-eval-live", "-k", "good")
+    assert result.ret == 0
+    result.stdout.fnmatch_lines(
+        [
+            "*booking: 1/1 passed (100%) >= 100% required -- PASSED*",
+            "*1 test(s) deselected*",
+        ]
+    )
+
+
+def test_must_pass_missing_from_selection_warns_but_passes(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=0.0, extra_toml='must_pass = ["bad_case"]')
+    result = pytester.runpytest("--agent-eval-live", "-k", "good")
+    assert result.ret == 0
+    result.stdout.fnmatch_lines(["*WARNING: must_pass entry 'bad_case' did not run*"])
+
+
 def test_invalid_group_config_becomes_usage_error(pytester: pytest.Pytester):
     pytester.makepyprojecttoml(
         """
