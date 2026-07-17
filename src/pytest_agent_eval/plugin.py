@@ -26,12 +26,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Register the agent_eval marker and the report-writing plugin."""
+    """Register the agent_eval marker, validate group config, and add the report plugin."""
     config.addinivalue_line(
         "markers",
         "agent_eval(threshold=None, runs=None): mark test as an LLM evaluation test. "
         "Skipped unless --agent-eval-live or EVAL_LIVE=1.",
     )
+    try:
+        load_config(config)
+    except ValueError as exc:
+        raise pytest.UsageError(str(exc)) from exc
+
     from pytest_agent_eval.report import AgentEvalReportPlugin
 
     config.pluginmanager.register(AgentEvalReportPlugin(config), "llm_eval_report")
