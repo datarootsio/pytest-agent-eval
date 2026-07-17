@@ -349,6 +349,60 @@ def test_markdown_report_includes_groups_section(pytester: pytest.Pytester, tmp_
     assert content.index("## Groups") < content.index("## Details")
 
 
+# --- exit-code override ---
+
+
+def test_exit_overridden_when_group_absorbs_failure(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=0.5)
+    result = pytester.runpytest("--agent-eval-live")
+    result.assert_outcomes(passed=1, failed=1)
+    assert result.ret == 0
+    result.stdout.fnmatch_lines(["*exit code overridden to 0*"])
+
+
+def test_exit_stays_red_when_group_below_threshold(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=0.9)
+    result = pytester.runpytest("--agent-eval-live")
+    assert result.ret == 1
+    result.stdout.fnmatch_lines(["*booking: 1/2 passed (50%) >= 90% required -- FAILED*"])
+
+
+def test_exit_stays_red_on_must_pass_failure(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=0.5, extra_toml='must_pass = ["bad_case"]')
+    result = pytester.runpytest("--agent-eval-live")
+    assert result.ret == 1
+    result.stdout.fnmatch_lines(["*must_pass: bad_case FAILED*"])
+
+
+def test_exit_stays_red_when_plain_test_fails(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=0.5)
+    pytester.makepyfile(test_plain="def test_broken(): assert False")
+    result = pytester.runpytest("--agent-eval-live")
+    assert result.ret == 1
+
+
+def test_exit_stays_red_when_ungrouped_transcript_fails(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=0.5)
+    pytester.makefile(
+        ".yaml",
+        **{
+            "tests/evals/ungrouped": (
+                "id: ungrouped_case\nthreshold: 1.0\nturns:\n"
+                "  - user: bad\n    expect:\n      reply_contains_any: [confirmed]\n"
+            )
+        },
+    )
+    result = pytester.runpytest("--agent-eval-live")
+    assert result.ret == 1
+
+
+def test_all_skipped_group_renders_skipped_without_override(pytester: pytest.Pytester):
+    _make_grouped_project(pytester, threshold=0.5)
+    result = pytester.runpytest()
+    result.stdout.fnmatch_lines(["*booking: SKIPPED (2 matched, all skipped)*"])
+    assert result.ret == 0
+
+
 def test_invalid_group_config_becomes_usage_error(pytester: pytest.Pytester):
     pytester.makepyprojecttoml(
         """

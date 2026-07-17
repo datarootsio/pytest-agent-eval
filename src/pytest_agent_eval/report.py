@@ -256,9 +256,25 @@ class AgentEvalReportPlugin:
             terminalreporter.write_line("exit code overridden to 0: all group thresholds met", green=True)
 
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
-        """Write the markdown report to disk if a path was configured."""
+        """Write the markdown report and apply the group exit-code override."""
         cfg = self._get_cfg()
         if cfg.report_path and self._results:
             group_results = self._group_results() if cfg.groups else None
             report_text = build_markdown_report(self._results, group_results=group_results)
             Path(cfg.report_path).write_text(report_text)
+        self._maybe_override_exit_code(session, exitstatus)
+
+    def _maybe_override_exit_code(self, session: pytest.Session, exitstatus: int) -> None:
+        # Only downgrade TESTS_FAILED to OK, and only when every failure is absorbed
+        # by a passing gated group — a failing plain unit test, an ungrouped
+        # transcript, or a collection error must keep the red exit code.
+        if not self._get_cfg().groups or exitstatus != pytest.ExitCode.TESTS_FAILED or self._had_collect_error:
+            return
+        gated = [r for r in self._group_results() if r.total > 0]
+        if not gated or any(not r.passed for r in gated):
+            return
+        covered_failed = {nodeid for result in gated for nodeid in result.failed_nodeids}
+        if not self._failed_nodeids.issubset(covered_failed):
+            return
+        session.exitstatus = pytest.ExitCode.OK
+        self._exit_overridden = True
