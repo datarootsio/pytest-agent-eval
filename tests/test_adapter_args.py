@@ -50,6 +50,34 @@ async def test_openai_adapter_captures_tool_call_args():
     assert tool_calls[0].args == {"time": "10am"}
 
 
+# --- PydanticAIAdapter ---
+
+
+async def test_pydantic_ai_adapter_extracts_tool_calls_from_message_parts():
+    """Regression: modern pydantic-ai messages carry tool calls in .parts, not .tool_name."""
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+
+    from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
+
+    response = ModelResponse(
+        parts=[
+            ToolCallPart(tool_name="book_slot", args={"time": "10am"}),
+            TextPart(content="Booked!"),
+        ]
+    )
+    mock_result = MagicMock()
+    mock_result.output = "Booked!"
+    mock_result.all_messages.return_value = [response]
+    agent = MagicMock()
+    agent.run = AsyncMock(return_value=mock_result)
+
+    reply, tool_calls = await PydanticAIAdapter(agent)([{"role": "user", "content": "book me"}])
+
+    assert reply == "Booked!"
+    assert tool_calls == ["book_slot"]
+    assert tool_calls[0].args == {"time": "10am"}
+
+
 # --- LangChainAdapter ---
 
 

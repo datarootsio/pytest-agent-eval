@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from pytest_agent_eval.models import ToolCall
+
 
 class PydanticAIAdapter:
     """Wrap a pydantic-ai Agent to conform to the agent callable contract.
@@ -34,7 +36,12 @@ class PydanticAIAdapter:
         message_history = history[:-1]
         result = await self._agent.run(user_msg, message_history=message_history)
 
-        tool_calls = [msg.tool_name for msg in result.all_messages() if hasattr(msg, "tool_name") and msg.tool_name]
+        tool_calls = [
+            ToolCall(part.tool_name, part.args_as_dict())
+            for msg in result.all_messages()
+            for part in getattr(msg, "parts", [])
+            if getattr(part, "part_kind", None) == "tool-call"
+        ]
 
         reply = result.output if isinstance(result.output, str) else str(result.output)
         return reply, tool_calls
