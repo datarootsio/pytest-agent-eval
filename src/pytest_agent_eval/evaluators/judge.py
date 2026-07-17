@@ -23,6 +23,30 @@ class _JudgeOutput(BaseModel):
     reasoning: str
 
 
+def _build_judge_agent(model: str | None, system_prompt: str) -> "Agent[None, _JudgeOutput]":
+    if model is None:
+        from pytest_agent_eval.config import load_config_from_toml
+
+        model = load_config_from_toml(Path("pyproject.toml")).model
+    return Agent(model, output_type=_JudgeOutput, system_prompt=system_prompt)
+
+
+async def _run_judge(agent: "Agent[None, _JudgeOutput]", user_msg: str, retries: int, timeout: float) -> EvalResult:
+    last_error: Exception | None = None
+    for _ in range(retries + 1):
+        try:
+            result = await asyncio.wait_for(agent.run(user_msg), timeout=timeout)
+            output = result.output
+            return EvalResult(passed=output.passed, reasoning=output.reasoning)
+        except Exception as exc:
+            last_error = exc
+
+    return EvalResult(
+        passed=False,
+        reasoning=f"Judge failed after {retries + 1} attempts: {last_error}",
+    )
+
+
 def _format_judge_prompt(rubric: str, ctx: TurnContext) -> str:
     history_text = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in ctx.history)
     return (
@@ -60,27 +84,10 @@ class JudgeEvaluator:
 
     def _get_agent(self) -> "Agent[None, _JudgeOutput]":
         if self._agent is None:
-            from pytest_agent_eval.config import load_config_from_toml
-
-            model_id = self.model or load_config_from_toml(Path("pyproject.toml")).model
-            self._agent = Agent(model_id, output_type=_JudgeOutput, system_prompt=_SYSTEM_PROMPT)
+            self._agent = _build_judge_agent(self.model, _SYSTEM_PROMPT)
         return self._agent
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Run the LLM judge against the turn and return its verdict."""
-        agent = self._get_agent()
         user_msg = _format_judge_prompt(self.rubric, ctx)
-
-        last_error: Exception | None = None
-        for _ in range(self.retries + 1):
-            try:
-                result = await asyncio.wait_for(agent.run(user_msg), timeout=self.timeout)
-                output = result.output
-                return EvalResult(passed=output.passed, reasoning=output.reasoning)
-            except Exception as exc:
-                last_error = exc
-
-        return EvalResult(
-            passed=False,
-            reasoning=f"Judge failed after {self.retries + 1} attempts: {last_error}",
-        )
+        return await _run_judge(self._get_agent(), user_msg, self.retries, self.timeout)
