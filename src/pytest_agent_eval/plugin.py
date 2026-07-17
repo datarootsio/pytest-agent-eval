@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from pytest_agent_eval.config import load_config
@@ -54,9 +56,22 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     if cfg.live:
         return
     skip = pytest.mark.skip(reason="agent_eval: live mode disabled (use --agent-eval-live or EVAL_LIVE=1)")
+    skipped = 0
     for item in items:
         if item.get_closest_marker("agent_eval") is not None:
             item.add_marker(skip)
+            skipped += 1
+    config._agent_eval_live_skipped = skipped
+
+
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:
+    """Print a hint when eval tests were skipped because live mode is off."""
+    skipped = getattr(config, "_agent_eval_live_skipped", 0)
+    if skipped:
+        terminalreporter.write_line(
+            f"{skipped} eval test(s) skipped — live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.",
+            yellow=True,
+        )
 
 
 @pytest.fixture

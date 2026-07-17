@@ -25,6 +25,26 @@ def test_llm_eval_tests_skipped_by_default(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
+def test_skip_hint_printed_when_live_mode_off(pytester: pytest.Pytester):
+    pytester.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.agent_eval
+        async def test_something(agent_eval):
+            pass
+        """
+    )
+    result = pytester.runpytest()
+    result.stdout.fnmatch_lines(["*1 eval test(s) skipped*live mode is off*--agent-eval-live*EVAL_LIVE=1*"])
+
+
+def test_no_skip_hint_when_nothing_skipped(pytester: pytest.Pytester):
+    pytester.makepyfile("def test_plain(): pass")
+    result = pytester.runpytest()
+    assert "live mode is off" not in result.stdout.str()
+
+
 def test_llm_eval_tests_run_with_live_flag(pytester: pytest.Pytester):
     pytester.makeini("[pytest]\nasyncio_mode = auto\n")
     pytester.makepyfile(
