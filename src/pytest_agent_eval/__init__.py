@@ -12,6 +12,7 @@ from pytest_agent_eval.evaluators import (
     ToolCallEvaluator,
 )
 from pytest_agent_eval.models import Expect, JudgeConfig, ToolCall, ToolCallArgsConfig, Transcript, Turn
+from pytest_agent_eval.yaml_loader import TranscriptError
 
 __version__ = _pkg_version("pytest-agent-eval")
 
@@ -29,5 +30,6 @@ __all__ = [
     "ToolCallArgsEvaluator",
     "ToolCallArgsJudgeEvaluator",
     "JudgeEvaluator",
+    "TranscriptError",
     "__version__",
 ]
