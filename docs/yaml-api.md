@@ -111,9 +111,20 @@ All `expect` fields are optional. Omit `expect` entirely for turns where you onl
 |----------------------|---------------|------------------------------------------------------|
 | `reply_contains_any` | `list[str]`   | At least one string must appear in the reply         |
 | `reply_contains_all` | `list[str]`   | All strings must appear in the reply                 |
+| `reply_matches_any`  | `list[str]`   | At least one regex pattern must match the reply      |
+| `reply_matches_all`  | `list[str]`   | All regex patterns must match the reply              |
 | `tool_calls_include` | `list[str]`   | These tool names must be present in the turn's calls |
 | `tool_calls_exclude` | `list[str]`   | These tool names must be absent from the turn's calls|
 | `judge`              | `JudgeConfig` | LLM-as-judge rubric evaluation                       |
+
+String and regex checks are case-insensitive. Regex patterns use Python `re.search` semantics — quote them in YAML so `\d` and friends survive parsing:
+
+```yaml
+expect:
+  reply_matches_any:
+    - "BK-\\d+"
+    - "ref(erence)? number"
+```
 
 ### `turns[].expect.judge`
 

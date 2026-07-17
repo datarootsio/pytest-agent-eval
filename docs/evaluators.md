@@ -4,7 +4,7 @@ Evaluators decide whether an agent's reply passes or fails a turn. All evaluator
 
 ## `ContainsEvaluator`
 
-Checks that the reply contains expected substrings (case-insensitive).
+Checks that the reply contains expected substrings or matches regex patterns (case-insensitive by default).
 
 ```python
 from pytest_agent_eval import ContainsEvaluator
@@ -15,19 +15,31 @@ ContainsEvaluator(any_of=["confirmed", "booked"])
 # Pass if reply contains ALL of these
 ContainsEvaluator(all_of=["booking", "reference number"])
 
-# Both checks at once
+# Regex patterns (evaluated with re.search)
+ContainsEvaluator(matches_any=[r"ref(erence)? number[:# ]*[A-Z]{2}-\d+"])
+ContainsEvaluator(matches_all=[r"\d{1,2}(am|pm)", r"tomorrow"])
+
+# Substring and regex checks compose freely
 ContainsEvaluator(
     any_of=["confirmed", "booked"],
-    all_of=["tomorrow"],
+    matches_all=[r"BK-\d+"],
 )
+
+# Exact-case matching
+ContainsEvaluator(all_of=["Booking"], case_sensitive=True)
 ```
+
+Invalid regex patterns raise `ValueError` at construction time, so a typo fails the test suite immediately instead of silently failing every turn.
 
 **Parameters:**
 
-| Parameter | Type        | Description                                              |
-|-----------|-------------|----------------------------------------------------------|
-| `any_of`  | `list[str]` | Reply must contain at least one of these (case-insensitive) |
-| `all_of`  | `list[str]` | Reply must contain every one of these (case-insensitive)  |
+| Parameter        | Type        | Description                                                       |
+|------------------|-------------|-------------------------------------------------------------------|
+| `any_of`         | `list[str]` | Reply must contain at least one of these substrings               |
+| `all_of`         | `list[str]` | Reply must contain every one of these substrings                  |
+| `matches_any`    | `list[str]` | Reply must match at least one of these regex patterns (`re.search`) |
+| `matches_all`    | `list[str]` | Reply must match every one of these regex patterns (`re.search`)  |
+| `case_sensitive` | `bool`      | When `False` (default), all checks ignore case                    |
 
 ## `ToolCallEvaluator`
 

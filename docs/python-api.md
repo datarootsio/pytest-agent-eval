@@ -80,6 +80,8 @@ expect = Expect(
 | `evaluators`         | `list[Evaluator]` | Custom evaluator instances                           |
 | `reply_contains_any` | `list[str]`       | Reply must contain at least one string               |
 | `reply_contains_all` | `list[str]`       | Reply must contain all strings                       |
+| `reply_matches_any`  | `list[str]`       | Reply must match at least one regex pattern          |
+| `reply_matches_all`  | `list[str]`       | Reply must match all regex patterns                  |
 | `tool_calls_include` | `list[str]`       | These tool names must appear in the turn's calls     |
 | `tool_calls_exclude` | `list[str]`       | These tool names must NOT appear in the turn's calls |
 | `judge`              | `JudgeConfig`     | LLM-as-judge rubric (see Evaluators)                 |
@@ -93,6 +95,8 @@ from pytest_agent_eval import ContainsEvaluator
 
 ContainsEvaluator(any_of=["confirmed", "booked"])
 ContainsEvaluator(all_of=["booking", "reference number"])
+ContainsEvaluator(matches_any=[r"BK-\d+"])                      # regex via re.search
+ContainsEvaluator(all_of=["Booking"], case_sensitive=True)      # exact-case matching
 ```
 
 ### `ToolCallEvaluator`

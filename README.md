@@ -59,7 +59,7 @@ Bringing your own framework? Any `async def agent(messages) -> (reply, tool_call
 
 `pytest-agent-eval` separates the *kinds of checks* you might want into composable evaluators:
 
-- **Deterministic checks** — `ContainsEvaluator(any_of=["confirmed", "booked"])` for substring/regex assertions over the agent reply.
+- **Deterministic checks** — `ContainsEvaluator(any_of=["confirmed", "booked"], matches_all=[r"BK-\d+"])` for substring and regex assertions over the agent reply.
 - **Tool-call assertions** — `ToolCallEvaluator(must_include=["create_booking"], ordered=True)` to verify that the agent called the right tools, in the right order.
 - **LLM-as-judge** — `JudgeEvaluator(rubric="Reply must be friendly, include a date, and confirm the booking.")` for open-ended quality checks the agent under test should meet.
 
