@@ -121,6 +121,7 @@ class AgentEvalItem(pytest.Item):
             pytest.mark.agent_eval(
                 threshold=transcript.threshold,
                 runs=transcript.runs,
+                tags=transcript.tags,
             )
         )
         self._eval_result: Any = None

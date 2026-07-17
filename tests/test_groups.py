@@ -238,6 +238,54 @@ def test_load_config_parses_groups_section(tmp_path):
     assert cfg.groups[0].threshold == 0.9
 
 
+def test_yaml_item_marker_carries_transcript_tags(pytester: pytest.Pytester):
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makefile(
+        ".yaml",
+        **{"tests/evals/tagged": ("id: tagged_test\ntags: [gate:booking]\nturns:\n  - user: hi\n")},
+    )
+    pytester.makeconftest(
+        """
+        import pytest
+
+        @pytest.fixture
+        def llm_eval_agent():
+            async def agent(history):
+                return "ok", []
+            return agent
+
+
+        def pytest_collection_modifyitems(items):
+            for item in items:
+                marker = item.get_closest_marker("agent_eval")
+                if marker is not None:
+                    print(f"TAGS={marker.kwargs.get('tags')}")
+        """
+    )
+    result = pytester.runpytest("--agent-eval-live", "-s", "--collect-only")
+    result.stdout.fnmatch_lines(["TAGS=*gate:booking*"])
+
+
+def test_group_pytest_markers_are_auto_registered(pytester: pytest.Pytester):
+    pytester.makepyprojecttoml(
+        """
+        [tool.agent_eval.groups.smoke]
+        pytest_markers = ["smoke"]
+        """
+    )
+    pytester.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.smoke
+        def test_marked():
+            pass
+        """
+    )
+    result = pytester.runpytest("-W", "error::pytest.PytestUnknownMarkWarning")
+    assert result.ret == 0
+
+
 def test_invalid_group_config_becomes_usage_error(pytester: pytest.Pytester):
     pytester.makepyprojecttoml(
         """
