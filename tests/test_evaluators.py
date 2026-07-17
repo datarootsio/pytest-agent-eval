@@ -5,8 +5,8 @@ import pytest
 from pytest_agent_eval.evaluators.base import Evaluator
 from pytest_agent_eval.evaluators.contains import ContainsEvaluator
 from pytest_agent_eval.evaluators.judge import JudgeEvaluator
-from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
-from pytest_agent_eval.models import TurnContext
+from pytest_agent_eval.evaluators.tool_call import ToolCallArgsEvaluator, ToolCallEvaluator
+from pytest_agent_eval.models import ToolCall, TurnContext
 
 
 def _ctx(reply: str = "", tool_calls: list[str] | None = None) -> TurnContext:
@@ -186,6 +186,77 @@ async def test_tool_call_empty_config_passes():
     ev = ToolCallEvaluator()
     result = await ev.evaluate(_ctx(tool_calls=["anything"]))
     assert result.passed is True
+
+
+# --- ToolCallArgsEvaluator ---
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_subset_passes_with_extra_observed_keys():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"time": "10am", "date": "tomorrow"})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_subset_fails_on_wrong_value():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "11am"})
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"time": "10am"})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is False
+    assert "11am" in result.reasoning
+    assert "10am" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_exact_fails_with_extra_observed_keys():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"}, mode="exact")
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"time": "10am", "date": "tomorrow"})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is False
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_exact_passes_on_equal_dict():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"}, mode="exact")
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"time": "10am"})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_any_matching_call_passes():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    ctx = _ctx(
+        tool_calls=[
+            ToolCall("book_slot", {"time": "9am"}),
+            ToolCall("book_slot", {"time": "10am"}),
+        ]
+    )
+    result = await ev.evaluate(ctx)
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_reports_never_called():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    result = await ev.evaluate(_ctx(tool_calls=[ToolCall("other_tool", {})]))
+    assert result.passed is False
+    assert "never called" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_reports_args_not_captured():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    result = await ev.evaluate(_ctx(tool_calls=["book_slot"]))
+    assert result.passed is False
+    assert "no arguments were captured" in result.reasoning
+
+
+def test_tool_call_args_rejects_unknown_mode():
+    with pytest.raises(ValueError, match="subset"):
+        ToolCallArgsEvaluator(tool="t", args={}, mode="fuzzy")
 
 
 @pytest.mark.asyncio
