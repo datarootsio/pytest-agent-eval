@@ -7,7 +7,9 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
+from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.adapters._wav_input import WavFileAudioInput
+from pytest_agent_eval.models import ToolCall
 
 if TYPE_CHECKING:
     from livekit.agents.voice import Agent, AgentSession
@@ -96,14 +98,14 @@ class LiveKitAdapter:
 
         session, agent = self._session_factory()
 
-        tool_calls: list[str] = []
+        tool_calls: list[ToolCall] = []
         reply_chunks: list[str] = []
 
         def _on_function_tools_executed(event: Any) -> None:
             for fc in getattr(event, "function_calls", []) or []:
                 name = getattr(fc, "name", "") or ""
                 if name:
-                    tool_calls.append(name)
+                    tool_calls.append(ToolCall(name, coerce_args(getattr(fc, "arguments", None))))
 
         def _on_conversation_item_added(event: Any) -> None:
             item = getattr(event, "item", None)

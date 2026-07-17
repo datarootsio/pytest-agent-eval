@@ -105,6 +105,26 @@ async def test_filters_python_interpreter_and_final_answer_by_default():
     assert tool_calls == ["create_booking"]
 
 
+async def test_captures_tool_call_arguments():
+    step = types.SimpleNamespace(tool_calls=[types.SimpleNamespace(name="create_booking", arguments={"time": "10am"})])
+    fake = _make_fake_agent(new_steps=[step])
+    adapter = SmolagentsAdapter(fake)
+
+    _, tool_calls = await adapter([{"role": "user", "content": "hi"}])
+
+    assert tool_calls == ["create_booking"]
+    assert tool_calls[0].args == {"time": "10am"}
+
+
+async def test_tool_call_without_arguments_degrades_to_none():
+    fake = _make_fake_agent(new_steps=[_step("create_booking")])
+    adapter = SmolagentsAdapter(fake)
+
+    _, tool_calls = await adapter([{"role": "user", "content": "hi"}])
+
+    assert tool_calls[0].args is None
+
+
 async def test_include_internal_tools_returns_them():
     fake = _make_fake_agent(
         new_steps=[

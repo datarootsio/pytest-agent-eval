@@ -32,13 +32,15 @@ class _FakeInputContainer:
 
 
 class _FakeFunctionCall:
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, arguments: str | None = None) -> None:
         self.name = name
+        if arguments is not None:
+            self.arguments = arguments
 
 
 class _FakeFunctionToolsExecutedEvent:
-    def __init__(self, names: list[str]) -> None:
-        self.function_calls = [_FakeFunctionCall(n) for n in names]
+    def __init__(self, names: list[str], arguments: str | None = None) -> None:
+        self.function_calls = [_FakeFunctionCall(n, arguments) for n in names]
 
 
 class _FakeChatItem:
@@ -115,6 +117,34 @@ async def test_captures_tool_calls_and_reply(tmp_path: Path, patched_wav_input: 
     assert tool_calls == ["create_booking"]
     assert fake.started
     assert fake.closed
+
+
+async def test_captures_tool_call_arguments_when_present(tmp_path: Path, patched_wav_input: None) -> None:
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+
+    class FakeWithArgs(FakeAgentSession):
+        async def start(self, agent: Any) -> None:
+            self.started = True
+            for h in self._handlers.get("function_tools_executed", []):
+                h(_FakeFunctionToolsExecutedEvent(["create_booking"], arguments='{"time": "10am"}'))
+
+    adapter = LiveKitAdapter(lambda: (FakeWithArgs(), object()), grace_period_s=0.0, timeout_s=1.0)
+    _, tool_calls = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert tool_calls == ["create_booking"]
+    assert tool_calls[0].args == {"time": "10am"}
+
+
+async def test_tool_call_without_arguments_degrades_to_none(tmp_path: Path, patched_wav_input: None) -> None:
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+    fake = FakeAgentSession(tool_names=["create_booking"])
+
+    adapter = LiveKitAdapter(lambda: (fake, object()), grace_period_s=0.0, timeout_s=1.0)
+    _, tool_calls = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert tool_calls[0].args is None
 
 
 async def test_concatenates_multiple_reply_chunks(tmp_path: Path, patched_wav_input: None) -> None:
