@@ -29,6 +29,12 @@ class LangChainAdapter:
 
     def __init__(self, runnable: Any) -> None:
         """Store the LangChain runnable to delegate calls to."""
+        if not hasattr(runnable, "ainvoke"):
+            raise TypeError(
+                f"LangChainAdapter expects a LangChain Runnable with an .ainvoke() method, "
+                f"got {type(runnable).__name__}. Wrap a compiled graph or chain, and make sure "
+                "the extra is installed: pip install 'pytest-agent-eval[langchain]'"
+            )
         self._runnable = runnable
 
     async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:

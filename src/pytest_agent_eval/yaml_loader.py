@@ -311,7 +311,8 @@ class AgentEvalItem(pytest.Item):
                 "    @pytest.fixture\n"
                 "    def llm_eval_agent():\n"
                 "        async def agent(history): ...\n"
-                "        return agent\n"
+                "        return agent\n\n"
+                "Docs: https://datarootsio.github.io/pytest-agent-eval/latest/yaml-api/#agent-fixture"
             )
         cfg = load_config(self.config)
         result = asyncio.run(run_transcript(self.transcript, agent, cfg.model, cfg.judge_model))

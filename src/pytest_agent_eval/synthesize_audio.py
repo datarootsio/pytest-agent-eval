@@ -227,7 +227,10 @@ def _build_client() -> Any:
     try:
         from openai import AsyncOpenAI
     except ImportError as exc:
-        raise SystemExit("ERROR: the 'openai' package is required. Install with `pip install openai`.") from exc
+        raise SystemExit(
+            "ERROR: the 'openai' package is required. "
+            "Install with: pip install 'pytest-agent-eval[livekit]' (or pip install openai)."
+        ) from exc
     return AsyncOpenAI()
 
 

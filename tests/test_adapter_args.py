@@ -50,6 +50,27 @@ async def test_openai_adapter_captures_tool_call_args():
     assert tool_calls[0].args == {"time": "10am"}
 
 
+# --- constructor guards ---
+
+
+def test_adapter_constructors_reject_wrong_objects():
+    import pytest
+
+    from pytest_agent_eval.adapters.langchain import LangChainAdapter
+    from pytest_agent_eval.adapters.openai import OpenAIAdapter
+    from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
+    from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
+
+    with pytest.raises(TypeError, match=r"ainvoke.*pytest-agent-eval\[langchain\]"):
+        LangChainAdapter("not a runnable")
+    with pytest.raises(TypeError, match=r"chat\.completions.*pytest-agent-eval\[openai\]"):
+        OpenAIAdapter("not a client", model="gpt-4o")
+    with pytest.raises(TypeError, match=r"pydantic-ai Agent"):
+        PydanticAIAdapter("not an agent")
+    with pytest.raises(TypeError, match=r"memory\.steps.*pytest-agent-eval\[smolagents\]"):
+        SmolagentsAdapter("not an agent")
+
+
 # --- PydanticAIAdapter ---
 
 

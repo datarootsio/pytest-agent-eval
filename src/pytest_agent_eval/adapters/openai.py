@@ -35,6 +35,12 @@ class OpenAIAdapter:
         system_prompt: str | None = None,
     ) -> None:
         """Store the OpenAI client, model name, and optional system prompt."""
+        if not hasattr(client, "chat"):
+            raise TypeError(
+                f"OpenAIAdapter expects an AsyncOpenAI-compatible client with .chat.completions, "
+                f"got {type(client).__name__}. Make sure the extra is installed: "
+                "pip install 'pytest-agent-eval[openai]'"
+            )
         self._client = client
         self._model = model
         self._system_prompt = system_prompt

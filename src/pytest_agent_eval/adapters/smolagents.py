@@ -40,6 +40,12 @@ class SmolagentsAdapter:
 
     def __init__(self, agent: Any, *, include_internal_tools: bool = False) -> None:
         """Store the smolagents agent and the internal-tool filter setting."""
+        if not hasattr(agent, "run") or not hasattr(agent, "memory"):
+            raise TypeError(
+                f"SmolagentsAdapter expects a smolagents agent with .run() and .memory.steps, "
+                f"got {type(agent).__name__}. Make sure the extra is installed: "
+                "pip install 'pytest-agent-eval[smolagents]'"
+            )
         self._agent = agent
         self._include_internal_tools = include_internal_tools
 

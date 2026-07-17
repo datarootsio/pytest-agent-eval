@@ -28,6 +28,11 @@ class PydanticAIAdapter:
 
     def __init__(self, agent: Any) -> None:
         """Store the pydantic-ai agent to delegate calls to."""
+        if not hasattr(agent, "run"):
+            raise TypeError(
+                f"PydanticAIAdapter expects a pydantic-ai Agent with an async .run() method, "
+                f"got {type(agent).__name__}."
+            )
         self._agent = agent
 
     async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
