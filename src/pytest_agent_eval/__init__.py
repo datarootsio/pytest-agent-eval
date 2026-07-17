@@ -8,6 +8,7 @@ from pytest_agent_eval.evaluators import (
     Evaluator,
     JudgeEvaluator,
     ToolCallArgsEvaluator,
+    ToolCallArgsJudgeEvaluator,
     ToolCallEvaluator,
 )
 from pytest_agent_eval.models import Expect, JudgeConfig, ToolCall, Transcript, Turn
@@ -25,6 +26,7 @@ __all__ = [
     "ContainsEvaluator",
     "ToolCallEvaluator",
     "ToolCallArgsEvaluator",
+    "ToolCallArgsJudgeEvaluator",
     "JudgeEvaluator",
     "__version__",
 ]

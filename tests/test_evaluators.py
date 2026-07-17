@@ -302,6 +302,57 @@ async def test_judge_evaluator_fails_on_negative_verdict():
 
 
 @pytest.mark.asyncio
+async def test_tool_call_args_judge_passes_verdict_through():
+    from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
+
+    mock_output = MagicMock()
+    mock_output.passed = True
+    mock_output.reasoning = "Time is within business hours."
+    mock_result = MagicMock()
+    mock_result.output = mock_output
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(return_value=mock_result)
+        MockAgent.return_value = instance
+
+        ev = ToolCallArgsJudgeEvaluator(tool="book_slot", rubric="Business hours only", model="openai:gpt-4o-mini")
+        result = await ev.evaluate(_ctx(tool_calls=[ToolCall("book_slot", {"time": "10am"})]))
+
+    assert result.passed is True
+    prompt = instance.run.call_args.args[0]
+    assert "book_slot" in prompt
+    assert "10am" in prompt
+    assert "Business hours only" in prompt
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_judge_short_circuits_when_never_called():
+    from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        ev = ToolCallArgsJudgeEvaluator(tool="book_slot", rubric="anything", model="openai:gpt-4o-mini")
+        result = await ev.evaluate(_ctx(tool_calls=[]))
+
+    assert result.passed is False
+    assert "never called" in result.reasoning
+    MockAgent.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_judge_short_circuits_when_args_not_captured():
+    from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        ev = ToolCallArgsJudgeEvaluator(tool="book_slot", rubric="anything", model="openai:gpt-4o-mini")
+        result = await ev.evaluate(_ctx(tool_calls=["book_slot"]))
+
+    assert result.passed is False
+    assert "no arguments were captured" in result.reasoning
+    MockAgent.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_judge_evaluator_returns_failure_after_retries_exhausted():
     with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
         instance = AsyncMock()
