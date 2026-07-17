@@ -21,6 +21,41 @@ class EvalResult:
     reasoning: str = ""
 
 
+class ToolCall(str):
+    """A tool-call name that optionally carries the arguments it was invoked with.
+
+    Subclasses ``str`` so name-based checks keep working unchanged: ``"book_slot"
+    in ctx.tool_calls``, equality against plain strings, and hand-rolled agents
+    returning ``list[str]`` (the runner normalises those to ``ToolCall`` with
+    ``args=None``).
+
+    Args:
+        name: The tool name.
+        args: The arguments the tool was called with, or None when the adapter
+            could not capture them.
+
+    Example:
+        ```python
+        call = ToolCall("book_slot", {"date": "tomorrow", "time": "10am"})
+        call == "book_slot"          # True
+        call.args["time"]            # "10am"
+        ```
+    """
+
+    args: dict[str, Any] | None
+
+    def __new__(cls, name: str, args: dict[str, Any] | None = None) -> ToolCall:
+        """Create a ToolCall from a tool name and optional captured arguments."""
+        obj = super().__new__(cls, name)
+        obj.args = args
+        return obj
+
+    @property
+    def name(self) -> str:
+        """The tool name (the string value itself)."""
+        return str(self)
+
+
 @dataclass
 class TurnContext:
     """Context passed to every evaluator for a turn.
@@ -28,14 +63,15 @@ class TurnContext:
     Args:
         user: The user message for this turn.
         reply: The agent's reply.
-        tool_calls: Names of tools called during the turn.
+        tool_calls: Tools called during the turn. Each entry is a ToolCall
+            (str-compatible); ``.args`` holds captured arguments or None.
         history: Full conversation history in OpenAI message format, up to but not including
             the assistant reply for this turn.
     """
 
     user: str
     reply: str
-    tool_calls: list[str]
+    tool_calls: list[ToolCall]
     history: list[dict[str, Any]]
 
 

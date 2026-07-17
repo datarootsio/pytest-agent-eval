@@ -10,6 +10,7 @@ from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
 from pytest_agent_eval.models import (
     Expect,
     RunResult,
+    ToolCall,
     Transcript,
     TranscriptResult,
     Turn,
@@ -50,13 +51,14 @@ async def _run_turn(
     agent: AgentCallable,
     config_model: str | None = None,
     judge_model: str | None = None,
-) -> tuple[TurnResult, str, list[str]]:
+) -> tuple[TurnResult, str, list[ToolCall]]:
     """Execute one turn and evaluate results."""
     msg: dict[str, Any] = {"role": "user", "content": turn.user}
     if turn.audio is not None:
         msg["audio"] = str(turn.audio)
     history.append(msg)
-    reply, tool_calls = await agent(history)
+    reply, raw_tool_calls = await agent(history)
+    tool_calls = [tc if isinstance(tc, ToolCall) else ToolCall(tc) for tc in raw_tool_calls]
     history.append({"role": "assistant", "content": reply})
 
     ctx = TurnContext(

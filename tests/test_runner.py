@@ -167,6 +167,32 @@ async def test_run_transcript_multiple_runs_score():
 
 
 @pytest.mark.asyncio
+async def test_runner_normalises_plain_strings_to_tool_calls():
+    from pytest_agent_eval.models import EvalResult, ToolCall
+
+    captured: list[list] = []
+
+    class CaptureEvaluator:
+        async def evaluate(self, ctx):
+            captured.append(ctx.tool_calls)
+            return EvalResult(passed=True)
+
+    async def mixed_agent(history: list[dict]) -> tuple[str, list]:
+        return "ok", ["plain_name", ToolCall("with_args", {"a": 1})]
+
+    transcript = Transcript(
+        id="normalise",
+        turns=[Turn(user="go", expect=Expect(evaluators=[CaptureEvaluator()]))],
+        runs=1,
+    )
+    await run_transcript(transcript, mixed_agent)
+    tool_calls = captured[0]
+    assert all(isinstance(tc, ToolCall) for tc in tool_calls)
+    assert tool_calls[0].args is None
+    assert tool_calls[1].args == {"a": 1}
+
+
+@pytest.mark.asyncio
 async def test_history_is_accumulated_across_turns():
     captured_histories: list[list[dict]] = []
 
