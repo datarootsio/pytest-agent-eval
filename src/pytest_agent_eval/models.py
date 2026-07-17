@@ -110,6 +110,7 @@ class Expect:
         judge: YAML-defined judge config.
         tool_calls_include: Tool names that must appear in tool_calls.
         tool_calls_exclude: Tool names that must NOT appear in tool_calls.
+        tool_calls_ordered: If True, tool_calls_include must appear in the given order.
         reply_contains_any: Reply must contain at least one of these strings.
         reply_contains_all: Reply must contain all of these strings.
         reply_matches_any: Reply must match at least one of these regex patterns.
@@ -120,6 +121,7 @@ class Expect:
     judge: JudgeConfig | None = None
     tool_calls_include: list[str] = field(default_factory=list)
     tool_calls_exclude: list[str] = field(default_factory=list)
+    tool_calls_ordered: bool = False
     reply_contains_any: list[str] = field(default_factory=list)
     reply_contains_all: list[str] = field(default_factory=list)
     reply_matches_any: list[str] = field(default_factory=list)

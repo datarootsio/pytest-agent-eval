@@ -28,6 +28,7 @@ def _build_yaml_evaluators(expect: Expect) -> list[Any]:
             ToolCallEvaluator(
                 must_include=expect.tool_calls_include,
                 must_exclude=expect.tool_calls_exclude,
+                ordered=expect.tool_calls_ordered,
             )
         )
     if expect.reply_contains_any or expect.reply_contains_all or expect.reply_matches_any or expect.reply_matches_all:

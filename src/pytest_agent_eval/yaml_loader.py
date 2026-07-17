@@ -24,6 +24,7 @@ def _parse_turn(raw_turn: dict[str, Any], yaml_dir: Path) -> Turn:
         judge=judge_cfg,
         tool_calls_include=raw_expect.get("tool_calls_include", []),
         tool_calls_exclude=raw_expect.get("tool_calls_exclude", []),
+        tool_calls_ordered=raw_expect.get("tool_calls_ordered", False),
         reply_contains_any=raw_expect.get("reply_contains_any", []),
         reply_contains_all=raw_expect.get("reply_contains_all", []),
         reply_matches_any=raw_expect.get("reply_matches_any", []),

@@ -98,6 +98,30 @@ async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
 
 
 @pytest.mark.asyncio
+async def test_run_transcript_enforces_tool_calls_ordered_from_expect():
+    async def ordered_agent(history: list[dict]) -> tuple[str, list[str]]:
+        return "done", ["fetch", "auth"]
+
+    transcript = Transcript(
+        id="ordered",
+        turns=[Turn(user="go", expect=Expect(tool_calls_include=["auth", "fetch"], tool_calls_ordered=True))],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(transcript, ordered_agent)
+    assert result.passed is False
+
+    unordered = Transcript(
+        id="unordered",
+        turns=[Turn(user="go", expect=Expect(tool_calls_include=["auth", "fetch"]))],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(unordered, ordered_agent)
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
 async def test_run_transcript_fails_when_evaluator_fails():
     transcript = Transcript(
         id="test",

@@ -36,6 +36,21 @@ def test_load_transcript_parses_regex_expect_fields(tmp_path: Path):
     assert transcript.turns[0].expect.reply_matches_all == ["tomorrow"]
 
 
+def test_load_transcript_parses_tool_calls_ordered(tmp_path: Path):
+    yaml_path = tmp_path / "ordered.yaml"
+    yaml_path.write_text(
+        "id: t\n"
+        "turns:\n"
+        "  - user: hi\n"
+        "    expect:\n"
+        "      tool_calls_include: [auth, fetch]\n"
+        "      tool_calls_ordered: true\n"
+    )
+    transcript = load_transcript(yaml_path)
+    assert transcript.turns[0].expect.tool_calls_ordered is True
+    assert load_transcript(SAMPLE).turns[0].expect.tool_calls_ordered is False
+
+
 def test_audio_field_defaults_to_none(tmp_path: Path):
     yaml_path = tmp_path / "no_audio.yaml"
     yaml_path.write_text("id: t\nturns:\n  - user: hi\n")
