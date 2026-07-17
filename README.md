@@ -15,6 +15,7 @@
 - 📝 **YAML or Python transcripts** — pick the authoring style your team prefers
 - 🔍 **YAML auto-discovery** — drop `*.yaml` files in any configured directory and they become pytest tests automatically
 - 🎙 **Voice agents (LiveKit)** — drive a real `AgentSession` with a WAV per turn; same evaluator surface as text agents
+- 🚦 **Group-level quality gates** — `[tool.agent_eval.groups]` gates CI on aggregate pass rates ("90% of booking evals") with `must_pass` pins, instead of failing on every flaky eval
 - 🛡 **CI-safe by default** — eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1`
 - ⚡ **Parallel-ready** — `pytest -n auto` (via [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)) just works
 - 📄 **Markdown reports** — full per-run trace with `--agent-eval-report=eval.md`
@@ -164,6 +165,27 @@ turns:
 ```
 
 Each turn's full conversation history is built up as the test runs — your agent receives all prior `(user, assistant)` pairs as context, the same way it would in production. Failures point at the exact turn that broke, not just "the test failed."
+
+## Group quality gates
+
+A suite of LLM evals fails somewhere almost every run. Group thresholds gate CI on **aggregate pass rates** while pinning the tests that must never break:
+
+```toml
+[tool.agent_eval.groups.booking]
+threshold = 0.9                          # 90% of matched tests must pass
+tags = ["gate:booking"]                  # match transcripts by tag
+must_pass = ["booking_confirmation"]     # ...but this one must always pass
+```
+
+```text
+============================== group summary ===============================
+booking: 9/10 passed (90%) >= 90% required -- PASSED
+  failures: booking_edge_case
+  must_pass: booking_confirmation ok
+exit code overridden to 0: all group thresholds met
+```
+
+When every gate is green and every failure belongs to a gated group, the exit code is overridden to `0` — a failing plain unit test or ungrouped transcript still keeps CI red. See the [group thresholds docs](https://datarootsio.github.io/pytest-agent-eval/latest/groups/) for membership and `must_pass` semantics.
 
 ## Voice agents (LiveKit)
 

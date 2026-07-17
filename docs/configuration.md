@@ -75,6 +75,12 @@ Directories to search recursively for `*.yaml` evaluation transcripts. Paths are
 
 When `true`, eval tests run without needing `--agent-eval-live` or `EVAL_LIVE=1`. Useful for local development but should remain `false` in shared/CI config.
 
+### `groups`
+
+**Type:** tables under `[tool.agent_eval.groups.<name>]`
+
+Quality-gate groups with aggregate pass thresholds and `must_pass` pins. See [Group thresholds](groups.md) for keys and semantics.
+
 ## Precedence
 
 Command-line flag `--agent-eval-live` > `EVAL_LIVE=1` env var > `live = true` in config > default (skip).
