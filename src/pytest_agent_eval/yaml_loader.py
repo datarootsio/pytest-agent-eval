@@ -168,4 +168,6 @@ class AgentEvalItem(pytest.Item):
 
     def reportinfo(self) -> tuple[Any, int | None, str]:
         """Provide the location string pytest shows for this item."""
-        return self.fspath, None, f"agent_eval: {self.transcript.id}"
+        # Line 0, not None: pytest rewrites a marker-skipped test's longrepr to its
+        # reportinfo location and (since 9.1) asserts the line is not None.
+        return self.fspath, 0, f"agent_eval: {self.transcript.id}"
