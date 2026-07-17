@@ -12,10 +12,19 @@ yaml_dirs = ["tests/evals"]
 
 Any `*.yaml` file inside `tests/evals/` (searched recursively) becomes a test.
 
+## Editor and agent support
+
+A published [JSON Schema](https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json) describes every transcript field. Add this first line to any transcript to get completion and validation in editors (and to help coding agents write valid files):
+
+```yaml
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+```
+
 ## Full annotated transcript
 
 ```yaml
 # tests/evals/booking.yaml
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
 
 # Unique ID, used as the pytest test name
 id: booking_confirmation

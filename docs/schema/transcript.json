@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json",
+  "title": "pytest-agent-eval transcript",
+  "description": "A multi-turn LLM evaluation transcript. Files matching this schema inside a configured yaml_dirs directory are collected as pytest tests.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "turns"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique test identifier; becomes the pytest test name."
+    },
+    "threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.8,
+      "description": "Fraction of runs that must pass for the test to pass."
+    },
+    "runs": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Number of times to execute the full transcript."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Quality-gate tags used by [tool.agent_eval.groups] membership."
+    },
+    "turns": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/turn" },
+      "description": "Ordered conversation turns; history accumulates across them."
+    }
+  },
+  "$defs": {
+    "turn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user"],
+      "properties": {
+        "user": {
+          "type": "string",
+          "description": "The user message for this turn."
+        },
+        "audio": {
+          "type": "string",
+          "description": "Optional WAV path for voice adapters, resolved relative to this YAML file."
+        },
+        "expect": { "$ref": "#/$defs/expect" }
+      }
+    },
+    "expect": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Expectations for the agent's reply on this turn. All fields optional.",
+      "properties": {
+        "reply_contains_any": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "At least one substring must appear in the reply (case-insensitive)."
+        },
+        "reply_contains_all": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Every substring must appear in the reply (case-insensitive)."
+        },
+        "reply_matches_any": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "At least one regex (re.search, case-insensitive) must match the reply."
+        },
+        "reply_matches_all": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Every regex (re.search, case-insensitive) must match the reply."
+        },
+        "tool_calls_include": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tool names that must appear in this turn's tool calls."
+        },
+        "tool_calls_exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tool names that must NOT appear in this turn's tool calls."
+        },
+        "tool_calls_ordered": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, tool_calls_include must appear in the given order."
+        },
+        "tool_calls_args": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/toolCallArgs" },
+          "description": "Assertions on the arguments of specific tool calls."
+        },
+        "judge": { "$ref": "#/$defs/judge" }
+      }
+    },
+    "judge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rubric"],
+      "properties": {
+        "rubric": {
+          "type": "string",
+          "description": "Natural-language criteria the LLM judge evaluates against."
+        },
+        "model": {
+          "type": "string",
+          "description": "pydantic-ai model ID override (e.g. 'openai:gpt-4o'); falls back to [tool.agent_eval] config."
+        }
+      }
+    },
+    "toolCallArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool"],
+      "anyOf": [{ "required": ["args"] }, { "required": ["judge"] }],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "description": "Name of the tool whose call arguments to check."
+        },
+        "args": {
+          "type": "object",
+          "description": "Expected arguments for the deterministic check."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["subset", "exact"],
+          "default": "subset",
+          "description": "subset: expected items must appear in the observed args; exact: full equality."
+        },
+        "judge": { "$ref": "#/$defs/judge" }
+      }
+    }
+  }
+}

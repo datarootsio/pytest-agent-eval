@@ -99,6 +99,7 @@ def llm_eval_agent():
 
 ```yaml
 # tests/evals/booking_single_turn.yaml
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
 id: booking_single_turn
 threshold: 0.8
 runs: 3

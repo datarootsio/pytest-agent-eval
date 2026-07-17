@@ -3098,6 +3098,7 @@ xdist = [
 [package.dev-dependencies]
 dev = [
     { name = "anyio", extra = ["trio"] },
+    { name = "jsonschema" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -3127,6 +3128,7 @@ provides-extras = ["langchain", "openai", "smolagents", "livekit", "xdist"]
 [package.metadata.requires-dev]
 dev = [
     { name = "anyio", extras = ["trio"], specifier = ">=4.0" },
+    { name = "jsonschema", specifier = ">=4" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "pytest", specifier = ">=7.4" },
     { name = "pytest-asyncio", specifier = ">=0.23" },
