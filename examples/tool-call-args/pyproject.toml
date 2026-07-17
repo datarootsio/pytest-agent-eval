@@ -1,0 +1,12 @@
+[project]
+name = "example-tool-call-args"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = ["pytest-agent-eval"]
+
+[tool.agent_eval]
+model = "openai:gpt-4o-mini"
+yaml_dirs = ["evals"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

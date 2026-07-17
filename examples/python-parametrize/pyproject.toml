@@ -1,0 +1,8 @@
+[project]
+name = "example-python-parametrize"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = ["pytest-agent-eval", "pytest-asyncio"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

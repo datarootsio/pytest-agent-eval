@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+id: booking_single_turn
+threshold: 1.0
+runs: 1
+turns:
+  - user: "Book me a table for two tomorrow at 10am."
+    expect:
+      reply_contains_any: [confirmed, booked]
+      tool_calls_include: [create_booking]

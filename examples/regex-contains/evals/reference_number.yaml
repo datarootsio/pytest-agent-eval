@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+id: booking_reference_format
+threshold: 1.0
+runs: 1
+turns:
+  - user: "Book me a table for two tomorrow at 10am."
+    expect:
+      reply_contains_all: [confirmed, tomorrow]
+      reply_matches_any:
+        - "BK-\\d+"
+        - "REF-\\d+"
+      reply_matches_all:
+        - "\\d{1,2}(am|pm)"

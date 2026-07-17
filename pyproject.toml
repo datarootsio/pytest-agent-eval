@@ -64,6 +64,7 @@ packages = ["src/pytest_agent_eval"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pytester_example_dir = "examples"
 
 [tool.ruff]
 line-length = 120
@@ -76,3 +77,4 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D102", "D103", "D107"]
+"examples/*" = ["D102", "D103", "D107"]

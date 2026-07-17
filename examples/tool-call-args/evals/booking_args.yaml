@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+id: booking_argument_checks
+threshold: 1.0
+runs: 1
+turns:
+  - user: "Book me a table for two tomorrow at 10am."
+    expect:
+      tool_calls_include: [create_booking]
+      tool_calls_args:
+        # subset (default): these keys/values must appear; extras are fine
+        - tool: create_booking
+          args:
+            time: 10am
+            party_size: 2
+
+        # exact: the full argument dict must match
+        - tool: create_booking
+          mode: exact
+          args:
+            time: 10am
+            date: tomorrow
+            party_size: 2
+
+        # LLM-judged: rubric evaluated against the call's JSON arguments
+        - tool: create_booking
+          judge:
+            rubric: "The booking time must be within business hours (9am-5pm)."
