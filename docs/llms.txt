@@ -19,6 +19,7 @@ Key facts for tools and agents:
 - [Configuration](https://datarootsio.github.io/pytest-agent-eval/latest/configuration/): `[tool.agent_eval]` keys and precedence
 - [Group thresholds](https://datarootsio.github.io/pytest-agent-eval/latest/groups/): aggregate pass-rate CI gates, must_pass pins, exit-code override
 - [Reporting](https://datarootsio.github.io/pytest-agent-eval/latest/reporting/): verbosity levels and the markdown report
+- [Using with coding agents](https://datarootsio.github.io/pytest-agent-eval/latest/agents/): AGENTS.md snippet, schema-first authoring, runnable examples
 
 ## Optional
 

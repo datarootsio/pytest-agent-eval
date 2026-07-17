@@ -10,6 +10,7 @@ nav = [
     { "Getting started" = "getting-started.md" },
     { "Writing evals" = [{ "YAML API" = "yaml-api.md" }, { "Python API" = "python-api.md" }, { "Evaluators" = "evaluators.md" }, { "Adapters" = "adapters.md" }] },
     { "Running & CI" = [{ "Configuration" = "configuration.md" }, { "Group thresholds" = "groups.md" }, { "Reporting" = "reporting.md" }] },
+    { "Using with coding agents" = "agents.md" },
     { "API reference" = [{ "Overview" = "api-reference/index.md" }, { "Models" = "api-reference/models.md" }, { "Evaluators" = "api-reference/evaluators.md" }, { "Adapters" = "api-reference/adapters.md" }] },
 ]
 
