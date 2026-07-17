@@ -1,0 +1,26 @@
+# pytest-agent-eval
+
+> A pytest plugin for evaluating LLM agents: multi-turn YAML transcripts collected as tests, threshold-based pass/fail over N runs, deterministic reply/tool-call/tool-argument assertions, LLM-as-judge rubrics, and group-level CI quality gates.
+
+Key facts for tools and agents:
+
+- Eval tests are skipped unless `--agent-eval-live` is passed or `EVAL_LIVE=1` is set (CI-cost safety default).
+- YAML files inside a configured `yaml_dirs` directory become pytest tests automatically; a `llm_eval_agent` fixture in conftest.py supplies the agent under test.
+- Transcripts are validated against a published JSON Schema: https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+- The full documentation as one file: https://datarootsio.github.io/pytest-agent-eval/llms-full.txt
+
+## Docs
+
+- [Getting started](https://datarootsio.github.io/pytest-agent-eval/latest/getting-started/): install, configure `[tool.agent_eval]`, wire the agent fixture, first eval
+- [YAML API](https://datarootsio.github.io/pytest-agent-eval/latest/yaml-api/): every transcript field, with the expect assertion reference
+- [Python API](https://datarootsio.github.io/pytest-agent-eval/latest/python-api/): the `agent_eval` fixture, `Turn`/`Expect`, programmatic evaluators
+- [Evaluators](https://datarootsio.github.io/pytest-agent-eval/latest/evaluators/): ContainsEvaluator (substrings + regex), ToolCallEvaluator, ToolCallArgsEvaluator, judges, custom evaluators
+- [Adapters](https://datarootsio.github.io/pytest-agent-eval/latest/adapters/): pydantic-ai, LangChain, OpenAI, smolagents, LiveKit voice, and the custom-agent contract
+- [Configuration](https://datarootsio.github.io/pytest-agent-eval/latest/configuration/): `[tool.agent_eval]` keys and precedence
+- [Group thresholds](https://datarootsio.github.io/pytest-agent-eval/latest/groups/): aggregate pass-rate CI gates, must_pass pins, exit-code override
+- [Reporting](https://datarootsio.github.io/pytest-agent-eval/latest/reporting/): verbosity levels and the markdown report
+
+## Optional
+
+- [API reference](https://datarootsio.github.io/pytest-agent-eval/latest/api-reference/): auto-generated from docstrings
+- [GitHub repository](https://github.com/datarootsio/pytest-agent-eval): source, issues, examples/

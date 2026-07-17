@@ -54,6 +54,8 @@ jobs:
             echo "kind=branch" >> "$GITHUB_OUTPUT"
             echo "label=main" >> "$GITHUB_OUTPUT"
           fi
+      - name: Generate llms-full.txt
+        run: uv run python scripts/build_llms_full.py -o docs/llms-full.txt
       - name: Deploy with mike
         run: |
           if [[ "${{ steps.ver.outputs.kind }}" == "tag" ]]; then
@@ -61,4 +63,20 @@ jobs:
           else
             uv run mike deploy --push main
             uv run mike set-default --push main
+          fi
+      - name: Publish llms files and schema at the site root
+        run: |
+          git fetch origin gh-pages
+          git worktree add /tmp/gh-pages gh-pages
+          if [[ -d /tmp/gh-pages/main ]]; then
+            cp /tmp/gh-pages/main/llms.txt /tmp/gh-pages/llms.txt
+            cp /tmp/gh-pages/main/llms-full.txt /tmp/gh-pages/llms-full.txt
+            mkdir -p /tmp/gh-pages/schema
+            cp /tmp/gh-pages/main/schema/transcript.json /tmp/gh-pages/schema/transcript.json
+            cd /tmp/gh-pages
+            git add llms.txt llms-full.txt schema/
+            if ! git diff --cached --quiet; then
+              git commit -m "docs: publish llms files and schema at site root"
+              git push origin gh-pages
+            fi
           fi

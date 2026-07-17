@@ -33,4 +33,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --group docs
+      - run: uv run python scripts/build_llms_full.py -o docs/llms-full.txt
       - run: uv run zensical build
