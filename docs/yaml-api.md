@@ -134,7 +134,8 @@ import pytest
 def llm_eval_agent():
     async def my_agent(messages):
         # messages is a list of OpenAI-style {"role": ..., "content": ...} dicts
-        return "Booking confirmed! Reference BK-1234."
+        # Return (reply, tool_calls): the reply string plus the tool names called.
+        return "Booking confirmed! Reference BK-1234.", ["create_booking"]
     return my_agent
 ```
 

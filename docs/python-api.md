@@ -33,12 +33,12 @@ result = await agent_eval.run(agent=my_agent, turns=[...])
 
 **`agent_eval.run()` parameters:**
 
-| Parameter   | Type            | Description                              |
-|-------------|-----------------|------------------------------------------|
-| `agent`     | `Callable`      | Async callable: `(messages) -> str`      |
-| `turns`     | `list[Turn]`    | Ordered list of turns to execute         |
-| `threshold` | `float \| None` | Override the marker's threshold          |
-| `runs`      | `int \| None`   | Override the marker's run count          |
+| Parameter   | Type            | Description                                            |
+|-------------|-----------------|--------------------------------------------------------|
+| `agent`     | `Callable`      | Async callable: `(messages) -> (reply, tool_calls)`    |
+| `turns`     | `list[Turn]`    | Ordered list of turns to execute                       |
+
+Threshold and run count come from the `@pytest.mark.agent_eval(threshold=..., runs=...)` marker, falling back to `[tool.agent_eval]` config.
 
 Returns a `TranscriptResult`.
 
@@ -100,7 +100,7 @@ ContainsEvaluator(all_of=["booking", "reference number"])
 ```python
 from pytest_agent_eval import ToolCallEvaluator
 
-ToolCallEvaluator(include=["create_booking"], exclude=["cancel_booking"])
+ToolCallEvaluator(must_include=["create_booking"], must_exclude=["cancel_booking"])
 ```
 
 ### `JudgeEvaluator`
@@ -139,8 +139,8 @@ from pytest_agent_eval import (
 )
 
 async def booking_agent(messages):
-    # Your real agent implementation here
-    return "Booking confirmed! Reference: BK-1234 for tomorrow at 10am."
+    # Your real agent implementation here — return (reply, tool_calls)
+    return "Booking confirmed! Reference: BK-1234 for tomorrow at 10am.", ["create_booking"]
 
 @pytest.mark.agent_eval(threshold=0.8, runs=3)
 async def test_full_booking_flow(agent_eval):
@@ -152,7 +152,7 @@ async def test_full_booking_flow(agent_eval):
                 expect=Expect(
                     evaluators=[
                         ContainsEvaluator(any_of=["confirmed", "booked"]),
-                        ToolCallEvaluator(include=["create_booking"]),
+                        ToolCallEvaluator(must_include=["create_booking"]),
                         JudgeEvaluator(
                             rubric=(
                                 "The reply must confirm the booking and include "
