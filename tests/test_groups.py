@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from pytest_agent_eval.groups import GroupConfig, parse_groups
+from pytest_agent_eval.groups import (
+    EvalOutcome,
+    GroupConfig,
+    build_group_markdown_lines,
+    evaluate_groups,
+    format_group_summary_lines,
+    parse_groups,
+)
 
 # --- parse_groups ---
 
@@ -55,6 +62,159 @@ def test_parse_groups_rejects_non_list_tags():
 def test_parse_groups_rejects_non_table_group():
     with pytest.raises(ValueError, match="must be a table"):
         parse_groups({"g": 0.9})
+
+
+# --- evaluate_groups ---
+
+
+def _outcome(identity: str, outcome: str = "passed", tags: list[str] | None = None, markers: list[str] | None = None):
+    return EvalOutcome(
+        identity=identity,
+        nodeid=f"tests/evals/{identity}.yaml::{identity}",
+        outcome=outcome,
+        tags=tags or [],
+        markers=markers or [],
+    )
+
+
+def test_evaluate_groups_threshold_pass_and_fail():
+    group = GroupConfig(name="booking", threshold=0.66, tags=["gate:booking"])
+    outcomes = [
+        _outcome("a", "passed", tags=["gate:booking"]),
+        _outcome("b", "passed", tags=["gate:booking"]),
+        _outcome("c", "failed", tags=["gate:booking"]),
+        _outcome("unrelated", "failed"),
+    ]
+    (result,) = evaluate_groups([group], outcomes)
+    assert result.total == 3
+    assert result.passed_count == 2
+    assert result.pass_rate == pytest.approx(2 / 3)
+    assert result.passed is True
+    assert result.failing == ["c"]
+
+    strict = GroupConfig(name="booking", threshold=0.9, tags=["gate:booking"])
+    (result,) = evaluate_groups([strict], outcomes)
+    assert result.passed is False
+
+
+def test_evaluate_groups_matches_on_markers_or_tags():
+    group = GroupConfig(name="g", tags=["gate:x"], pytest_markers=["smoke"])
+    outcomes = [
+        _outcome("by_tag", "passed", tags=["gate:x"]),
+        _outcome("by_marker", "passed", markers=["smoke"]),
+        _outcome("neither", "passed"),
+    ]
+    (result,) = evaluate_groups([group], outcomes)
+    assert result.total == 2
+
+
+def test_evaluate_groups_skips_excluded_from_denominator():
+    group = GroupConfig(name="g", threshold=1.0, tags=["t"])
+    outcomes = [
+        _outcome("ran", "passed", tags=["t"]),
+        _outcome("skipped_one", "skipped", tags=["t"]),
+    ]
+    (result,) = evaluate_groups([group], outcomes)
+    assert result.total == 1
+    assert result.skipped_count == 1
+    assert result.passed is True
+
+
+def test_evaluate_groups_all_skipped_is_not_a_pass():
+    group = GroupConfig(name="g", tags=["t"])
+    (result,) = evaluate_groups([group], [_outcome("s", "skipped", tags=["t"])])
+    assert result.skipped is True
+    assert result.passed is False
+
+
+def test_evaluate_groups_zero_match():
+    group = GroupConfig(name="g", tags=["t"])
+    (result,) = evaluate_groups([group], [_outcome("x", "passed")])
+    assert result.matched is False
+    assert result.passed is False
+
+
+def test_must_pass_failure_fails_group_even_above_threshold():
+    group = GroupConfig(name="g", threshold=0.5, tags=["t"], must_pass=["critical"])
+    outcomes = [
+        _outcome("a", "passed", tags=["t"]),
+        _outcome("b", "passed", tags=["t"]),
+        _outcome("critical", "failed", tags=["t"]),
+    ]
+    (result,) = evaluate_groups([group], outcomes)
+    assert result.pass_rate >= 0.5
+    assert result.must_pass_failed == ["critical"]
+    assert result.passed is False
+
+
+def test_must_pass_matches_parametrized_identities():
+    group = GroupConfig(name="g", tags=["t"], must_pass=["test_thing"])
+    outcomes = [
+        _outcome("test_thing[a]", "passed", tags=["t"]),
+        _outcome("test_thing[b]", "failed", tags=["t"]),
+        _outcome("test_thing_else", "passed", tags=["t"]),
+    ]
+    (result,) = evaluate_groups([group], outcomes)
+    assert result.must_pass_failed == ["test_thing"]
+
+
+def test_must_pass_entry_that_never_ran_is_missing_not_failed():
+    group = GroupConfig(name="g", threshold=0.0, tags=["t"], must_pass=["absent"])
+    (result,) = evaluate_groups([group], [_outcome("a", "passed", tags=["t"])])
+    assert result.must_pass_missing == ["absent"]
+    assert result.must_pass_failed == []
+    assert result.passed is True
+
+
+def test_must_pass_is_assertion_not_selector():
+    """A must_pass entry that fails outside the tag selection still fails the group."""
+    group = GroupConfig(name="g", tags=["t"], must_pass=["outside"])
+    outcomes = [
+        _outcome("a", "passed", tags=["t"]),
+        _outcome("outside", "failed"),
+    ]
+    (result,) = evaluate_groups([group], outcomes)
+    assert result.must_pass_failed == ["outside"]
+    assert result.passed is False
+
+
+# --- formatting ---
+
+
+def test_format_group_summary_lines_shows_failures_even_when_group_passes():
+    group = GroupConfig(name="g", threshold=0.5, tags=["t"])
+    outcomes = [
+        _outcome("a", "passed", tags=["t"]),
+        _outcome("b", "failed", tags=["t"]),
+    ]
+    lines = format_group_summary_lines(evaluate_groups([group], outcomes))
+    assert any("PASSED" in line for line in lines)
+    assert any("failures: b" in line for line in lines)
+
+
+def test_format_group_summary_lines_warns_on_zero_match():
+    group = GroupConfig(name="ghost", tags=["t"])
+    lines = format_group_summary_lines(evaluate_groups([group], []))
+    assert lines == ["WARNING: group 'ghost' matched no tests"]
+
+
+def test_format_group_summary_lines_skipped_row():
+    group = GroupConfig(name="g", tags=["t"])
+    lines = format_group_summary_lines(evaluate_groups([group], [_outcome("s", "skipped", tags=["t"])]))
+    assert "SKIPPED" in lines[0]
+
+
+def test_build_group_markdown_lines_contains_table_and_notes():
+    group = GroupConfig(name="g", threshold=0.5, tags=["t"], must_pass=["absent"])
+    outcomes = [
+        _outcome("a", "passed", tags=["t"]),
+        _outcome("b", "failed", tags=["t"]),
+    ]
+    lines = build_group_markdown_lines(evaluate_groups([group], outcomes))
+    assert lines[0] == "## Groups"
+    assert any("| g | 1 | 2 |" in line for line in lines)
+    assert any("failures: b" in line for line in lines)
+    assert any("did not run: absent" in line for line in lines)
 
 
 # --- config wiring ---
