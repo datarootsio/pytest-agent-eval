@@ -76,14 +76,16 @@ Asserts the **arguments** a tool was called with. Requires an adapter (or custom
 ```python
 from pytest_agent_eval import ToolCallArgsEvaluator
 
-# Subset (default): expected keys/values must appear; extra observed keys are fine
+# Subset (default): expected top-level keys/values must appear; extra observed keys are fine
 ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
 
 # Exact: observed args must equal the expected dict exactly
 ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am", "date": "tomorrow"}, mode="exact")
 ```
 
-If the tool is called several times in a turn, the check passes when **any** call matches. Failure messages distinguish three cases: the tool was never called, the tool was called but no arguments were captured, and a genuine argument mismatch (which shows expected vs observed).
+Subset matching compares top-level keys only; a nested dict value is compared exactly (`{"opts": {"a": 1}}` does not subset-match `{"opts": {"a": 1, "b": 2}}`). Use `mode="exact"` when you want full equality, or assert the nested keys with a separate entry.
+
+If the tool is called several times in a turn, the check passes when **any** call matches. Failure messages distinguish three cases: the tool was never called, the tool was called but no dict arguments were captured, and a genuine argument mismatch (which shows expected vs observed).
 
 **Parameters:**
 

@@ -251,7 +251,24 @@ async def test_tool_call_args_reports_args_not_captured():
     ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
     result = await ev.evaluate(_ctx(tool_calls=["book_slot"]))
     assert result.passed is False
-    assert "no arguments were captured" in result.reasoning
+    assert "no dict arguments were captured" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_does_not_crash_on_json_string_args():
+    """A ToolCall whose args is an un-parsed JSON string must not raise TypeError."""
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    result = await ev.evaluate(_ctx(tool_calls=[ToolCall("book_slot", '{"time": "10am"}')]))
+    assert result.passed is False
+    assert "no dict arguments were captured" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_subset_is_top_level_only():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"opts": {"a": 1}})
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"opts": {"a": 1, "b": 2}})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is False
 
 
 def test_tool_call_args_rejects_unknown_mode():
@@ -348,7 +365,7 @@ async def test_tool_call_args_judge_short_circuits_when_args_not_captured():
         result = await ev.evaluate(_ctx(tool_calls=["book_slot"]))
 
     assert result.passed is False
-    assert "no arguments were captured" in result.reasoning
+    assert "no dict arguments were captured" in result.reasoning
     MockAgent.assert_not_called()
 
 

@@ -149,14 +149,14 @@ class ToolCallArgsJudgeEvaluator:
                 reasoning=f"Tool {self.tool!r} was never called (tools called: {[str(tc) for tc in ctx.tool_calls]!r})",
             )
 
-        captured = [tc.args for tc in matching if getattr(tc, "args", None) is not None]
+        captured = [tc.args for tc in matching if isinstance(getattr(tc, "args", None), dict)]
         if not captured:
             return EvalResult(
                 passed=False,
                 reasoning=(
-                    f"Tool {self.tool!r} was called but no arguments were captured. "
+                    f"Tool {self.tool!r} was called but no dict arguments were captured. "
                     "Argument assertions need the agent/adapter to return ToolCall(name, args) "
-                    "instead of plain tool-name strings."
+                    "with args as a mapping (a JSON string is not enough — parse it first)."
                 ),
             )
 
