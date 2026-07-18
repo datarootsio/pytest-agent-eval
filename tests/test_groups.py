@@ -158,6 +158,24 @@ def test_must_pass_matches_parametrized_identities():
     assert result.must_pass_failed == ["test_thing"]
 
 
+def test_selectorless_must_pass_group_reports_failure():
+    """A must_pass-only group (no tags/markers) still records the failure though it matches no members."""
+    group = GroupConfig(name="critical", must_pass=["bad_case"])
+    outcomes = [_outcome("bad_case", "failed", tags=["gate:booking"])]
+    (result,) = evaluate_groups([group], outcomes)
+    assert result.matched is False
+    assert result.total == 0
+    assert result.must_pass_failed == ["bad_case"]
+
+
+def test_format_summary_surfaces_must_pass_failure_for_unmatched_group():
+    group = GroupConfig(name="critical", must_pass=["bad_case"])
+    outcomes = [_outcome("bad_case", "failed", tags=["gate:booking"])]
+    lines = format_group_summary_lines(evaluate_groups([group], outcomes))
+    assert any("matched no tests" in line for line in lines)
+    assert any("must_pass: bad_case FAILED" in line for line in lines)
+
+
 def test_must_pass_entry_that_never_ran_is_missing_not_failed():
     group = GroupConfig(name="g", threshold=0.0, tags=["t"], must_pass=["absent"])
     (result,) = evaluate_groups([group], [_outcome("a", "passed", tags=["t"])])
@@ -379,6 +397,20 @@ def test_exit_stays_red_when_plain_test_fails(pytester: pytest.Pytester):
     pytester.makepyfile(test_plain="def test_broken(): assert False")
     result = pytester.runpytest("--agent-eval-live")
     assert result.ret == 1
+
+
+def test_exit_stays_red_when_selectorless_must_pass_group_fails(pytester: pytest.Pytester):
+    """A must_pass-only gate must veto the override even though its selectors match nothing."""
+    _make_grouped_project(pytester, threshold=0.5)
+    # bad_case fails and is absorbed by the booking group's 0.5 threshold, but a
+    # separate selector-less group pins it as must_pass — the override must not fire.
+    pyproject = (pytester.path / "pyproject.toml").read_text()
+    pyproject += '\n[tool.agent_eval.groups.critical]\nmust_pass = ["bad_case"]\n'
+    (pytester.path / "pyproject.toml").write_text(pyproject)
+    result = pytester.runpytest("--agent-eval-live")
+    assert result.ret == 1
+    result.stdout.fnmatch_lines(["*must_pass: bad_case FAILED*"])
+    assert "exit code overridden" not in result.stdout.str()
 
 
 def test_exit_stays_red_when_ungrouped_transcript_fails(pytester: pytest.Pytester):

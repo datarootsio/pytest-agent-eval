@@ -157,17 +157,18 @@ def format_group_summary_lines(results: list[GroupResult]) -> list[str]:
         group = result.group
         if not result.matched:
             lines.append(f"WARNING: group '{group.name}' matched no tests")
-            continue
-        if result.skipped:
+        elif result.skipped:
             lines.append(f"{group.name}: SKIPPED ({result.skipped_count} matched, all skipped)")
-            continue
-        status = "PASSED" if result.passed else "FAILED"
-        lines.append(
-            f"{group.name}: {result.passed_count}/{result.total} passed "
-            f"({result.pass_rate:.0%}) >= {group.threshold:.0%} required -- {status}"
-        )
-        if result.failing:
-            lines.append(f"  failures: {', '.join(result.failing)}")
+        else:
+            status = "PASSED" if result.passed else "FAILED"
+            lines.append(
+                f"{group.name}: {result.passed_count}/{result.total} passed "
+                f"({result.pass_rate:.0%}) >= {group.threshold:.0%} required -- {status}"
+            )
+            if result.failing:
+                lines.append(f"  failures: {', '.join(result.failing)}")
+        # must_pass is an assertion over every ran outcome, independent of membership,
+        # so surface it even when the group's selectors matched nothing.
         for entry in group.must_pass:
             if entry in result.must_pass_failed:
                 lines.append(f"  must_pass: {entry} FAILED")
@@ -192,18 +193,18 @@ def build_group_markdown_lines(results: list[GroupResult]) -> list[str]:
     for result in results:
         group = result.group
         if not result.matched:
-            lines.append(f"| {group.name} | - | 0 | - | {group.threshold:.2f} | ⚠️ NO MATCH |")
-            continue
-        if result.skipped:
+            status_cell = "❌ must_pass FAILED" if result.must_pass_failed else "⚠️ NO MATCH"
+            lines.append(f"| {group.name} | - | 0 | - | {group.threshold:.2f} | {status_cell} |")
+        elif result.skipped:
             lines.append(f"| {group.name} | - | 0 | - | {group.threshold:.2f} | ⏭ SKIPPED |")
-            continue
-        status = "✅ PASS" if result.passed else "❌ FAIL"
-        lines.append(
-            f"| {group.name} | {result.passed_count} | {result.total} "
-            f"| {result.pass_rate:.2f} | {group.threshold:.2f} | {status} |"
-        )
-        if result.failing:
-            notes.append(f"- `{group.name}` failures: {', '.join(result.failing)}")
+        else:
+            status = "✅ PASS" if result.passed else "❌ FAIL"
+            lines.append(
+                f"| {group.name} | {result.passed_count} | {result.total} "
+                f"| {result.pass_rate:.2f} | {group.threshold:.2f} | {status} |"
+            )
+            if result.failing:
+                notes.append(f"- `{group.name}` failures: {', '.join(result.failing)}")
         notes.extend(f"- `{group.name}` must_pass FAILED: {entry}" for entry in result.must_pass_failed)
         notes.extend(f"- `{group.name}` must_pass did not run: {entry}" for entry in result.must_pass_missing)
     if notes:

@@ -270,7 +270,12 @@ class AgentEvalReportPlugin:
         # transcript, or a collection error must keep the red exit code.
         if not self._get_cfg().groups or exitstatus != pytest.ExitCode.TESTS_FAILED or self._had_collect_error:
             return
-        gated = [r for r in self._group_results() if r.total > 0]
+        results = self._group_results()
+        # A failed must_pass assertion vetoes the override even when the group's
+        # selectors matched nothing (a selector-less must_pass-only gate has total == 0).
+        if any(r.must_pass_failed for r in results):
+            return
+        gated = [r for r in results if r.total > 0]
         if not gated or any(not r.passed for r in gated):
             return
         covered_failed = {nodeid for result in gated for nodeid in result.failed_nodeids}
