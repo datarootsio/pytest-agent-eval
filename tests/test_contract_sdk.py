@@ -38,6 +38,29 @@ async def test_pydantic_ai_adapter_against_real_agent():
     assert "time" in tool_calls[0].args
 
 
+async def test_pydantic_ai_adapter_against_real_agent_multi_turn():
+    """Regression: pydantic-ai's message_history takes ModelMessage objects, not OpenAI dicts.
+
+    Passing raw dicts crashes with AttributeError on pydantic-ai 1.x+; the fake-based
+    tests never exercised a real Agent with prior-turn history, so the drift was invisible.
+    """
+    from pydantic_ai import Agent
+    from pydantic_ai.models.test import TestModel
+
+    from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
+
+    adapter = PydanticAIAdapter(Agent(TestModel()))
+    history = [
+        {"role": "user", "content": "first turn"},
+        {"role": "assistant", "content": "acknowledged"},
+        {"role": "user", "content": "second turn"},
+    ]
+    reply, tool_calls = await adapter(history)
+
+    assert isinstance(reply, str) and reply
+    assert isinstance(tool_calls, list)
+
+
 async def test_judge_evaluator_against_real_agent_with_structured_output():
     from pydantic_ai.models.test import TestModel
 
