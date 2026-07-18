@@ -51,6 +51,8 @@ async def _run_turn(
     agent: AgentCallable,
     config_model: str | None = None,
     judge_model: str | None = None,
+    judge_retries: int = 2,
+    judge_timeout: float = 30.0,
 ) -> tuple[TurnResult, str, list[ToolCall]]:
     """Execute one turn and evaluate results."""
     msg: dict[str, Any] = {"role": "user", "content": turn.user}
@@ -74,7 +76,14 @@ async def _run_turn(
         from pytest_agent_eval.evaluators.judge import JudgeEvaluator
 
         resolved_judge_model = turn.expect.judge.model or judge_model or config_model
-        evaluators.append(JudgeEvaluator(rubric=turn.expect.judge.rubric, model=resolved_judge_model))
+        evaluators.append(
+            JudgeEvaluator(
+                rubric=turn.expect.judge.rubric,
+                model=resolved_judge_model,
+                retries=judge_retries,
+                timeout=judge_timeout,
+            )
+        )
 
     for args_cfg in turn.expect.tool_calls_args:
         if args_cfg.args is not None:
@@ -86,7 +95,13 @@ async def _run_turn(
 
             resolved = args_cfg.judge.model or judge_model or config_model
             evaluators.append(
-                ToolCallArgsJudgeEvaluator(tool=args_cfg.tool, rubric=args_cfg.judge.rubric, model=resolved)
+                ToolCallArgsJudgeEvaluator(
+                    tool=args_cfg.tool,
+                    rubric=args_cfg.judge.rubric,
+                    model=resolved,
+                    retries=judge_retries,
+                    timeout=judge_timeout,
+                )
             )
 
     eval_results = list(await asyncio.gather(*(ev.evaluate(ctx) for ev in evaluators)))
@@ -100,13 +115,17 @@ async def _run_once(
     run_idx: int,
     config_model: str | None = None,
     judge_model: str | None = None,
+    judge_retries: int = 2,
+    judge_timeout: float = 30.0,
 ) -> RunResult:
     """Execute all turns once and return a RunResult."""
     history: list[dict[str, Any]] = []
     turn_results: list[TurnResult] = []
 
     for turn_idx, turn in enumerate(transcript.turns):
-        turn_result, _, _ = await _run_turn(turn, turn_idx, history, agent, config_model, judge_model)
+        turn_result, _, _ = await _run_turn(
+            turn, turn_idx, history, agent, config_model, judge_model, judge_retries, judge_timeout
+        )
         turn_results.append(turn_result)
 
     run_passed = all(t.passed for t in turn_results)
@@ -118,6 +137,8 @@ async def run_transcript(
     agent: AgentCallable,
     config_model: str | None = None,
     judge_model: str | None = None,
+    judge_retries: int = 2,
+    judge_timeout: float = 30.0,
 ) -> TranscriptResult:
     """Run a transcript N times and aggregate results.
 
@@ -126,13 +147,18 @@ async def run_transcript(
         agent: Async callable ``(history) -> (reply, tool_calls)``.
         config_model: Fallback model string for JudgeEvaluator (from config).
         judge_model: Dedicated judge model override; takes priority over config_model.
+        judge_retries: Retry attempts for failed judge calls (from config).
+        judge_timeout: Per-judge-call timeout in seconds (from config).
 
     Returns:
         TranscriptResult with score, threshold, and per-run details.
     """
     run_results = list(
         await asyncio.gather(
-            *(_run_once(transcript, agent, run_idx, config_model, judge_model) for run_idx in range(transcript.runs))
+            *(
+                _run_once(transcript, agent, run_idx, config_model, judge_model, judge_retries, judge_timeout)
+                for run_idx in range(transcript.runs)
+            )
         )
     )
     score = sum(r.passed for r in run_results) / len(run_results)
@@ -154,6 +180,8 @@ class EvalSession:
         runs: Number of runs (overrides config).
         config_model: Default model fallback for JudgeEvaluator.
         judge_model: Dedicated judge model; takes priority over config_model.
+        judge_retries: Retry attempts for failed judge calls.
+        judge_timeout: Per-judge-call timeout in seconds.
         _item: The pytest item node — used by the report plugin to attach score output.
     """
 
@@ -163,6 +191,8 @@ class EvalSession:
         runs: int,
         config_model: str | None = None,
         judge_model: str | None = None,
+        judge_retries: int = 2,
+        judge_timeout: float = 30.0,
         _item: Any = None,
     ) -> None:
         """Initialise an EvalSession with thresholds, run count, and model fallbacks."""
@@ -170,6 +200,8 @@ class EvalSession:
         self.runs = runs
         self.config_model = config_model
         self.judge_model = judge_model
+        self.judge_retries = judge_retries
+        self.judge_timeout = judge_timeout
         self._item = _item
 
     async def run(
@@ -192,7 +224,9 @@ class EvalSession:
             threshold=self.threshold,
             runs=self.runs,
         )
-        result = await run_transcript(transcript, agent, self.config_model, self.judge_model)
+        result = await run_transcript(
+            transcript, agent, self.config_model, self.judge_model, self.judge_retries, self.judge_timeout
+        )
         if self._item is not None:
             self._item._eval_result = result
         return result

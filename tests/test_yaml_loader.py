@@ -69,6 +69,89 @@ def test_empty_turns_is_an_error(tmp_path: Path):
         _load(tmp_path, "id: t\n")
 
 
+def test_invalid_regex_pattern_fails_validation_with_location(tmp_path: Path):
+    with pytest.raises(TranscriptError, match=r"turns\[0\].expect.reply_matches_any\[0\].*invalid regex"):
+        _load(tmp_path, 'id: t\nturns:\n  - user: hi\n    expect:\n      reply_matches_any: ["("]\n')
+
+
+def test_runs_accepts_integral_float(tmp_path: Path):
+    transcript = _load(tmp_path, "id: t\nruns: 2.0\nturns:\n  - user: hi\n")
+    assert transcript.runs == 2
+    assert isinstance(transcript.runs, int)
+    with pytest.raises(TranscriptError, match="integer >= 1"):
+        _load(tmp_path, "id: t\nruns: 2.5\nturns:\n  - user: hi\n")
+
+
+def test_load_transcript_honours_config_defaults(tmp_path: Path):
+    yaml_path = tmp_path / "t.yaml"
+    yaml_path.write_text("id: t\nturns:\n  - user: hi\n")
+    transcript = load_transcript(yaml_path, default_threshold=0.5, default_runs=4)
+    assert transcript.threshold == 0.5
+    assert transcript.runs == 4
+
+    explicit = tmp_path / "explicit.yaml"
+    explicit.write_text("id: t2\nthreshold: 0.9\nruns: 2\nturns:\n  - user: hi\n")
+    transcript = load_transcript(explicit, default_threshold=0.5, default_runs=4)
+    assert transcript.threshold == 0.9
+    assert transcript.runs == 2
+
+
+def test_yaml_syntax_error_shows_clean_collect_error(pytester: pytest.Pytester):
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makefile(
+        ".yaml",
+        **{"tests/evals/broken_syntax": ("id: broken\nturns:\n  - user: hi\n   expect:\n      judge: x\n")},
+    )
+    pytester.makeconftest(
+        """
+        import pytest
+
+        @pytest.fixture
+        def llm_eval_agent():
+            async def agent(history):
+                return "ok", []
+            return agent
+        """
+    )
+    result = pytester.runpytest("--agent-eval-live")
+    assert result.ret != 0
+    result.stdout.fnmatch_lines(["*invalid YAML at line*"])
+    assert "yaml.parser" not in result.stdout.str()
+
+
+def test_yaml_transcript_defaults_come_from_config(pytester: pytest.Pytester):
+    pytester.makepyprojecttoml(
+        """
+        [tool.agent_eval]
+        yaml_dirs = ["tests/evals"]
+        threshold = 0.0
+        """
+    )
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makefile(
+        ".yaml",
+        **{
+            "tests/evals/no_threshold": (
+                "id: config_default\nturns:\n  - user: hi\n    expect:\n      reply_contains_any: [impossible]\n"
+            )
+        },
+    )
+    pytester.makeconftest(
+        """
+        import pytest
+
+        @pytest.fixture
+        def llm_eval_agent():
+            async def agent(history):
+                return "nope", []
+            return agent
+        """
+    )
+    result = pytester.runpytest("--agent-eval-live", "-v")
+    result.stdout.fnmatch_lines(["*config_default*PASSED*"])
+    assert result.ret == 0
+
+
 def test_validate_transcript_dict_rejects_non_mapping():
     with pytest.raises(TranscriptError, match="must be a YAML mapping"):
         validate_transcript_dict(["not", "a", "dict"], source="x.yaml")

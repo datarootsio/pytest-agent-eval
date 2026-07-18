@@ -41,7 +41,7 @@ Individual tests override this via `@pytest.mark.agent_eval(threshold=0.9)` or t
 ### `runs`
 
 **Type:** `int`
-**Default:** `3`
+**Default:** `1`
 
 The default number of times each transcript is executed. Higher values reduce the impact of nondeterminism but increase cost.
 
@@ -52,14 +52,14 @@ Individual tests override this via `@pytest.mark.agent_eval(runs=5)` or the YAML
 **Type:** `int`
 **Default:** `2`
 
-Number of times to retry a single run if the agent raises an exception (network error, rate limit, etc.).
+Number of times a failed LLM-judge call is retried before the judge returns a FAIL verdict. Applies to all judge evaluators; agent calls are never retried.
 
 ### `timeout`
 
 **Type:** `int`
 **Default:** `30`
 
-Per-turn timeout in seconds. If the agent callable does not return within this window, the turn is marked as failed.
+Per-judge-call timeout in seconds. A judge call that does not return within this window counts as a failed attempt (see `retries`).
 
 ### `yaml_dirs`
 

@@ -35,10 +35,10 @@ tests/test_booking.py::test_booking_flow PASSED
   ---- LLM Eval ----
   [3/3 runs, score=1.00 >= 0.80]
     Run 1 ✅
-      All substring checks passed
+      All substring and pattern checks passed
       All tool call checks passed
     Run 2 ✅
-      All substring checks passed
+      All substring and pattern checks passed
       All tool call checks passed
 ```
 

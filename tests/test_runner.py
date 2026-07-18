@@ -270,6 +270,31 @@ async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallba
 
 
 @pytest.mark.asyncio
+async def test_run_transcript_passes_judge_retries_and_timeout_through():
+    from unittest.mock import AsyncMock, patch
+
+    from pytest_agent_eval.models import JudgeConfig
+
+    async def agent(history: list[dict]) -> tuple[str, list[str]]:
+        return "hello", []
+
+    transcript = Transcript(
+        id="judge_knobs",
+        turns=[Turn(user="hi", expect=Expect(judge=JudgeConfig(rubric="anything")))],
+        threshold=0.0,
+        runs=1,
+    )
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(side_effect=Exception("API down"))
+        MockAgent.return_value = instance
+        await run_transcript(transcript, agent, config_model="openai:x", judge_retries=0, judge_timeout=5.0)
+
+    assert instance.run.call_count == 1
+
+
+@pytest.mark.asyncio
 async def test_history_is_accumulated_across_turns():
     captured_histories: list[list[dict]] = []
 

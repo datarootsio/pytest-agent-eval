@@ -97,5 +97,11 @@ def agent_eval(request: pytest.FixtureRequest):
     threshold = marker.kwargs["threshold"] if (marker and "threshold" in marker.kwargs) else cfg.threshold
     runs = marker.kwargs["runs"] if (marker and "runs" in marker.kwargs) else cfg.runs
     return EvalSession(
-        threshold=threshold, runs=runs, config_model=cfg.model, judge_model=cfg.judge_model, _item=request.node
+        threshold=threshold,
+        runs=runs,
+        config_model=cfg.model,
+        judge_model=cfg.judge_model,
+        judge_retries=cfg.retries,
+        judge_timeout=cfg.timeout,
+        _item=request.node,
     )

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import difflib
+import re
 from pathlib import Path
 from typing import Any, Generator
 
@@ -108,6 +109,12 @@ def _check_expect(raw: Any, location: str) -> None:
     for field in _LIST_OF_STR_EXPECT_FIELDS:
         if field in raw:
             _check_list_of_str(raw[field], f"{location}.{field}")
+    for field in ("reply_matches_any", "reply_matches_all"):
+        for i, pattern in enumerate(raw.get(field, [])):
+            try:
+                re.compile(pattern, re.IGNORECASE)
+            except re.error as exc:
+                raise _fail(f"{location}.{field}[{i}]", f"invalid regex pattern {pattern!r}: {exc}") from exc
     if "tool_calls_ordered" in raw and not isinstance(raw["tool_calls_ordered"], bool):
         raise _fail(f"{location}.tool_calls_ordered", f"must be true or false, got {raw['tool_calls_ordered']!r}")
     if "judge" in raw:
@@ -142,7 +149,9 @@ def validate_transcript_dict(data: Any, source: str = "transcript") -> None:
             raise _fail(f"{source}.threshold", f"must be a number between 0 and 1, got {threshold!r}")
     if "runs" in data:
         runs = data["runs"]
-        if isinstance(runs, bool) or not isinstance(runs, int) or runs < 1:
+        # Integral floats (runs: 2.0) count as integers, matching JSON Schema semantics.
+        integral = isinstance(runs, int) or (isinstance(runs, float) and runs.is_integer())
+        if isinstance(runs, bool) or not integral or runs < 1:
             raise _fail(f"{source}.runs", f"must be an integer >= 1, got {runs!r}")
     if "tags" in data:
         _check_list_of_str(data["tags"], f"{source}.tags")
@@ -208,11 +217,14 @@ def _parse_turn(raw_turn: dict[str, Any], yaml_dir: Path) -> Turn:
     return Turn(user=raw_turn["user"], audio=audio, expect=expect)
 
 
-def load_transcript(path: Path) -> Transcript:
+def load_transcript(path: Path, *, default_threshold: float = 0.8, default_runs: int = 1) -> Transcript:
     """Parse a YAML file into a Transcript.
 
     Args:
         path: Path to the YAML transcript file.
+        default_threshold: Threshold when the document omits one (callers pass
+            the [tool.agent_eval] value).
+        default_runs: Run count when the document omits one.
 
     Returns:
         Parsed Transcript with all fields populated.
@@ -229,8 +241,8 @@ def load_transcript(path: Path) -> Transcript:
     return Transcript(
         id=data["id"],
         turns=[_parse_turn(t, yaml_dir) for t in data["turns"]],
-        threshold=data.get("threshold", 0.8),
-        runs=data.get("runs", 1),
+        threshold=data.get("threshold", default_threshold),
+        runs=int(data.get("runs", default_runs)),
         tags=data.get("tags", []),
     )
 
@@ -258,8 +270,16 @@ class AgentEvalFile(pytest.File):
 
     def collect(self) -> Generator[pytest.Item, None, None]:
         """Yield a single AgentEvalItem for this YAML transcript."""
+        cfg = load_config(self.config)
         try:
-            transcript = load_transcript(self.path)
+            transcript = load_transcript(self.path, default_threshold=cfg.threshold, default_runs=cfg.runs)
+        except yaml.YAMLError as exc:
+            mark = getattr(exc, "problem_mark", None)
+            where = f" at line {mark.line + 1}, column {mark.column + 1}" if mark else ""
+            problem = getattr(exc, "problem", None) or exc
+            raise self.CollectError(
+                f"{self.path.name}: invalid YAML{where}: {problem}\nSchema reference: {SCHEMA_URL}"
+            ) from exc
         except TranscriptError as exc:
             raise self.CollectError(str(exc)) from exc
         yield AgentEvalItem.from_parent(self, name=transcript.id, transcript=transcript)
@@ -315,7 +335,9 @@ class AgentEvalItem(pytest.Item):
                 "Docs: https://datarootsio.github.io/pytest-agent-eval/latest/yaml-api/#agent-fixture"
             )
         cfg = load_config(self.config)
-        result = asyncio.run(run_transcript(self.transcript, agent, cfg.model, cfg.judge_model))
+        result = asyncio.run(
+            run_transcript(self.transcript, agent, cfg.model, cfg.judge_model, cfg.retries, cfg.timeout)
+        )
         self._eval_result = result
         result.assert_threshold()
 
