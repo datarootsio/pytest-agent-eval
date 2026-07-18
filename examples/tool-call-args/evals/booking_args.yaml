@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
 id: booking_argument_checks
 threshold: 1.0
 runs: 1

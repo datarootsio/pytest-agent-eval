@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json",
+  "$id": "https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json",
   "title": "pytest-agent-eval transcript",
   "description": "A multi-turn LLM evaluation transcript. Files matching this schema inside a configured yaml_dirs directory are collected as pytest tests.",
   "type": "object",

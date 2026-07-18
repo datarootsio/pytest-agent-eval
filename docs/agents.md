@@ -6,7 +6,7 @@ Point your coding agent (Claude Code, Cursor, Copilot, ...) at these resources:
 
 - **[`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt)** — the index, at the site root per the [llms.txt convention](https://llmstxt.org/)
 - **[`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt)** — the entire documentation as one file, for tools that ingest a single URL
-- **[JSON Schema](https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json)** — machine-readable transcript format
+- **[JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json)** — machine-readable transcript format
 - **[`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples)** — small runnable projects, one per feature
 
 ## AGENTS.md snippet
@@ -20,7 +20,7 @@ Prefer YAML transcripts over Python tests. Put them in the directory named by
 `yaml_dirs` under `[tool.agent_eval]` in pyproject.toml (default: tests/evals/);
 each file becomes a pytest test automatically. Start every file with:
 
-    # yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+    # yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
 
 Canonical multi-turn transcript:
 
@@ -60,7 +60,7 @@ Gotchas:
   for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
 
 Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
-.../latest/schema/transcript.json (schema),
+https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (schema),
 https://github.com/datarootsio/pytest-agent-eval/tree/main/examples (runnable examples).
 ````
 

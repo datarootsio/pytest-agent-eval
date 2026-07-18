@@ -52,7 +52,7 @@ Individual tests override this via `@pytest.mark.agent_eval(runs=5)` or the YAML
 **Type:** `int`
 **Default:** `2`
 
-Number of times a failed LLM-judge call is retried before the judge returns a FAIL verdict. Applies to all judge evaluators; agent calls are never retried.
+Number of times a failed LLM-judge call is retried before the judge returns a FAIL verdict. Applies to judge evaluators the plugin builds from YAML `judge` / `tool_calls_args[].judge` config and the `agent_eval` fixture. A `JudgeEvaluator(...)` you construct yourself and pass in `Expect(evaluators=[...])` keeps its own constructor arguments. Agent calls are never retried.
 
 ### `timeout`
 
@@ -64,7 +64,7 @@ Per-judge-call timeout in seconds. A judge call that does not return within this
 ### `yaml_dirs`
 
 **Type:** `list[str]`
-**Default:** `[]`
+**Default:** `["tests/evals"]`
 
 Directories to search recursively for `*.yaml` evaluation transcripts. Paths are relative to the project root (where `pyproject.toml` lives).
 

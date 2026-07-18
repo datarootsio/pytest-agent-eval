@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
 # This transcript fails on purpose: the group's 0.5 threshold absorbs it.
 id: booking_edge_case
 threshold: 1.0

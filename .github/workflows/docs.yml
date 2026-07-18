@@ -55,7 +55,13 @@ jobs:
             echo "label=main" >> "$GITHUB_OUTPUT"
           fi
       - name: Generate llms-full.txt
-        run: uv run python scripts/build_llms_full.py -o docs/llms-full.txt
+        # Guard for workflow_dispatch redeploys of older tags that predate the script.
+        run: |
+          if [ -f scripts/build_llms_full.py ]; then
+            uv run python scripts/build_llms_full.py -o docs/llms-full.txt
+          else
+            echo "scripts/build_llms_full.py not present at this ref; skipping"
+          fi
       - name: Deploy with mike
         run: |
           if [[ "${{ steps.ver.outputs.kind }}" == "tag" ]]; then

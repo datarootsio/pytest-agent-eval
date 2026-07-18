@@ -15,7 +15,7 @@ from pytest_agent_eval.config import load_config
 from pytest_agent_eval.models import Expect, JudgeConfig, ToolCallArgsConfig, Transcript, Turn
 from pytest_agent_eval.runner import run_transcript
 
-SCHEMA_URL = "https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json"
+SCHEMA_URL = "https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json"
 
 TOP_LEVEL_FIELDS = frozenset({"id", "threshold", "runs", "tags", "turns"})
 TURN_FIELDS = frozenset({"user", "audio", "expect"})

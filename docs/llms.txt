@@ -6,7 +6,7 @@ Key facts for tools and agents:
 
 - Eval tests are skipped unless `--agent-eval-live` is passed or `EVAL_LIVE=1` is set (CI-cost safety default).
 - YAML files inside a configured `yaml_dirs` directory become pytest tests automatically; a `llm_eval_agent` fixture in conftest.py supplies the agent under test.
-- Transcripts are validated against a published JSON Schema: https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+- Transcripts are validated against a published JSON Schema: https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
 - The full documentation as one file: https://datarootsio.github.io/pytest-agent-eval/llms-full.txt
 
 ## Docs

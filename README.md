@@ -99,7 +99,7 @@ def llm_eval_agent():
 
 ```yaml
 # tests/evals/booking_single_turn.yaml
-# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
 id: booking_single_turn
 threshold: 0.8
 runs: 3
@@ -233,7 +233,7 @@ See [Voice testing](docs/adapters.md#livekit-voice) for the full reference (samp
 
 ## Using with coding agents
 
-Transcripts are plain YAML with a [published JSON Schema](https://datarootsio.github.io/pytest-agent-eval/latest/schema/transcript.json), validation errors suggest the intended field ("Did you mean 'tool_calls_include'?"), and the docs ship as [`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt) / [`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt) — so Claude Code, Cursor, and friends write correct evals on the first try. Grab the ready-made AGENTS.md snippet from the [coding agents guide](https://datarootsio.github.io/pytest-agent-eval/latest/agents/), and point agents at [`examples/`](examples/) for known-good starting points.
+Transcripts are plain YAML with a [published JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json), validation errors suggest the intended field ("Did you mean 'tool_calls_include'?"), and the docs ship as [`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt) / [`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt) — so Claude Code, Cursor, and friends write correct evals on the first try. Grab the ready-made AGENTS.md snippet from the [coding agents guide](https://datarootsio.github.io/pytest-agent-eval/latest/agents/), and point agents at [`examples/`](examples/) for known-good starting points.
 
 ## Sample report
 
