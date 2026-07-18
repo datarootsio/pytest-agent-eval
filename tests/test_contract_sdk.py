@@ -61,6 +61,61 @@ async def test_pydantic_ai_adapter_against_real_agent_multi_turn():
     assert isinstance(tool_calls, list)
 
 
+async def test_pydantic_ai_adapter_preserves_system_prompt_across_turns():
+    """message_history reconstruction must re-embed the agent's static system prompt.
+
+    pydantic-ai only auto-applies system_prompt when message_history is empty, so a
+    naive reconstruction runs turn 2+ without it — a silent behavior change.
+    """
+    from pydantic_ai import Agent
+    from pydantic_ai.messages import ModelResponse, TextPart
+    from pydantic_ai.models.function import FunctionModel
+
+    saw_system: list[bool] = []
+
+    def model_fn(messages, info):
+        saw_system.append(
+            any(
+                any(getattr(p, "part_kind", None) == "system-prompt" for p in getattr(m, "parts", [])) for m in messages
+            )
+        )
+        return ModelResponse(parts=[TextPart(content="reply")])
+
+    from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
+
+    adapter = PydanticAIAdapter(Agent(FunctionModel(model_fn), system_prompt="You are a pirate."))
+    await adapter(
+        [
+            {"role": "user", "content": "turn 1"},
+            {"role": "assistant", "content": "prev reply"},
+            {"role": "user", "content": "turn 2"},
+        ]
+    )
+    assert saw_system == [True]
+
+
+def test_pydantic_ai_adapter_excludes_native_tool_search():
+    """builtin-tool-call covers native tool-search meta-ops; those must not be counted."""
+    from pytest_agent_eval.adapters.pydantic_ai import _is_tool_call_part
+
+    class _NativeToolCallPart:
+        part_kind = "builtin-tool-call"
+
+    class _NativeToolSearchCallPart:
+        part_kind = "builtin-tool-call"
+
+    class _ToolCallPart:
+        part_kind = "tool-call"
+
+    class _TextPart:
+        part_kind = "text"
+
+    assert _is_tool_call_part(_NativeToolCallPart()) is True
+    assert _is_tool_call_part(_ToolCallPart()) is True
+    assert _is_tool_call_part(_NativeToolSearchCallPart()) is False
+    assert _is_tool_call_part(_TextPart()) is False
+
+
 async def test_judge_evaluator_against_real_agent_with_structured_output():
     from pydantic_ai.models.test import TestModel
 
