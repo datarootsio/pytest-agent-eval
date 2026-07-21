@@ -7,4 +7,10 @@
           data-color="#3f51b5"
           data-welcome-message="Ask me anything about pytest-agent-eval — YAML transcripts, evaluators, tool-call assertions, and group thresholds."
           data-placeholder="Ask about pytest-agent-eval"></script>
+  {# The widget's input lives in a CLOSED shadow root, so keystrokes bubble to the page retargeted to the host div — Zensical's shortcut handler (window-level, only pierces open shadow roots) then treats letters typed in the chat as shortcuts: n/p/,/. navigate away, / opens search. Bubble-phase on body runs after the widget's own handlers (Enter-to-send intact) and before the theme's window listener. #}
+  <script>
+    document.body.addEventListener("keydown", (e) => {
+      if (e.target.closest("#context7-widget")) e.stopPropagation();
+    });
+  </script>
 {% endblock %}
