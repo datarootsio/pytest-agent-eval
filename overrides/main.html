@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block extrahead %}
+  {{ super() }}
+  <script src="https://context7.com/widget.js"
+          data-library="/datarootsio/pytest-agent-eval"
+          data-color="#3f51b5"
+          data-welcome-message="Ask me anything about pytest-agent-eval — YAML transcripts, evaluators, tool-call assertions, and group thresholds."
+          data-placeholder="Ask about pytest-agent-eval"></script>
+{% endblock %}
