@@ -9,5 +9,7 @@
     "Eval tests are skipped unless pytest runs with --agent-eval-live or EVAL_LIVE=1 is set",
     "Validate transcripts against the JSON Schema at https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (add the yaml-language-server $schema directive as the first line)",
     "A conftest.py fixture named llm_eval_agent must return an async callable (messages) -> (reply, tool_calls)"
-  ]
+  ],
+  "url": "https://context7.com/datarootsio/pytest-agent-eval",
+  "public_key": "pk_b9DMvuuooI8ccW5mlLMJY"
 }
