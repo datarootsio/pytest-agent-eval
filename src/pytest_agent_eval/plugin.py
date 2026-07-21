@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from pytest_agent_eval.config import load_config
@@ -26,12 +28,23 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Register the agent_eval marker and the report-writing plugin."""
+    """Register the agent_eval marker, validate group config, and add the report plugin."""
     config.addinivalue_line(
         "markers",
-        "agent_eval(threshold=None, runs=None): mark test as an LLM evaluation test. "
-        "Skipped unless --agent-eval-live or EVAL_LIVE=1.",
+        "agent_eval(threshold=None, runs=None, tags=None): mark test as an LLM evaluation test. "
+        "Skipped unless --agent-eval-live or EVAL_LIVE=1. tags feed [tool.agent_eval.groups] gates.",
     )
+    try:
+        cfg = load_config(config)
+    except ValueError as exc:
+        raise pytest.UsageError(str(exc)) from exc
+
+    for group in cfg.groups:
+        for marker_name in group.pytest_markers:
+            config.addinivalue_line(
+                "markers", f"{marker_name}: auto-registered by pytest-agent-eval group '{group.name}'"
+            )
+
     from pytest_agent_eval.report import AgentEvalReportPlugin
 
     config.pluginmanager.register(AgentEvalReportPlugin(config), "llm_eval_report")
@@ -43,9 +56,22 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     if cfg.live:
         return
     skip = pytest.mark.skip(reason="agent_eval: live mode disabled (use --agent-eval-live or EVAL_LIVE=1)")
+    skipped = 0
     for item in items:
         if item.get_closest_marker("agent_eval") is not None:
             item.add_marker(skip)
+            skipped += 1
+    config._agent_eval_live_skipped = skipped
+
+
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:
+    """Print a hint when eval tests were skipped because live mode is off."""
+    skipped = getattr(config, "_agent_eval_live_skipped", 0)
+    if skipped:
+        terminalreporter.write_line(
+            f"{skipped} eval test(s) skipped — live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.",
+            yellow=True,
+        )
 
 
 @pytest.fixture
@@ -71,5 +97,11 @@ def agent_eval(request: pytest.FixtureRequest):
     threshold = marker.kwargs["threshold"] if (marker and "threshold" in marker.kwargs) else cfg.threshold
     runs = marker.kwargs["runs"] if (marker and "runs" in marker.kwargs) else cfg.runs
     return EvalSession(
-        threshold=threshold, runs=runs, config_model=cfg.model, judge_model=cfg.judge_model, _item=request.node
+        threshold=threshold,
+        runs=runs,
+        config_model=cfg.model,
+        judge_model=cfg.judge_model,
+        judge_retries=cfg.retries,
+        judge_timeout=cfg.timeout,
+        _item=request.node,
     )

@@ -15,6 +15,7 @@
 - 📝 **YAML or Python transcripts** — pick the authoring style your team prefers
 - 🔍 **YAML auto-discovery** — drop `*.yaml` files in any configured directory and they become pytest tests automatically
 - 🎙 **Voice agents (LiveKit)** — drive a real `AgentSession` with a WAV per turn; same evaluator surface as text agents
+- 🚦 **Group-level quality gates** — `[tool.agent_eval.groups]` gates CI on aggregate pass rates ("90% of booking evals") with `must_pass` pins, instead of failing on every flaky eval
 - 🛡 **CI-safe by default** — eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1`
 - ⚡ **Parallel-ready** — `pytest -n auto` (via [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)) just works
 - 📄 **Markdown reports** — full per-run trace with `--agent-eval-report=eval.md`
@@ -59,8 +60,9 @@ Bringing your own framework? Any `async def agent(messages) -> (reply, tool_call
 
 `pytest-agent-eval` separates the *kinds of checks* you might want into composable evaluators:
 
-- **Deterministic checks** — `ContainsEvaluator(any_of=["confirmed", "booked"])` for substring/regex assertions over the agent reply.
+- **Deterministic checks** — `ContainsEvaluator(any_of=["confirmed", "booked"], matches_all=[r"BK-\d+"])` for substring and regex assertions over the agent reply.
 - **Tool-call assertions** — `ToolCallEvaluator(must_include=["create_booking"], ordered=True)` to verify that the agent called the right tools, in the right order.
+- **Tool-argument assertions** — `ToolCallArgsEvaluator(tool="create_booking", args={"time": "10am"})` for deterministic subset/exact checks on call arguments, plus `ToolCallArgsJudgeEvaluator` for rubric-based judging of arguments.
 - **LLM-as-judge** — `JudgeEvaluator(rubric="Reply must be friendly, include a date, and confirm the booking.")` for open-ended quality checks the agent under test should meet.
 
 Mix and match per turn — every evaluator participates in the threshold score.
@@ -97,6 +99,7 @@ def llm_eval_agent():
 
 ```yaml
 # tests/evals/booking_single_turn.yaml
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
 id: booking_single_turn
 threshold: 0.8
 runs: 3
@@ -164,6 +167,27 @@ turns:
 
 Each turn's full conversation history is built up as the test runs — your agent receives all prior `(user, assistant)` pairs as context, the same way it would in production. Failures point at the exact turn that broke, not just "the test failed."
 
+## Group quality gates
+
+A suite of LLM evals fails somewhere almost every run. Group thresholds gate CI on **aggregate pass rates** while pinning the tests that must never break:
+
+```toml
+[tool.agent_eval.groups.booking]
+threshold = 0.9                          # 90% of matched tests must pass
+tags = ["gate:booking"]                  # match transcripts by tag
+must_pass = ["booking_confirmation"]     # ...but this one must always pass
+```
+
+```text
+============================== group summary ===============================
+booking: 9/10 passed (90%) >= 90% required -- PASSED
+  failures: booking_edge_case
+  must_pass: booking_confirmation ok
+exit code overridden to 0: all group thresholds met
+```
+
+When every gate is green and every failure belongs to a gated group, the exit code is overridden to `0` — a failing plain unit test or ungrouped transcript still keeps CI red. See the [group thresholds docs](https://datarootsio.github.io/pytest-agent-eval/latest/groups/) for membership and `must_pass` semantics.
+
 ## Voice agents (LiveKit)
 
 The `[livekit]` extra adds a `LiveKitAdapter` that drives a real LiveKit `AgentSession` from a WAV per turn. Every turn declares an `audio:` path — the adapter streams it at real-time pace, captures `function_tools_executed` and `conversation_item_added` events, and returns `(reply, tool_calls)` to the same evaluators you already use for text agents:
@@ -206,6 +230,10 @@ python -m pytest_agent_eval.synthesize_audio --force            # ignore cache
 The CLI auto-writes a `.gitignore` next to every WAV (`*.wav`, `*.wav.hash`) so generated audio stays local — commit YAML transcripts only. Real recordings work too: drop a hand-recorded WAV at the same path and the adapter doesn't care how it got there.
 
 See [Voice testing](docs/adapters.md#livekit-voice) for the full reference (sample rate, frame size, grace period, custom session factories).
+
+## Using with coding agents
+
+Transcripts are plain YAML with a [published JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json), validation errors suggest the intended field ("Did you mean 'tool_calls_include'?"), and the docs ship as [`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt) / [`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt) — so Claude Code, Cursor, and friends write correct evals on the first try. Grab the ready-made AGENTS.md snippet from the [coding agents guide](https://datarootsio.github.io/pytest-agent-eval/latest/agents/), and point agents at [`examples/`](examples/) for known-good starting points.
 
 ## Sample report
 

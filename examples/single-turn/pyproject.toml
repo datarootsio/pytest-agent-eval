@@ -1,0 +1,11 @@
+[project]
+name = "example-single-turn"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = ["pytest-agent-eval"]
+
+[tool.agent_eval]
+yaml_dirs = ["evals"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

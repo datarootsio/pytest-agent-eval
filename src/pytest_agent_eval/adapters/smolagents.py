@@ -5,6 +5,9 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from pytest_agent_eval.adapters._args import coerce_args
+from pytest_agent_eval.models import ToolCall
+
 _INTERNAL_TOOLS = frozenset({"python_interpreter", "final_answer"})
 
 
@@ -37,6 +40,12 @@ class SmolagentsAdapter:
 
     def __init__(self, agent: Any, *, include_internal_tools: bool = False) -> None:
         """Store the smolagents agent and the internal-tool filter setting."""
+        if not hasattr(agent, "run") or not hasattr(agent, "memory"):
+            raise TypeError(
+                f"SmolagentsAdapter expects a smolagents agent with .run() and .memory.steps, "
+                f"got {type(agent).__name__}. Make sure the extra is installed: "
+                "pip install 'pytest-agent-eval[smolagents]'"
+            )
         self._agent = agent
         self._include_internal_tools = include_internal_tools
 
@@ -47,7 +56,11 @@ class SmolagentsAdapter:
         prev = len(self._agent.memory.steps)
         result = await asyncio.to_thread(self._agent.run, user_msg, reset=reset)
         new_steps = self._agent.memory.steps[prev:] if not reset else self._agent.memory.steps
-        names = [tc.name for step in new_steps for tc in getattr(step, "tool_calls", None) or []]
+        calls = [
+            ToolCall(tc.name, coerce_args(getattr(tc, "arguments", None)))
+            for step in new_steps
+            for tc in getattr(step, "tool_calls", None) or []
+        ]
         if not self._include_internal_tools:
-            names = [n for n in names if n not in _INTERNAL_TOOLS]
-        return str(result), names
+            calls = [c for c in calls if c not in _INTERNAL_TOOLS]
+        return str(result), calls

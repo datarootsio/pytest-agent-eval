@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytest-agent-eval"
-version = "0.2.0"
+version = "0.3.0"
 description = "A pytest plugin for LLM evaluation tests with threshold-based pass/fail"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -51,6 +51,7 @@ dev = [
     "anyio[trio]>=4.0",
     "pre-commit>=4.0",
     "pytest-xdist>=3.0",
+    "jsonschema>=4",
 ]
 docs = [
     "zensical",
@@ -63,6 +64,7 @@ packages = ["src/pytest_agent_eval"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pytester_example_dir = "examples"
 
 [tool.ruff]
 line-length = 120
@@ -75,3 +77,4 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D102", "D103", "D107"]
+"examples/*" = ["D102", "D103", "D107"]

@@ -6,6 +6,10 @@
 
 ::: pytest_agent_eval.models.Expect
 
+::: pytest_agent_eval.models.ToolCall
+
+::: pytest_agent_eval.models.ToolCallArgsConfig
+
 ::: pytest_agent_eval.models.TurnContext
 
 ::: pytest_agent_eval.models.EvalResult

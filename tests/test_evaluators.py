@@ -5,8 +5,8 @@ import pytest
 from pytest_agent_eval.evaluators.base import Evaluator
 from pytest_agent_eval.evaluators.contains import ContainsEvaluator
 from pytest_agent_eval.evaluators.judge import JudgeEvaluator
-from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
-from pytest_agent_eval.models import TurnContext
+from pytest_agent_eval.evaluators.tool_call import ToolCallArgsEvaluator, ToolCallEvaluator
+from pytest_agent_eval.models import ToolCall, TurnContext
 
 
 def _ctx(reply: str = "", tool_calls: list[str] | None = None) -> TurnContext:
@@ -63,6 +63,67 @@ async def test_contains_empty_config_always_passes():
     ev = ContainsEvaluator()
     result = await ev.evaluate(_ctx(reply="anything"))
     assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_contains_matches_any_passes_on_regex_match():
+    ev = ContainsEvaluator(matches_any=[r"ref(erence)? number[:# ]*[A-Z]{2}-\d+"])
+    result = await ev.evaluate(_ctx(reply="Your reference number: BK-1234"))
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_contains_matches_any_fails_when_no_pattern_matches():
+    ev = ContainsEvaluator(matches_any=[r"\bBK-\d+\b", r"\bREF-\d+\b"])
+    result = await ev.evaluate(_ctx(reply="No reference here."))
+    assert result.passed is False
+    assert "did not match" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_contains_matches_all_passes_when_all_match():
+    ev = ContainsEvaluator(matches_all=[r"\d{1,2}(am|pm)", r"tomorrow"])
+    result = await ev.evaluate(_ctx(reply="Booked for tomorrow at 10am."))
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_contains_matches_all_fails_and_names_missing_pattern():
+    ev = ContainsEvaluator(matches_all=[r"tomorrow", r"BK-\d+"])
+    result = await ev.evaluate(_ctx(reply="Booked for tomorrow."))
+    assert result.passed is False
+    assert "BK-" in result.reasoning
+    assert "tomorrow" not in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_contains_matches_any_is_case_insensitive_by_default():
+    ev = ContainsEvaluator(matches_any=[r"confirmed"])
+    result = await ev.evaluate(_ctx(reply="CONFIRMED!"))
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_contains_case_sensitive_flag_applies_to_regex():
+    ev = ContainsEvaluator(matches_any=[r"confirmed"], case_sensitive=True)
+    result = await ev.evaluate(_ctx(reply="CONFIRMED!"))
+    assert result.passed is False
+
+
+@pytest.mark.asyncio
+async def test_contains_case_sensitive_flag_applies_to_substrings():
+    ev = ContainsEvaluator(any_of=["Confirmed"], case_sensitive=True)
+    result = await ev.evaluate(_ctx(reply="your booking is CONFIRMED"))
+    assert result.passed is False
+
+    ev_all = ContainsEvaluator(all_of=["Booking"], case_sensitive=True)
+    result_all = await ev_all.evaluate(_ctx(reply="Booking confirmed"))
+    assert result_all.passed is True
+
+
+def test_contains_invalid_regex_raises_value_error():
+    with pytest.raises(ValueError, match="Invalid regex pattern"):
+        ContainsEvaluator(matches_any=["[unclosed"])
 
 
 # --- Evaluator Protocol ---
@@ -127,6 +188,94 @@ async def test_tool_call_empty_config_passes():
     assert result.passed is True
 
 
+# --- ToolCallArgsEvaluator ---
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_subset_passes_with_extra_observed_keys():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"time": "10am", "date": "tomorrow"})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_subset_fails_on_wrong_value():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "11am"})
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"time": "10am"})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is False
+    assert "11am" in result.reasoning
+    assert "10am" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_exact_fails_with_extra_observed_keys():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"}, mode="exact")
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"time": "10am", "date": "tomorrow"})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is False
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_exact_passes_on_equal_dict():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"}, mode="exact")
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"time": "10am"})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_any_matching_call_passes():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    ctx = _ctx(
+        tool_calls=[
+            ToolCall("book_slot", {"time": "9am"}),
+            ToolCall("book_slot", {"time": "10am"}),
+        ]
+    )
+    result = await ev.evaluate(ctx)
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_reports_never_called():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    result = await ev.evaluate(_ctx(tool_calls=[ToolCall("other_tool", {})]))
+    assert result.passed is False
+    assert "never called" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_reports_args_not_captured():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    result = await ev.evaluate(_ctx(tool_calls=["book_slot"]))
+    assert result.passed is False
+    assert "no dict arguments were captured" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_does_not_crash_on_json_string_args():
+    """A ToolCall whose args is an un-parsed JSON string must not raise TypeError."""
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+    result = await ev.evaluate(_ctx(tool_calls=[ToolCall("book_slot", '{"time": "10am"}')]))
+    assert result.passed is False
+    assert "no dict arguments were captured" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_subset_is_top_level_only():
+    ev = ToolCallArgsEvaluator(tool="book_slot", args={"opts": {"a": 1}})
+    ctx = _ctx(tool_calls=[ToolCall("book_slot", {"opts": {"a": 1, "b": 2}})])
+    result = await ev.evaluate(ctx)
+    assert result.passed is False
+
+
+def test_tool_call_args_rejects_unknown_mode():
+    with pytest.raises(ValueError, match="subset"):
+        ToolCallArgsEvaluator(tool="t", args={}, mode="fuzzy")
+
+
 @pytest.mark.asyncio
 async def test_judge_evaluator_passes_on_positive_verdict():
     mock_output = MagicMock()
@@ -167,6 +316,57 @@ async def test_judge_evaluator_fails_on_negative_verdict():
 
     assert result.passed is False
     assert "off-topic" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_judge_passes_verdict_through():
+    from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
+
+    mock_output = MagicMock()
+    mock_output.passed = True
+    mock_output.reasoning = "Time is within business hours."
+    mock_result = MagicMock()
+    mock_result.output = mock_output
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(return_value=mock_result)
+        MockAgent.return_value = instance
+
+        ev = ToolCallArgsJudgeEvaluator(tool="book_slot", rubric="Business hours only", model="openai:gpt-4o-mini")
+        result = await ev.evaluate(_ctx(tool_calls=[ToolCall("book_slot", {"time": "10am"})]))
+
+    assert result.passed is True
+    prompt = instance.run.call_args.args[0]
+    assert "book_slot" in prompt
+    assert "10am" in prompt
+    assert "Business hours only" in prompt
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_judge_short_circuits_when_never_called():
+    from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        ev = ToolCallArgsJudgeEvaluator(tool="book_slot", rubric="anything", model="openai:gpt-4o-mini")
+        result = await ev.evaluate(_ctx(tool_calls=[]))
+
+    assert result.passed is False
+    assert "never called" in result.reasoning
+    MockAgent.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_tool_call_args_judge_short_circuits_when_args_not_captured():
+    from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        ev = ToolCallArgsJudgeEvaluator(tool="book_slot", rubric="anything", model="openai:gpt-4o-mini")
+        result = await ev.evaluate(_ctx(tool_calls=["book_slot"]))
+
+    assert result.passed is False
+    assert "no dict arguments were captured" in result.reasoning
+    MockAgent.assert_not_called()
 
 
 @pytest.mark.asyncio

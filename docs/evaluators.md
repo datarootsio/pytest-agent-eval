@@ -4,7 +4,7 @@ Evaluators decide whether an agent's reply passes or fails a turn. All evaluator
 
 ## `ContainsEvaluator`
 
-Checks that the reply contains expected substrings (case-insensitive).
+Checks that the reply contains expected substrings or matches regex patterns (case-insensitive by default).
 
 ```python
 from pytest_agent_eval import ContainsEvaluator
@@ -15,19 +15,31 @@ ContainsEvaluator(any_of=["confirmed", "booked"])
 # Pass if reply contains ALL of these
 ContainsEvaluator(all_of=["booking", "reference number"])
 
-# Both checks at once
+# Regex patterns (evaluated with re.search)
+ContainsEvaluator(matches_any=[r"ref(erence)? number[:# ]*[A-Z]{2}-\d+"])
+ContainsEvaluator(matches_all=[r"\d{1,2}(am|pm)", r"tomorrow"])
+
+# Substring and regex checks compose freely
 ContainsEvaluator(
     any_of=["confirmed", "booked"],
-    all_of=["tomorrow"],
+    matches_all=[r"BK-\d+"],
 )
+
+# Exact-case matching
+ContainsEvaluator(all_of=["Booking"], case_sensitive=True)
 ```
+
+Invalid regex patterns raise `ValueError` at construction time, so a typo fails the test suite immediately instead of silently failing every turn.
 
 **Parameters:**
 
-| Parameter | Type        | Description                                              |
-|-----------|-------------|----------------------------------------------------------|
-| `any_of`  | `list[str]` | Reply must contain at least one of these (case-insensitive) |
-| `all_of`  | `list[str]` | Reply must contain every one of these (case-insensitive)  |
+| Parameter        | Type        | Description                                                       |
+|------------------|-------------|-------------------------------------------------------------------|
+| `any_of`         | `list[str]` | Reply must contain at least one of these substrings               |
+| `all_of`         | `list[str]` | Reply must contain every one of these substrings                  |
+| `matches_any`    | `list[str]` | Reply must match at least one of these regex patterns (`re.search`) |
+| `matches_all`    | `list[str]` | Reply must match every one of these regex patterns (`re.search`)  |
+| `case_sensitive` | `bool`      | When `False` (default), all checks ignore case                    |
 
 ## `ToolCallEvaluator`
 
@@ -56,6 +68,57 @@ ToolCallEvaluator(
 | `must_include` | `list[str]` | Tool names that must appear in the turn's tool calls               |
 | `must_exclude` | `list[str]` | Tool names that must NOT appear in the turn's tool calls           |
 | `ordered`      | `bool`      | If `True`, `must_include` tools must appear in the specified order |
+
+## `ToolCallArgsEvaluator`
+
+Asserts the **arguments** a tool was called with. Requires an adapter (or custom agent) that captures arguments — all bundled adapters do; custom agents return `ToolCall(name, args)` instead of plain strings (see [Adapters](adapters.md#writing-a-custom-adapter)).
+
+```python
+from pytest_agent_eval import ToolCallArgsEvaluator
+
+# Subset (default): expected top-level keys/values must appear; extra observed keys are fine
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+
+# Exact: observed args must equal the expected dict exactly
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am", "date": "tomorrow"}, mode="exact")
+```
+
+Subset matching compares top-level keys only; a nested dict value is compared exactly (`{"opts": {"a": 1}}` does not subset-match `{"opts": {"a": 1, "b": 2}}`). Use `mode="exact"` when you want full equality, or assert the nested keys with a separate entry.
+
+If the tool is called several times in a turn, the check passes when **any** call matches. Failure messages distinguish three cases: the tool was never called, the tool was called but no dict arguments were captured, and a genuine argument mismatch (which shows expected vs observed).
+
+**Parameters:**
+
+| Parameter | Type   | Default    | Description                                        |
+|-----------|--------|------------|----------------------------------------------------|
+| `tool`    | `str`  | required   | Name of the tool to check                          |
+| `args`    | `dict` | required   | Expected arguments                                 |
+| `mode`    | `str`  | `"subset"` | `"subset"` or `"exact"`                            |
+
+## `ToolCallArgsJudgeEvaluator`
+
+Uses an LLM to judge a tool's arguments against a natural-language rubric — for constraints that are awkward to express as exact values ("the time must be within business hours", "the query must mention the user's city").
+
+```python
+from pytest_agent_eval import ToolCallArgsJudgeEvaluator
+
+ToolCallArgsJudgeEvaluator(
+    tool="book_slot",
+    rubric="The booking time must be within business hours (9am-5pm).",
+)
+```
+
+The judge receives the tool name and the JSON arguments of every call to that tool in the turn, and passes if any call satisfies the rubric. Never-called and args-not-captured fail deterministically **before** any LLM call, so no judge tokens are spent on structural failures.
+
+**Parameters:**
+
+| Parameter | Type          | Default  | Description                                                  |
+|-----------|---------------|----------|--------------------------------------------------------------|
+| `tool`    | `str`         | required | Name of the tool whose arguments to judge                    |
+| `rubric`  | `str`         | required | Natural-language rubric for acceptable arguments             |
+| `model`   | `str \| None` | `None`   | pydantic-ai model ID; falls back to `[tool.agent_eval] model` |
+| `retries` | `int`         | `2`      | Retries on API failure                                       |
+| `timeout` | `float`       | `30.0`   | Per-call timeout in seconds                                  |
 
 ## `JudgeEvaluator`
 

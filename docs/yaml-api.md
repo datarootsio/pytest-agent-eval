@@ -12,10 +12,19 @@ yaml_dirs = ["tests/evals"]
 
 Any `*.yaml` file inside `tests/evals/` (searched recursively) becomes a test.
 
+## Editor and agent support
+
+A published [JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json) describes every transcript field. Add this first line to any transcript to get completion and validation in editors (and to help coding agents write valid files):
+
+```yaml
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+```
+
 ## Full annotated transcript
 
 ```yaml
 # tests/evals/booking.yaml
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
 
 # Unique ID, used as the pytest test name
 id: booking_confirmation
@@ -111,9 +120,50 @@ All `expect` fields are optional. Omit `expect` entirely for turns where you onl
 |----------------------|---------------|------------------------------------------------------|
 | `reply_contains_any` | `list[str]`   | At least one string must appear in the reply         |
 | `reply_contains_all` | `list[str]`   | All strings must appear in the reply                 |
+| `reply_matches_any`  | `list[str]`   | At least one regex pattern must match the reply      |
+| `reply_matches_all`  | `list[str]`   | All regex patterns must match the reply              |
 | `tool_calls_include` | `list[str]`   | These tool names must be present in the turn's calls |
 | `tool_calls_exclude` | `list[str]`   | These tool names must be absent from the turn's calls|
+| `tool_calls_ordered` | `bool`        | If `true`, `tool_calls_include` must appear in order |
+| `tool_calls_args`    | `list`        | Assertions on the arguments of specific tool calls   |
 | `judge`              | `JudgeConfig` | LLM-as-judge rubric evaluation                       |
+
+String and regex checks are case-insensitive. Regex patterns use Python `re.search` semantics — quote them in YAML so `\d` and friends survive parsing:
+
+```yaml
+expect:
+  reply_matches_any:
+    - "BK-\\d+"
+    - "ref(erence)? number"
+```
+
+### `turns[].expect.tool_calls_args`
+
+Each entry asserts the arguments of one tool. Provide `args` for a deterministic check, `judge` for an LLM-judged rubric, or both:
+
+```yaml
+expect:
+  tool_calls_args:
+    # Deterministic: these keys/values must appear in the call's arguments
+    - tool: book_slot
+      args:
+        time: "10am"
+      mode: subset          # subset (default) or exact
+
+    # LLM-judged: rubric evaluated against the JSON arguments
+    - tool: book_slot
+      judge:
+        rubric: "The booking time must be within business hours."
+```
+
+| Field   | Type          | Default    | Description                                                        |
+|---------|---------------|------------|--------------------------------------------------------------------|
+| `tool`  | `str`         | required   | Tool name to check                                                 |
+| `args`  | `dict`        | `null`     | Expected arguments (deterministic check)                           |
+| `mode`  | `str`         | `"subset"` | `subset`: expected items must appear; `exact`: full dict equality  |
+| `judge` | `JudgeConfig` | `null`     | Rubric + optional model, judged against the call's JSON arguments  |
+
+If the tool is called several times in the turn, the assertion passes when any call matches. Argument capture requires an adapter that records arguments — all bundled adapters do; custom agents must return `ToolCall(name, args)` (see [Adapters](adapters.md#writing-a-custom-adapter)).
 
 ### `turns[].expect.judge`
 
@@ -134,7 +184,8 @@ import pytest
 def llm_eval_agent():
     async def my_agent(messages):
         # messages is a list of OpenAI-style {"role": ..., "content": ...} dicts
-        return "Booking confirmed! Reference BK-1234."
+        # Return (reply, tool_calls): the reply string plus the tool names called.
+        return "Booking confirmed! Reference BK-1234.", ["create_booking"]
     return my_agent
 ```
 

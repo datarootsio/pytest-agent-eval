@@ -7,6 +7,7 @@ from pytest_agent_eval.models import (
     Expect,
     JudgeConfig,
     RunResult,
+    ToolCall,
     Transcript,
     TranscriptResult,
     Turn,
@@ -45,6 +46,20 @@ def test_turn_context_fields():
     )
     assert ctx.user == "hello"
     assert ctx.tool_calls == ["tool_a"]
+
+
+def test_tool_call_is_str_compatible():
+    call = ToolCall("book_slot", {"date": "tomorrow"})
+    assert call == "book_slot"
+    assert call in ["book_slot", "other"]
+    assert "book_slot" in [call]
+    assert call.name == "book_slot"
+    assert call.args == {"date": "tomorrow"}
+
+
+def test_tool_call_args_default_to_none():
+    call = ToolCall("book_slot")
+    assert call.args is None
 
 
 def test_transcript_result_passes_when_score_above_threshold():

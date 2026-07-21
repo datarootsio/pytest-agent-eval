@@ -51,6 +51,7 @@ For framework-specific adapters, install one of the optional extras shown in the
 
     ContainsEvaluator(any_of=["confirmed", "booked"])
     ContainsEvaluator(all_of=["reference", "tomorrow"])
+    ContainsEvaluator(matches_any=[r"BK-\d+"])   # regex via re.search
     ```
 
 === "Tool calling"

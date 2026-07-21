@@ -35,10 +35,10 @@ tests/test_booking.py::test_booking_flow PASSED
   ---- LLM Eval ----
   [3/3 runs, score=1.00 >= 0.80]
     Run 1 ✅
-      All substring checks passed
+      All substring and pattern checks passed
       All tool call checks passed
     Run 2 ✅
-      All substring checks passed
+      All substring and pattern checks passed
       All tool call checks passed
 ```
 
@@ -56,6 +56,8 @@ The generated report has two sections: a summary table and per-transcript detail
 
 The summary table lists each transcript with its run count, pass count, score, threshold, and pass/fail status.
 The details section shows every run with turn-level evaluator reasoning.
+
+When [group thresholds](groups.md) are configured, a `## Groups` section with per-group pass rates and failures appears between Summary and Details, and a `group summary` section is printed in the terminal.
 
 ## Configuring the report path
 

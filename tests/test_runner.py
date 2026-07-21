@@ -72,6 +72,56 @@ async def test_run_transcript_with_tool_call_evaluator():
 
 
 @pytest.mark.asyncio
+async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
+    transcript = Transcript(
+        id="regex",
+        turns=[
+            Turn(
+                user="book me",
+                expect=Expect(reply_matches_any=[r"\bconfirmed\b"], reply_matches_all=[r"\d{1,2}am"]),
+            )
+        ],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(transcript, _booking_agent)
+    assert result.passed is True
+
+    failing = Transcript(
+        id="regex_fail",
+        turns=[Turn(user="book me", expect=Expect(reply_matches_all=[r"BK-\d+"]))],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(failing, _booking_agent)
+    assert result.passed is False
+
+
+@pytest.mark.asyncio
+async def test_run_transcript_enforces_tool_calls_ordered_from_expect():
+    async def ordered_agent(history: list[dict]) -> tuple[str, list[str]]:
+        return "done", ["fetch", "auth"]
+
+    transcript = Transcript(
+        id="ordered",
+        turns=[Turn(user="go", expect=Expect(tool_calls_include=["auth", "fetch"], tool_calls_ordered=True))],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(transcript, ordered_agent)
+    assert result.passed is False
+
+    unordered = Transcript(
+        id="unordered",
+        turns=[Turn(user="go", expect=Expect(tool_calls_include=["auth", "fetch"]))],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(unordered, ordered_agent)
+    assert result.passed is True
+
+
+@pytest.mark.asyncio
 async def test_run_transcript_fails_when_evaluator_fails():
     transcript = Transcript(
         id="test",
@@ -114,6 +164,134 @@ async def test_run_transcript_multiple_runs_score():
     result = await run_transcript(transcript, flaky_agent)
     assert result.score == 0.5
     assert result.passed is True  # 0.5 >= 0.5
+
+
+@pytest.mark.asyncio
+async def test_runner_normalises_plain_strings_to_tool_calls():
+    from pytest_agent_eval.models import EvalResult, ToolCall
+
+    captured: list[list] = []
+
+    class CaptureEvaluator:
+        async def evaluate(self, ctx):
+            captured.append(ctx.tool_calls)
+            return EvalResult(passed=True)
+
+    async def mixed_agent(history: list[dict]) -> tuple[str, list]:
+        return "ok", ["plain_name", ToolCall("with_args", {"a": 1})]
+
+    transcript = Transcript(
+        id="normalise",
+        turns=[Turn(user="go", expect=Expect(evaluators=[CaptureEvaluator()]))],
+        runs=1,
+    )
+    await run_transcript(transcript, mixed_agent)
+    tool_calls = captured[0]
+    assert all(isinstance(tc, ToolCall) for tc in tool_calls)
+    assert tool_calls[0].args is None
+    assert tool_calls[1].args == {"a": 1}
+
+
+@pytest.mark.asyncio
+async def test_run_transcript_dispatches_tool_calls_args_deterministic():
+    from pytest_agent_eval.models import ToolCall, ToolCallArgsConfig
+
+    async def args_agent(history: list[dict]) -> tuple[str, list]:
+        return "done", [ToolCall("book_slot", {"time": "10am"})]
+
+    transcript = Transcript(
+        id="args_ok",
+        turns=[
+            Turn(
+                user="book",
+                expect=Expect(tool_calls_args=[ToolCallArgsConfig(tool="book_slot", args={"time": "10am"})]),
+            )
+        ],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(transcript, args_agent)
+    assert result.passed is True
+
+    mismatch = Transcript(
+        id="args_bad",
+        turns=[
+            Turn(
+                user="book",
+                expect=Expect(tool_calls_args=[ToolCallArgsConfig(tool="book_slot", args={"time": "11am"})]),
+            )
+        ],
+        threshold=1.0,
+        runs=1,
+    )
+    result = await run_transcript(mismatch, args_agent)
+    assert result.passed is False
+
+
+@pytest.mark.asyncio
+async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallback():
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from pytest_agent_eval.models import JudgeConfig, ToolCall, ToolCallArgsConfig
+
+    async def args_agent(history: list[dict]) -> tuple[str, list]:
+        return "done", [ToolCall("book_slot", {"time": "10am"})]
+
+    mock_output = MagicMock()
+    mock_output.passed = True
+    mock_output.reasoning = "ok"
+    mock_result = MagicMock()
+    mock_result.output = mock_output
+
+    transcript = Transcript(
+        id="args_judge",
+        turns=[
+            Turn(
+                user="book",
+                expect=Expect(
+                    tool_calls_args=[
+                        ToolCallArgsConfig(tool="book_slot", judge=JudgeConfig(rubric="Business hours only"))
+                    ]
+                ),
+            )
+        ],
+        threshold=1.0,
+        runs=1,
+    )
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(return_value=mock_result)
+        MockAgent.return_value = instance
+        result = await run_transcript(transcript, args_agent, config_model="openai:fallback-model")
+
+    assert result.passed is True
+    assert MockAgent.call_args.args[0] == "openai:fallback-model"
+
+
+@pytest.mark.asyncio
+async def test_run_transcript_passes_judge_retries_and_timeout_through():
+    from unittest.mock import AsyncMock, patch
+
+    from pytest_agent_eval.models import JudgeConfig
+
+    async def agent(history: list[dict]) -> tuple[str, list[str]]:
+        return "hello", []
+
+    transcript = Transcript(
+        id="judge_knobs",
+        turns=[Turn(user="hi", expect=Expect(judge=JudgeConfig(rubric="anything")))],
+        threshold=0.0,
+        runs=1,
+    )
+
+    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
+        instance = AsyncMock()
+        instance.run = AsyncMock(side_effect=Exception("API down"))
+        MockAgent.return_value = instance
+        await run_transcript(transcript, agent, config_model="openai:x", judge_retries=0, judge_timeout=5.0)
+
+    assert instance.run.call_count == 1
 
 
 @pytest.mark.asyncio

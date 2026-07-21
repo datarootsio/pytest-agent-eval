@@ -20,8 +20,13 @@ def _import_livekit() -> tuple[Any, Any]:
     require ``livekit`` unless the user actually instantiates a
     :class:`WavFileAudioInput`.
     """
-    from livekit import rtc
-    from livekit.agents.voice.io import AudioInput
+    try:
+        from livekit import rtc
+        from livekit.agents.voice.io import AudioInput
+    except ImportError as exc:
+        raise ImportError(
+            "WavFileAudioInput requires the 'livekit' extra. Install with: pip install 'pytest-agent-eval[livekit]'"
+        ) from exc
 
     return rtc, AudioInput
 

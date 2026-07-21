@@ -1,8 +1,9 @@
-"""Tool call assertion evaluator."""
+"""Tool call assertion evaluators."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from pytest_agent_eval.models import EvalResult, TurnContext
 
@@ -52,3 +53,70 @@ class ToolCallEvaluator:
         if failures:
             return EvalResult(passed=False, reasoning="\n".join(failures))
         return EvalResult(passed=True, reasoning="All tool call checks passed")
+
+
+@dataclass
+class ToolCallArgsEvaluator:
+    """Assert the arguments a tool was called with.
+
+    When the tool was called more than once in a turn, the check passes if ANY
+    of those calls matches the expected arguments.
+
+    Args:
+        tool: Name of the tool to check.
+        args: Expected arguments.
+        mode: ``"subset"`` (every expected top-level key/value must appear in the
+            observed args; extra observed keys are fine, but nested values are
+            compared exactly) or ``"exact"`` (observed args must equal the
+            expected dict exactly).
+
+    Example:
+        ```python
+        ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+        ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am", "date": "tomorrow"}, mode="exact")
+        ```
+    """
+
+    tool: str
+    args: dict[str, Any]
+    mode: str = "subset"
+
+    def __post_init__(self) -> None:
+        if self.mode not in ("subset", "exact"):
+            raise ValueError(f"ToolCallArgsEvaluator mode must be 'subset' or 'exact', got {self.mode!r}")
+
+    def _matches(self, observed: dict[str, Any]) -> bool:
+        if self.mode == "exact":
+            return observed == self.args
+        return all(k in observed and observed[k] == v for k, v in self.args.items())
+
+    async def evaluate(self, ctx: TurnContext) -> EvalResult:
+        """Evaluate the expected arguments against every call of the tool this turn."""
+        matching = [tc for tc in ctx.tool_calls if tc == self.tool]
+        if not matching:
+            return EvalResult(
+                passed=False,
+                reasoning=f"Tool {self.tool!r} was never called (tools called: {[str(tc) for tc in ctx.tool_calls]!r})",
+            )
+
+        captured = [tc.args for tc in matching if isinstance(getattr(tc, "args", None), dict)]
+        if not captured:
+            return EvalResult(
+                passed=False,
+                reasoning=(
+                    f"Tool {self.tool!r} was called but no dict arguments were captured. "
+                    "Argument assertions need the agent/adapter to return ToolCall(name, args) "
+                    "with args as a mapping (a JSON string is not enough — parse it first)."
+                ),
+            )
+
+        if any(self._matches(observed) for observed in captured):
+            return EvalResult(passed=True, reasoning=f"Tool {self.tool!r} called with expected args ({self.mode})")
+
+        return EvalResult(
+            passed=False,
+            reasoning=(
+                f"Tool {self.tool!r} argument mismatch ({self.mode} mode): "
+                f"expected {self.args!r}, observed {captured!r}"
+            ),
+        )

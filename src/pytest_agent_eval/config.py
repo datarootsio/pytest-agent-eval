@@ -10,6 +10,8 @@ from typing import Any
 
 import pytest
 
+from pytest_agent_eval.groups import GroupConfig, parse_groups
+
 
 @dataclass
 class AgentEvalConfig:
@@ -24,6 +26,7 @@ class AgentEvalConfig:
         yaml_dirs: Directories to search for YAML transcript files.
         live: Whether to actually run LLM tests (False = skip all agent_eval tests).
         report_path: Path to write markdown report, or None to skip.
+        groups: Quality-gate groups parsed from [tool.agent_eval.groups].
     """
 
     model: str = "openai:gpt-4o"
@@ -35,6 +38,7 @@ class AgentEvalConfig:
     yaml_dirs: list[str] = field(default_factory=lambda: ["tests/evals"])
     live: bool = False
     report_path: str | None = None
+    groups: list[GroupConfig] = field(default_factory=list)
 
 
 def load_config_from_toml(path: Path) -> AgentEvalConfig:
@@ -51,7 +55,10 @@ def load_config_from_toml(path: Path) -> AgentEvalConfig:
         return cfg
     with open(path, "rb") as f:
         data = tomllib.load(f)
-    section: dict[str, Any] = data.get("tool", {}).get("agent_eval", {})
+    section: dict[str, Any] = dict(data.get("tool", {}).get("agent_eval", {}))
+    raw_groups = section.pop("groups", None)
+    if raw_groups is not None:
+        cfg.groups = parse_groups(raw_groups)
     for key, value in section.items():
         if hasattr(cfg, key):
             setattr(cfg, key, value)

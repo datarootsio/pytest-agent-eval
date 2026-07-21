@@ -1,0 +1,13 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "pytest-agent-eval",
+  "description": "pytest plugin for evaluating LLM agents: multi-turn YAML transcripts, threshold-based pass/fail scoring, tool-call and tool-argument assertions, LLM-as-judge rubrics, and group-level CI quality gates",
+  "folders": [],
+  "excludeFolders": ["src", "tests", "site", "scripts", ".github"],
+  "rules": [
+    "Prefer YAML transcripts over Python tests; every YAML file inside a configured yaml_dirs directory becomes a pytest test automatically",
+    "Eval tests are skipped unless pytest runs with --agent-eval-live or EVAL_LIVE=1 is set",
+    "Validate transcripts against the JSON Schema at https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (add the yaml-language-server $schema directive as the first line)",
+    "A conftest.py fixture named llm_eval_agent must return an async callable (messages) -> (reply, tool_calls)"
+  ]
+}

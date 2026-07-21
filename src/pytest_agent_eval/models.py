@@ -21,6 +21,41 @@ class EvalResult:
     reasoning: str = ""
 
 
+class ToolCall(str):
+    """A tool-call name that optionally carries the arguments it was invoked with.
+
+    Subclasses ``str`` so name-based checks keep working unchanged: ``"book_slot"
+    in ctx.tool_calls``, equality against plain strings, and hand-rolled agents
+    returning ``list[str]`` (the runner normalises those to ``ToolCall`` with
+    ``args=None``).
+
+    Args:
+        name: The tool name.
+        args: The arguments the tool was called with, or None when the adapter
+            could not capture them.
+
+    Example:
+        ```python
+        call = ToolCall("book_slot", {"date": "tomorrow", "time": "10am"})
+        call == "book_slot"          # True
+        call.args["time"]            # "10am"
+        ```
+    """
+
+    args: dict[str, Any] | None
+
+    def __new__(cls, name: str, args: dict[str, Any] | None = None) -> ToolCall:
+        """Create a ToolCall from a tool name and optional captured arguments."""
+        obj = super().__new__(cls, name)
+        obj.args = args
+        return obj
+
+    @property
+    def name(self) -> str:
+        """The tool name (the string value itself)."""
+        return str(self)
+
+
 @dataclass
 class TurnContext:
     """Context passed to every evaluator for a turn.
@@ -28,14 +63,15 @@ class TurnContext:
     Args:
         user: The user message for this turn.
         reply: The agent's reply.
-        tool_calls: Names of tools called during the turn.
+        tool_calls: Tools called during the turn. Each entry is a ToolCall
+            (str-compatible); ``.args`` holds captured arguments or None.
         history: Full conversation history in OpenAI message format, up to but not including
             the assistant reply for this turn.
     """
 
     user: str
     reply: str
-    tool_calls: list[str]
+    tool_calls: list[ToolCall]
     history: list[dict[str, Any]]
 
 
@@ -102,6 +138,33 @@ class JudgeConfig:
 
 
 @dataclass
+class ToolCallArgsConfig:
+    """One tool-argument assertion in a YAML transcript turn.
+
+    Args:
+        tool: Name of the tool whose arguments to check.
+        args: Expected arguments for the deterministic check, or None.
+        mode: "subset" or "exact" (deterministic check only).
+        judge: Optional LLM-judge config for the arguments.
+
+    Raises:
+        ValueError: If neither args nor judge is provided.
+    """
+
+    tool: str
+    args: dict[str, Any] | None = None
+    mode: str = "subset"
+    judge: JudgeConfig | None = None
+
+    def __post_init__(self) -> None:
+        if self.args is None and self.judge is None:
+            raise ValueError(
+                f"tool_calls_args entry for {self.tool!r} needs 'args' (deterministic check) "
+                "or 'judge' (LLM-judged rubric); got neither"
+            )
+
+
+@dataclass
 class Expect:
     """Expectations for a single transcript turn.
 
@@ -110,16 +173,24 @@ class Expect:
         judge: YAML-defined judge config.
         tool_calls_include: Tool names that must appear in tool_calls.
         tool_calls_exclude: Tool names that must NOT appear in tool_calls.
+        tool_calls_ordered: If True, tool_calls_include must appear in the given order.
+        tool_calls_args: Assertions on the arguments of specific tool calls.
         reply_contains_any: Reply must contain at least one of these strings.
         reply_contains_all: Reply must contain all of these strings.
+        reply_matches_any: Reply must match at least one of these regex patterns.
+        reply_matches_all: Reply must match all of these regex patterns.
     """
 
     evaluators: list[Any] = field(default_factory=list)
     judge: JudgeConfig | None = None
     tool_calls_include: list[str] = field(default_factory=list)
     tool_calls_exclude: list[str] = field(default_factory=list)
+    tool_calls_ordered: bool = False
+    tool_calls_args: list[ToolCallArgsConfig] = field(default_factory=list)
     reply_contains_any: list[str] = field(default_factory=list)
     reply_contains_all: list[str] = field(default_factory=list)
+    reply_matches_any: list[str] = field(default_factory=list)
+    reply_matches_all: list[str] = field(default_factory=list)
 
 
 @dataclass

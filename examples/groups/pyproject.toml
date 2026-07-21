@@ -1,0 +1,16 @@
+[project]
+name = "example-groups"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = ["pytest-agent-eval"]
+
+[tool.agent_eval]
+yaml_dirs = ["evals"]
+
+[tool.agent_eval.groups.booking]
+threshold = 0.5
+tags = ["gate:booking"]
+must_pass = ["booking_happy_path"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

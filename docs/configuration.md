@@ -41,7 +41,7 @@ Individual tests override this via `@pytest.mark.agent_eval(threshold=0.9)` or t
 ### `runs`
 
 **Type:** `int`
-**Default:** `3`
+**Default:** `1`
 
 The default number of times each transcript is executed. Higher values reduce the impact of nondeterminism but increase cost.
 
@@ -52,19 +52,19 @@ Individual tests override this via `@pytest.mark.agent_eval(runs=5)` or the YAML
 **Type:** `int`
 **Default:** `2`
 
-Number of times to retry a single run if the agent raises an exception (network error, rate limit, etc.).
+Number of times a failed LLM-judge call is retried before the judge returns a FAIL verdict. Applies to judge evaluators the plugin builds from YAML `judge` / `tool_calls_args[].judge` config and the `agent_eval` fixture. A `JudgeEvaluator(...)` you construct yourself and pass in `Expect(evaluators=[...])` keeps its own constructor arguments. Agent calls are never retried.
 
 ### `timeout`
 
 **Type:** `int`
 **Default:** `30`
 
-Per-turn timeout in seconds. If the agent callable does not return within this window, the turn is marked as failed.
+Per-judge-call timeout in seconds. A judge call that does not return within this window counts as a failed attempt (see `retries`).
 
 ### `yaml_dirs`
 
 **Type:** `list[str]`
-**Default:** `[]`
+**Default:** `["tests/evals"]`
 
 Directories to search recursively for `*.yaml` evaluation transcripts. Paths are relative to the project root (where `pyproject.toml` lives).
 
@@ -74,6 +74,12 @@ Directories to search recursively for `*.yaml` evaluation transcripts. Paths are
 **Default:** `false`
 
 When `true`, eval tests run without needing `--agent-eval-live` or `EVAL_LIVE=1`. Useful for local development but should remain `false` in shared/CI config.
+
+### `groups`
+
+**Type:** tables under `[tool.agent_eval.groups.<name>]`
+
+Quality-gate groups with aggregate pass thresholds and `must_pass` pins. See [Group thresholds](groups.md) for keys and semantics.
 
 ## Precedence
 
