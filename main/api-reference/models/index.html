@@ -2801,6 +2801,12 @@ the assistant reply for this turn.</p>
           data-color="#3f51b5"
           data-welcome-message="Ask me anything about pytest-agent-eval — YAML transcripts, evaluators, tool-call assertions, and group thresholds."
           data-placeholder="Ask about pytest-agent-eval"></script>
+  
+  <script>
+    document.body.addEventListener("keydown", (e) => {
+      if (e.target.closest("#context7-widget")) e.stopPropagation();
+    });
+  </script>
 
   </body>
 </html>
