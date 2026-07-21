@@ -12,13 +12,13 @@
         <meta name="author" content="Dataroots">
       
       
-        <link rel="canonical" href="https://datarootsio.github.io/main/reporting/">
+        <link rel="canonical" href="https://datarootsio.github.io/main/agents/">
       
       
-        <link rel="prev" href="../groups/">
+        <link rel="prev" href="../reporting/">
       
       
-        <link rel="next" href="../agents/">
+        <link rel="next" href="../api-reference/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Reporting - pytest-agent-eval</title>
+        <title>Using with coding agents - pytest-agent-eval</title>
       
     
     
@@ -85,7 +85,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#reporting" class="md-skip">
+        <a href="#using-with-coding-agents" class="md-skip">
           Skip to content
         </a>
       
@@ -125,7 +125,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Reporting
+              Using with coding agents
             
           </span>
         </div>
@@ -468,10 +468,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -490,11 +488,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -514,7 +512,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -582,6 +580,40 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reporting
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -601,7 +633,7 @@
   <span class="md-ellipsis">
     
   
-  Reporting
+  Using with coding agents
 
     
   </span>
@@ -618,7 +650,7 @@
   <span class="md-ellipsis">
     
   
-  Reporting
+  Using with coding agents
 
     
   </span>
@@ -644,60 +676,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#verbosity-levels" class="md-nav__link">
+  <a href="#agentsmd-snippet" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Verbosity levels
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Verbosity levels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#default-no-v" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Default (no <code>-v</code>)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#-v-one-verbose-flag" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>-v</code> (one verbose flag)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#-vv-two-verbose-flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>-vv</code> (two verbose flags)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-agent-eval-report-flag" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        The <code>--agent-eval-report</code> flag
+        AGENTS.md snippet
       </span>
     </span>
   </a>
@@ -705,21 +687,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#markdown-report-format" class="md-nav__link">
+  <a href="#why-agents-do-well-with-this-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Markdown report format
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-the-report-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Configuring the report path
+        Why agents do well with this plugin
       </span>
     </span>
   </a>
@@ -730,40 +701,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../agents/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Using with coding agents
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -968,60 +905,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#verbosity-levels" class="md-nav__link">
+  <a href="#agentsmd-snippet" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Verbosity levels
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Verbosity levels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#default-no-v" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Default (no <code>-v</code>)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#-v-one-verbose-flag" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>-v</code> (one verbose flag)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#-vv-two-verbose-flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>-vv</code> (two verbose flags)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-agent-eval-report-flag" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        The <code>--agent-eval-report</code> flag
+        AGENTS.md snippet
       </span>
     </span>
   </a>
@@ -1029,21 +916,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#markdown-report-format" class="md-nav__link">
+  <a href="#why-agents-do-well-with-this-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Markdown report format
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-the-report-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Configuring the report path
+        Why agents do well with this plugin
       </span>
     </span>
   </a>
@@ -1068,59 +944,6 @@
   
 
 
-  <nav class="md-path" aria-label="Navigation" >
-    <ol class="md-path__list">
-      
-        
-  
-  
-    <li class="md-path__item">
-      <a href="./.." class="md-path__link">
-        
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-
-      </a>
-    </li>
-  
-
-      
-      
-        
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-      <li class="md-path__item">
-        <a href="../configuration/" class="md-path__link">
-          
-  
-  <span class="md-ellipsis">
-    Running & CI
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ol>
-  </nav>
-
               
               <article class="md-content__inner md-typeset">
                 
@@ -1129,50 +952,72 @@
   
 
 
-<h1 id="reporting">Reporting<a class="headerlink" href="#reporting" title="Permanent link">&para;</a></h1>
-<p><code>pytest-agent-eval</code> adds score information to pytest's standard terminal output and can optionally write a full markdown report.</p>
-<h2 id="verbosity-levels">Verbosity levels<a class="headerlink" href="#verbosity-levels" title="Permanent link">&para;</a></h2>
-<h3 id="default-no-v">Default (no <code>-v</code>)<a class="headerlink" href="#default-no-v" title="Permanent link">&para;</a></h3>
-<p>Tests appear with the standard <code>PASSED</code>/<code>FAILED</code> status. No extra LLM eval detail is shown inline.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>tests/test_booking.py::test_booking_flow PASSED
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>tests/test_booking.py::test_refund_flow FAILED
+<h1 id="using-with-coding-agents">Using with coding agents<a class="headerlink" href="#using-with-coding-agents" title="Permanent link">&para;</a></h1>
+<p>pytest-agent-eval is built to be authored by LLMs as much as by people: transcripts are plain YAML with a published schema, error messages name the field and suggest the fix, and the whole documentation ships in agent-ingestible form.</p>
+<p>Point your coding agent (Claude Code, Cursor, Copilot, ...) at these resources:</p>
+<ul>
+<li><strong><a href="https://datarootsio.github.io/pytest-agent-eval/llms.txt"><code>llms.txt</code></a></strong> — the index, at the site root per the <a href="https://llmstxt.org/">llms.txt convention</a></li>
+<li><strong><a href="https://datarootsio.github.io/pytest-agent-eval/llms-full.txt"><code>llms-full.txt</code></a></strong> — the entire documentation as one file, for tools that ingest a single URL</li>
+<li><strong><a href="https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json">JSON Schema</a></strong> — machine-readable transcript format</li>
+<li><strong><a href="https://github.com/datarootsio/pytest-agent-eval/tree/main/examples"><code>examples/</code></a></strong> — small runnable projects, one per feature</li>
+</ul>
+<h2 id="agentsmd-snippet">AGENTS.md snippet<a class="headerlink" href="#agentsmd-snippet" title="Permanent link">&para;</a></h2>
+<p>Paste this into your repository's <code>AGENTS.md</code> / <code>CLAUDE.md</code> so agents write correct evals on the first try:</p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gu">## Writing agent evals (pytest-agent-eval)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Prefer YAML transcripts over Python tests. Put them in the directory named by
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="sb">`yaml_dirs`</span> under <span class="sb">`[tool.agent_eval]`</span> in pyproject.toml (default: tests/evals/);
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>each file becomes a pytest test automatically. Start every file with:
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    # yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>Canonical multi-turn transcript:
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    id: booking_flow            # unique; becomes the test name
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    threshold: 0.66             # fraction of runs that must pass
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    runs: 3
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    tags: [gate:booking]        # feeds [tool.agent_eval.groups] CI gates
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    turns:
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">      </span><span class="k">-</span><span class="w"> </span>user: &quot;Book me a slot tomorrow at 10am.&quot;
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>        expect:
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>          reply_contains_any: [confirmed, booked]
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>          tool_calls_include: [create_booking]
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>          tool_calls_args:
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">            </span><span class="k">-</span><span class="w"> </span>tool: create_booking
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>              args: {time: &quot;10am&quot;}          # subset match (mode: exact for equality)
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">      </span><span class="k">-</span><span class="w"> </span>user: &quot;Actually make it 11am.&quot;
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>        expect:
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>          tool_calls_include: [update_booking]
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>          tool_calls_exclude: [create_booking]
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>          judge:
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>            rubric: &quot;Confirms the new time and references the original booking.&quot;
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>All expect fields (each optional): reply_contains_any, reply_contains_all,
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>reply_matches_any, reply_matches_all (regex via re.search), tool_calls_include,
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>tool_calls_exclude, tool_calls_ordered (bool), tool_calls_args (tool/args/mode/judge),
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>judge (rubric/model).
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>Evaluator cheat-sheet: contains/matches = deterministic string checks on the reply;
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>tool_calls_* = which tools ran, their order, and their arguments; judge = LLM-graded
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>rubric (costs tokens; prefer deterministic checks when possible).
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>Gotchas:
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="k">-</span><span class="w"> </span>Eval tests are SKIPPED unless run with <span class="sb">`--agent-eval-live`</span> or <span class="sb">`EVAL_LIVE=1`</span>.
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>  &quot;N eval test(s) skipped — live mode is off&quot; in the output means they did not run.
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="k">-</span><span class="w"> </span>A conftest.py fixture named <span class="sb">`llm_eval_agent`</span> must return the agent under test:
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>  an async callable <span class="sb">`(messages) -&gt; (reply, tool_calls)`</span>. Framework adapters exist
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>  for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (schema),
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>https://github.com/datarootsio/pytest-agent-eval/tree/main/examples (runnable examples).
 </span></code></pre></div>
-<h3 id="-v-one-verbose-flag"><code>-v</code> (one verbose flag)<a class="headerlink" href="#-v-one-verbose-flag" title="Permanent link">&para;</a></h3>
-<p>A score summary line is appended to each eval test's output section:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>tests/test_booking.py::test_booking_flow PASSED
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  ---- LLM Eval ----
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  [3/3 runs, score=1.00 &gt;= 0.80]
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    Run 1 ✅
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    Run 2 ✅
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    Run 3 ✅
-</span></code></pre></div>
-<h3 id="-vv-two-verbose-flags"><code>-vv</code> (two verbose flags)<a class="headerlink" href="#-vv-two-verbose-flags" title="Permanent link">&para;</a></h3>
-<p>Per-turn evaluator reasoning is included:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>tests/test_booking.py::test_booking_flow PASSED
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  ---- LLM Eval ----
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  [3/3 runs, score=1.00 &gt;= 0.80]
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    Run 1 ✅
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>      All substring and pattern checks passed
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>      All tool call checks passed
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    Run 2 ✅
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>      All substring and pattern checks passed
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>      All tool call checks passed
-</span></code></pre></div>
-<h2 id="the-agent-eval-report-flag">The <code>--agent-eval-report</code> flag<a class="headerlink" href="#the-agent-eval-report-flag" title="Permanent link">&para;</a></h2>
-<p>Pass a file path to write a full markdown report after the session:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pytest<span class="w"> </span>--agent-eval-live<span class="w"> </span>--agent-eval-report<span class="o">=</span>eval-report.md
-</span></code></pre></div>
-<h2 id="markdown-report-format">Markdown report format<a class="headerlink" href="#markdown-report-format" title="Permanent link">&para;</a></h2>
-<p>The generated report has two sections: a summary table and per-transcript details.</p>
-<p>The summary table lists each transcript with its run count, pass count, score, threshold, and pass/fail status.
-The details section shows every run with turn-level evaluator reasoning.</p>
-<p>When <a href="../groups/">group thresholds</a> are configured, a <code>## Groups</code> section with per-group pass rates and failures appears between Summary and Details, and a <code>group summary</code> section is printed in the terminal.</p>
-<h2 id="configuring-the-report-path">Configuring the report path<a class="headerlink" href="#configuring-the-report-path" title="Permanent link">&para;</a></h2>
-<p>You can set a default report path in <code>pyproject.toml</code> so you do not need to pass the flag every time:</p>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[tool.agent_eval]</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">report_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;eval-report.md&quot;</span>
-</span></code></pre></div>
-<p>The command-line flag always takes precedence over the config value.</p>
+<h2 id="why-agents-do-well-with-this-plugin">Why agents do well with this plugin<a class="headerlink" href="#why-agents-do-well-with-this-plugin" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Schema-first authoring</strong> — the <code>yaml-language-server</code> directive plus <code>additionalProperties: false</code> means invalid files fail loudly, not silently.</li>
+<li><strong>Didactic errors</strong> — a typo'd field produces <code>turns[0].expect: unknown field 'tool_call_include'. Did you mean 'tool_calls_include'?</code> with the full valid-field list, which agents self-correct from.</li>
+<li><strong>Runnable examples</strong> — every feature has a minimal project under <a href="https://github.com/datarootsio/pytest-agent-eval/tree/main/examples"><code>examples/</code></a> that CI keeps working, so copied code starts from a known-good state.</li>
+</ul>
 
 
 
@@ -1212,7 +1057,7 @@ The details section shows every run with turn-level evaluator reasoning.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../groups/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Group thresholds">
+          <a href="../reporting/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reporting">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -1222,20 +1067,20 @@ The details section shows every run with turn-level evaluator reasoning.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Group thresholds
+                Reporting
               </div>
             </div>
           </a>
         
         
           
-          <a href="../agents/" class="md-footer__link md-footer__link--next" aria-label="Next: Using with coding agents">
+          <a href="../api-reference/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Using with coding agents
+                Overview
               </div>
             </div>
             <div class="md-footer__button md-icon">

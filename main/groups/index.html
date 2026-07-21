@@ -12,13 +12,13 @@
         <meta name="author" content="Dataroots">
       
       
-        <link rel="canonical" href="https://datarootsio.github.io/main/reporting/">
+        <link rel="canonical" href="https://datarootsio.github.io/main/groups/">
       
       
-        <link rel="prev" href="../groups/">
+        <link rel="prev" href="../configuration/">
       
       
-        <link rel="next" href="../agents/">
+        <link rel="next" href="../reporting/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Reporting - pytest-agent-eval</title>
+        <title>Group thresholds - pytest-agent-eval</title>
       
     
     
@@ -85,7 +85,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#reporting" class="md-skip">
+        <a href="#group-thresholds" class="md-skip">
           Skip to content
         </a>
       
@@ -125,7 +125,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Reporting
+              Group thresholds
             
           </span>
         </div>
@@ -555,33 +555,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../groups/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Group thresholds
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -601,7 +574,7 @@
   <span class="md-ellipsis">
     
   
-  Reporting
+  Group thresholds
 
     
   </span>
@@ -618,7 +591,7 @@
   <span class="md-ellipsis">
     
   
-  Reporting
+  Group thresholds
 
     
   </span>
@@ -644,60 +617,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#verbosity-levels" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Verbosity levels
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Verbosity levels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#default-no-v" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Default (no <code>-v</code>)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#-v-one-verbose-flag" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>-v</code> (one verbose flag)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#-vv-two-verbose-flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>-vv</code> (two verbose flags)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-agent-eval-report-flag" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        The <code>--agent-eval-report</code> flag
+        Configuration
       </span>
     </span>
   </a>
@@ -705,10 +628,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#markdown-report-format" class="md-nav__link">
+  <a href="#membership" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Markdown report format
+        Membership
       </span>
     </span>
   </a>
@@ -716,10 +639,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuring-the-report-path" class="md-nav__link">
+  <a href="#must_pass-semantics" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Configuring the report path
+        <code>must_pass</code> semantics
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#passfail-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pass/fail semantics
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-code-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Exit-code override
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#terminal-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Terminal output
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parallel-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Parallel execution
       </span>
     </span>
   </a>
@@ -730,6 +697,33 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reporting
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -968,60 +962,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#verbosity-levels" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Verbosity levels
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Verbosity levels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#default-no-v" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Default (no <code>-v</code>)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#-v-one-verbose-flag" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>-v</code> (one verbose flag)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#-vv-two-verbose-flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code>-vv</code> (two verbose flags)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-agent-eval-report-flag" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        The <code>--agent-eval-report</code> flag
+        Configuration
       </span>
     </span>
   </a>
@@ -1029,10 +973,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#markdown-report-format" class="md-nav__link">
+  <a href="#membership" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Markdown report format
+        Membership
       </span>
     </span>
   </a>
@@ -1040,10 +984,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuring-the-report-path" class="md-nav__link">
+  <a href="#must_pass-semantics" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Configuring the report path
+        <code>must_pass</code> semantics
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#passfail-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pass/fail semantics
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-code-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Exit-code override
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#terminal-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Terminal output
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parallel-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Parallel execution
       </span>
     </span>
   </a>
@@ -1129,50 +1117,102 @@
   
 
 
-<h1 id="reporting">Reporting<a class="headerlink" href="#reporting" title="Permanent link">&para;</a></h1>
-<p><code>pytest-agent-eval</code> adds score information to pytest's standard terminal output and can optionally write a full markdown report.</p>
-<h2 id="verbosity-levels">Verbosity levels<a class="headerlink" href="#verbosity-levels" title="Permanent link">&para;</a></h2>
-<h3 id="default-no-v">Default (no <code>-v</code>)<a class="headerlink" href="#default-no-v" title="Permanent link">&para;</a></h3>
-<p>Tests appear with the standard <code>PASSED</code>/<code>FAILED</code> status. No extra LLM eval detail is shown inline.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>tests/test_booking.py::test_booking_flow PASSED
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>tests/test_booking.py::test_refund_flow FAILED
+<h1 id="group-thresholds">Group thresholds<a class="headerlink" href="#group-thresholds" title="Permanent link">&para;</a></h1>
+<p>LLM evals are probabilistic; a suite of them fails somewhere almost every run. Group thresholds let you gate CI on <strong>aggregate pass rates</strong> ("90% of booking evals must pass") instead of every individual test, while still pinning down the tests that must never break.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Groups live under <code>[tool.agent_eval.groups]</code> in <code>pyproject.toml</code>:</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[tool.agent_eval.groups.booking]</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.9</span><span class="w">                          </span><span class="c1"># 90% of matched tests must pass</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;gate:booking&quot;</span><span class="p">]</span><span class="w">                  </span><span class="c1"># match transcripts by tag</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">pytest_markers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;booking&quot;</span><span class="p">]</span><span class="w">             </span><span class="c1"># ...and/or plain tests by marker</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">must_pass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;booking_confirmation&quot;</span><span class="p">]</span><span class="w">     </span><span class="c1"># these must individually pass</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">[tool.agent_eval.groups.smoke]</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;smoke&quot;</span><span class="p">]</span><span class="w">                         </span><span class="c1"># threshold defaults to 1.0</span>
 </span></code></pre></div>
-<h3 id="-v-one-verbose-flag"><code>-v</code> (one verbose flag)<a class="headerlink" href="#-v-one-verbose-flag" title="Permanent link">&para;</a></h3>
-<p>A score summary line is appended to each eval test's output section:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>tests/test_booking.py::test_booking_flow PASSED
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  ---- LLM Eval ----
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  [3/3 runs, score=1.00 &gt;= 0.80]
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    Run 1 ✅
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    Run 2 ✅
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    Run 3 ✅
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>threshold</code></td>
+<td><code>float</code></td>
+<td><code>1.0</code></td>
+<td>Fraction of matched, non-skipped tests that must pass (0.0-1.0)</td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td><code>list[str]</code></td>
+<td><code>[]</code></td>
+<td>Transcript tags that select members</td>
+</tr>
+<tr>
+<td><code>pytest_markers</code></td>
+<td><code>list[str]</code></td>
+<td><code>[]</code></td>
+<td>Pytest marker names that select members</td>
+</tr>
+<tr>
+<td><code>must_pass</code></td>
+<td><code>list[str]</code></td>
+<td><code>[]</code></td>
+<td>Test identities that must individually pass whenever they run</td>
+</tr>
+</tbody>
+</table>
+<p>Group config is validated strictly: unknown keys, bad types, and out-of-range thresholds abort the run with a usage error. A typo'd <code>must_pass</code> silently disabling a CI gate would be worse.</p>
+<p>Markers named in <code>pytest_markers</code> are auto-registered, so <code>--strict-markers</code> projects don't need extra <code>markers =</code> ini entries.</p>
+<h2 id="membership">Membership<a class="headerlink" href="#membership" title="Permanent link">&para;</a></h2>
+<p>A test belongs to a group when <strong>any</strong> of its tags or markers intersects the group's <code>tags</code>/<code>pytest_markers</code>:</p>
+<ul>
+<li>YAML transcripts contribute their <code>tags:</code> list (also visible as <code>tags=</code> on their <code>agent_eval</code> marker).</li>
+<li>Python tests contribute their pytest markers, so <code>@pytest.mark.booking</code> joins any group with <code>pytest_markers = ["booking"]</code> — plain non-LLM tests included.</li>
+</ul>
+<p>A test can belong to several groups; it counts in each.</p>
+<h2 id="must_pass-semantics"><code>must_pass</code> semantics<a class="headerlink" href="#must_pass-semantics" title="Permanent link">&para;</a></h2>
+<p><code>must_pass</code> entries are <strong>assertions, not selectors</strong> — they don't add tests to the group. An entry matches a test whose identity equals it exactly or is one of its parametrizations (<code>test_thing</code> matches <code>test_thing[case1]</code>). Identities are the transcript <code>id</code> for YAML tests and the test name for Python tests.</p>
+<ul>
+<li>If any matching test <strong>failed</strong>, the group fails regardless of its pass rate.</li>
+<li>If no matching test ran (deselected or skipped), the summary prints a warning — partial selection shouldn't flip gates.</li>
+</ul>
+<h2 id="passfail-semantics">Pass/fail semantics<a class="headerlink" href="#passfail-semantics" title="Permanent link">&para;</a></h2>
+<p>For each group per session:</p>
+<ul>
+<li><strong>Denominator</strong> = matched tests that ran. Skipped tests are excluded (so are xfails, which pytest reports as skips). A group whose matches were all skipped renders as <code>SKIPPED</code>, never as a vacuous pass.</li>
+<li>The group <strong>passes</strong> when <code>passed / total &gt;= threshold</code> and no <code>must_pass</code> entry failed.</li>
+<li>A group that matches nothing prints a <code>WARNING</code> — usually a stale tag.</li>
+</ul>
+<p>Under partial selection (<code>pytest -k booking_smoke</code>), the denominator is what actually ran, and a note flags the deselection. In CI you'll normally run the full suite, where the distinction vanishes.</p>
+<h2 id="exit-code-override">Exit-code override<a class="headerlink" href="#exit-code-override" title="Permanent link">&para;</a></h2>
+<p>When tests failed but every gate is green, the exit code is overridden to <code>0</code>. The override applies <strong>only</strong> when all of these hold:</p>
+<ul>
+<li>at least one group matched tests that ran,</li>
+<li>every such group met its threshold (including <code>must_pass</code>),</li>
+<li><strong>every failed test in the session belongs to a gated group</strong> — a failing plain unit test or an ungrouped transcript keeps CI red,</li>
+<li>there were no collection errors.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">The stats bar still shows failures</p>
+<p>An absorbed failure is still a failure in pytest's own summary (<code>1 failed, 3 passed</code>) — only the exit code changes, and the group summary prints <code>exit code overridden to 0</code> so logs stay honest.</p>
+</div>
+<h2 id="terminal-output">Terminal output<a class="headerlink" href="#terminal-output" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>============================== group summary ===============================
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>booking: 9/10 passed (90%) &gt;= 90% required -- PASSED
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  failures: booking_edge_case
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  must_pass: booking_confirmation ok
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>smoke: 4/4 passed (100%) &gt;= 100% required -- PASSED
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>exit code overridden to 0: all group thresholds met
 </span></code></pre></div>
-<h3 id="-vv-two-verbose-flags"><code>-vv</code> (two verbose flags)<a class="headerlink" href="#-vv-two-verbose-flags" title="Permanent link">&para;</a></h3>
-<p>Per-turn evaluator reasoning is included:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>tests/test_booking.py::test_booking_flow PASSED
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  ---- LLM Eval ----
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  [3/3 runs, score=1.00 &gt;= 0.80]
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    Run 1 ✅
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>      All substring and pattern checks passed
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>      All tool call checks passed
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    Run 2 ✅
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>      All substring and pattern checks passed
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>      All tool call checks passed
-</span></code></pre></div>
-<h2 id="the-agent-eval-report-flag">The <code>--agent-eval-report</code> flag<a class="headerlink" href="#the-agent-eval-report-flag" title="Permanent link">&para;</a></h2>
-<p>Pass a file path to write a full markdown report after the session:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pytest<span class="w"> </span>--agent-eval-live<span class="w"> </span>--agent-eval-report<span class="o">=</span>eval-report.md
-</span></code></pre></div>
-<h2 id="markdown-report-format">Markdown report format<a class="headerlink" href="#markdown-report-format" title="Permanent link">&para;</a></h2>
-<p>The generated report has two sections: a summary table and per-transcript details.</p>
-<p>The summary table lists each transcript with its run count, pass count, score, threshold, and pass/fail status.
-The details section shows every run with turn-level evaluator reasoning.</p>
-<p>When <a href="../groups/">group thresholds</a> are configured, a <code>## Groups</code> section with per-group pass rates and failures appears between Summary and Details, and a <code>group summary</code> section is printed in the terminal.</p>
-<h2 id="configuring-the-report-path">Configuring the report path<a class="headerlink" href="#configuring-the-report-path" title="Permanent link">&para;</a></h2>
-<p>You can set a default report path in <code>pyproject.toml</code> so you do not need to pass the flag every time:</p>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[tool.agent_eval]</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">report_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;eval-report.md&quot;</span>
-</span></code></pre></div>
-<p>The command-line flag always takes precedence over the config value.</p>
+<p>Failures are always listed when present — even inside a passing group — so absorbed regressions stay visible in logs.</p>
+<p>The <a href="../reporting/">markdown report</a> gains a <code>## Groups</code> section with the same numbers when groups are configured.</p>
+<h2 id="parallel-execution">Parallel execution<a class="headerlink" href="#parallel-execution" title="Permanent link">&para;</a></h2>
+<p>Group aggregation works under <code>pytest-xdist</code> (<code>-n auto</code>): workers forward each test's identity, tags, and markers to the controller, which aggregates and applies the override exactly as in single-process runs.</p>
 
 
 
@@ -1212,7 +1252,7 @@ The details section shows every run with turn-level evaluator reasoning.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../groups/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Group thresholds">
+          <a href="../configuration/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Configuration">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -1222,20 +1262,20 @@ The details section shows every run with turn-level evaluator reasoning.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Group thresholds
+                Configuration
               </div>
             </div>
           </a>
         
         
           
-          <a href="../agents/" class="md-footer__link md-footer__link--next" aria-label="Next: Using with coding agents">
+          <a href="../reporting/" class="md-footer__link md-footer__link--next" aria-label="Next: Reporting">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Using with coding agents
+                Reporting
               </div>
             </div>
             <div class="md-footer__button md-icon">

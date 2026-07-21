@@ -1,0 +1,1690 @@
+# pytest-agent-eval — full documentation
+
+> Concatenated from the official documentation at https://datarootsio.github.io/pytest-agent-eval/latest/ — one page per 'source:' comment below.
+
+
+<!-- source: index.md -->
+
+# pytest-agent-eval
+
+[![PyPI version](https://img.shields.io/pypi/v/pytest-agent-eval.svg)](https://pypi.org/project/pytest-agent-eval/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pytest-agent-eval.svg)](https://pypi.org/project/pytest-agent-eval/)
+[![License](https://img.shields.io/pypi/l/pytest-agent-eval.svg)](https://github.com/datarootsio/pytest-agent-eval/blob/main/LICENSE)
+[![pytest plugin](https://img.shields.io/badge/pytest-plugin-0A9EDC?logo=pytest&logoColor=white)](https://docs.pytest.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com/)
+
+**LLM evaluation tests that actually mean something.**
+
+`pytest-agent-eval` is a pytest plugin for testing LLM agents and applications with threshold-based pass/fail scoring, multi-turn YAML transcripts, and an LLM-as-judge rubric system, without breaking your CI bill.
+
+## Highlights
+
+- 🎯 **Threshold-based pass/fail**: run each test N times, pass when ≥ threshold% succeed
+- 📝 **YAML or Python transcripts**: pick the authoring style your team prefers
+- 🔍 **YAML auto-discovery**: drop `*.yaml` files in any configured directory and they become pytest tests automatically
+- 🎙 **Voice agents (LiveKit)**: drive a real `AgentSession` with a WAV per turn; same evaluator surface as text agents
+- 🛡 **CI-safe by default**: eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1`
+- ⚡ **Parallel-ready**: `pytest -n auto` (via [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)) just works
+- 📄 **Markdown reports**: full per-run trace with `--agent-eval-report=eval.md`
+
+## Install
+
+=== "pip"
+
+    ```bash
+    pip install pytest-agent-eval
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add pytest-agent-eval
+    ```
+
+For framework-specific adapters, install one of the optional extras shown in the [Frameworks](#supported-frameworks) section.
+
+## What you can test
+
+!!! tip "Three layers of checks, freely composable"
+    Each evaluator runs against every turn and contributes to the threshold score. Mix the strict ones with the judgmental ones; there is no priority.
+
+=== "Deterministic"
+
+    Substring / pattern assertions over the agent's reply. Cheap, fast, deterministic.
+
+    ```python
+    from pytest_agent_eval import ContainsEvaluator
+
+    ContainsEvaluator(any_of=["confirmed", "booked"])
+    ContainsEvaluator(all_of=["reference", "tomorrow"])
+    ContainsEvaluator(matches_any=[r"BK-\d+"])   # regex via re.search
+    ```
+
+=== "Tool calling"
+
+    Assert that the agent invoked the right tools, optionally in a specific order, with disallowed tools.
+
+    ```python
+    from pytest_agent_eval import ToolCallEvaluator
+
+    ToolCallEvaluator(
+        must_include=["authenticate", "fetch_availability", "create_booking"],
+        must_exclude=["cancel_booking"],
+        ordered=True,
+    )
+    ```
+
+=== "LLM as judge"
+
+    Open-ended quality checks. The judge (a separate model) returns a verdict + reasoning against your rubric.
+
+    ```python
+    from pytest_agent_eval import JudgeEvaluator
+
+    JudgeEvaluator(
+        rubric=(
+            "The reply must confirm the booking, include a reference "
+            "number, and have a friendly professional tone."
+        ),
+        model="openai:gpt-4o",   # optional override; falls back to [tool.agent_eval] judge_model
+    )
+    ```
+
+## Supported frameworks
+
+`pytest-agent-eval` ships first-class adapters for the major Python agent frameworks. Each is an optional extra so you only install what you use.
+
+=== "pydantic-ai"
+
+    No extra needed: pydantic-ai support ships with the base install.
+
+    === "pip"
+
+        ```bash
+        pip install pytest-agent-eval
+        ```
+
+    === "uv"
+
+        ```bash
+        uv add pytest-agent-eval
+        ```
+
+    ```python
+    from pydantic_ai import Agent
+    from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
+
+    my_agent = Agent("openai:gpt-4o", system_prompt="You are a helpful assistant.")
+
+    @pytest.fixture
+    def llm_eval_agent():
+        return PydanticAIAdapter(my_agent)
+    ```
+
+=== "LangChain / LangGraph"
+
+    === "pip"
+
+        ```bash
+        pip install "pytest-agent-eval[langchain]"
+        ```
+
+    === "uv"
+
+        ```bash
+        uv add "pytest-agent-eval[langchain]"
+        ```
+
+    ```python
+    from pytest_agent_eval.adapters.langchain import LangChainAdapter
+
+    @pytest.fixture
+    def llm_eval_agent():
+        return LangChainAdapter(my_compiled_graph)
+    ```
+
+=== "OpenAI SDK"
+
+    === "pip"
+
+        ```bash
+        pip install "pytest-agent-eval[openai]"
+        ```
+
+    === "uv"
+
+        ```bash
+        uv add "pytest-agent-eval[openai]"
+        ```
+
+    ```python
+    from openai import AsyncOpenAI
+    from pytest_agent_eval.adapters.openai import OpenAIAdapter
+
+    @pytest.fixture
+    def llm_eval_agent():
+        return OpenAIAdapter(AsyncOpenAI(), model="gpt-4o")
+    ```
+
+=== "Smolagents"
+
+    === "pip"
+
+        ```bash
+        pip install "pytest-agent-eval[smolagents]"
+        ```
+
+    === "uv"
+
+        ```bash
+        uv add "pytest-agent-eval[smolagents]"
+        ```
+
+    ```python
+    from smolagents import ToolCallingAgent, InferenceClientModel
+    from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
+
+    agent = ToolCallingAgent(tools=[...], model=InferenceClientModel(model_id="..."))
+
+    @pytest.fixture
+    def llm_eval_agent():
+        return SmolagentsAdapter(agent)
+    ```
+
+=== "LiveKit (voice)"
+
+    === "pip"
+
+        ```bash
+        pip install "pytest-agent-eval[livekit]"
+        ```
+
+    === "uv"
+
+        ```bash
+        uv add "pytest-agent-eval[livekit]"
+        ```
+
+    Each turn declares an `audio: turn.wav` path; the adapter streams it through a fresh `AgentSession` and captures tool calls + transcript on the same evaluator surface as text agents.
+
+    ```python
+    from livekit.agents.voice import Agent, AgentSession
+    from livekit.plugins import openai
+    from pytest_agent_eval.adapters.livekit import LiveKitAdapter
+
+    def make_session():
+        session = AgentSession(llm=openai.realtime.RealtimeModel())
+        agent = Agent(instructions="You are a booking assistant.", tools=[...])
+        return session, agent
+
+    @pytest.fixture
+    def llm_eval_agent():
+        return LiveKitAdapter(make_session)
+    ```
+
+    Generate WAV fixtures from your YAML transcripts (hash-cached, idempotent):
+
+    ```bash
+    python -m pytest_agent_eval.synthesize_audio
+    ```
+
+    See the [LiveKit adapter docs](adapters.md#livekit-voice) for full options.
+
+=== "Custom"
+
+    Any `async def agent(messages) -> tuple[reply: str, tool_calls: list[str]]` callable works as-is. No base class, no inheritance.
+
+    ```python
+    @pytest.fixture
+    def llm_eval_agent():
+        async def agent(messages):
+            reply = await call_my_backend(messages[-1]["content"])
+            return reply, []
+        return agent
+    ```
+
+## YAML auto-discovery
+
+!!! info "Zero-boilerplate evals"
+    Point `pytest-agent-eval` at any directory of `*.yaml` files and every transcript becomes a pytest test. No Python wrapper required: add files, run `pytest`, see results.
+
+```toml
+# pyproject.toml
+[tool.agent_eval]
+yaml_dirs = ["tests/evals"]
+```
+
+```yaml
+# tests/evals/booking.yaml
+id: booking_confirmation
+threshold: 0.8
+runs: 3
+turns:
+  - user: "Book me a slot tomorrow at 10am"
+    expect:
+      reply_contains_any: ["confirmed", "booked"]
+      tool_calls_include: ["create_booking"]
+      judge:
+        rubric: "Reply must include a reference number and be polite."
+```
+
+Provide one shared `llm_eval_agent` fixture (in `conftest.py`) and the loader handles the rest. See the [YAML API reference](yaml-api.md) for every field.
+
+## Quick start (Python API)
+
+```python
+import pytest
+from pytest_agent_eval import Turn, Expect, ContainsEvaluator, ToolCallEvaluator, JudgeEvaluator
+
+@pytest.mark.agent_eval(threshold=0.8, runs=3)
+async def test_booking(agent_eval):
+    result = await agent_eval.run(
+        agent=my_agent,
+        turns=[
+            Turn(
+                user="Book me a slot tomorrow at 10am",
+                expect=Expect(evaluators=[
+                    ContainsEvaluator(any_of=["confirmed", "booked"]),
+                    ToolCallEvaluator(must_include=["create_booking"]),
+                    JudgeEvaluator(rubric="Reply must include a reference number."),
+                ]),
+            )
+        ],
+    )
+    result.assert_threshold()
+```
+
+```bash
+pytest --agent-eval-live
+```
+
+See [Getting Started](getting-started.md) for a full walkthrough.
+
+
+<!-- source: getting-started.md -->
+
+# Getting Started
+
+This guide walks you through installing `pytest-agent-eval` and writing your first passing evaluation test.
+
+## Installation
+
+=== "pip"
+
+    ```bash
+    pip install pytest-agent-eval
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add pytest-agent-eval
+    ```
+
+For framework-specific adapters, install the matching optional extra:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-agent-eval[langchain]"   # LangChain / LangGraph support
+    pip install "pytest-agent-eval[openai]"      # OpenAI SDK support
+    pip install "pytest-agent-eval[xdist]"       # parallel test execution
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-agent-eval[langchain]"
+    uv add "pytest-agent-eval[openai]"
+    uv add "pytest-agent-eval[xdist]"
+    ```
+
+## Configure pyproject.toml
+
+Add a `[tool.agent_eval]` section to your `pyproject.toml`:
+
+```toml
+[tool.agent_eval]
+model       = "openai:gpt-4o"   # default judge + agent-fallback model
+threshold   = 0.8
+runs        = 3
+yaml_dirs   = ["tests/evals"]   # enables YAML auto-discovery
+```
+
+!!! tip "Use a separate judge model"
+    Set `judge_model = "openai:gpt-4o"` independently from the agent-under-test model; you typically want a stronger model judging a cheaper agent.
+
+## Write your first test: Python API
+
+Create `tests/test_my_agent.py`:
+
+```python
+import pytest
+from pytest_agent_eval import Turn, Expect, ContainsEvaluator
+
+async def my_agent(messages):
+    """Your agent callable: receives OpenAI-style messages, returns (reply, tool_calls)."""
+    return "Your booking is confirmed for tomorrow at 10am.", []
+
+@pytest.mark.agent_eval(threshold=0.8, runs=3)
+async def test_booking_confirmation(agent_eval):
+    result = await agent_eval.run(
+        agent=my_agent,
+        turns=[
+            Turn(
+                user="Book me a slot for tomorrow at 10am.",
+                expect=Expect(
+                    evaluators=[
+                        ContainsEvaluator(any_of=["confirmed", "booked"]),
+                        ContainsEvaluator(all_of=["tomorrow", "10"]),
+                    ]
+                ),
+            )
+        ],
+    )
+    result.assert_threshold()
+```
+
+## Write your first test: YAML style
+
+!!! info "YAML auto-discovery"
+    Any `*.yaml` file inside a directory listed in `yaml_dirs` becomes a pytest test automatically. No Python wrapper, no decorator: drop a file, run `pytest`, see the result.
+
+Create `tests/evals/booking.yaml`:
+
+```yaml
+id: booking_confirmation
+threshold: 0.8
+runs: 3
+turns:
+  - user: "Book me a slot for tomorrow at 10am."
+    expect:
+      reply_contains_any:
+        - "confirmed"
+        - "booked"
+      reply_contains_all:
+        - "tomorrow"
+```
+
+Then register the YAML directory in `pyproject.toml`:
+
+```toml
+[tool.agent_eval]
+yaml_dirs = ["tests/evals"]
+```
+
+You must also provide an `llm_eval_agent` fixture so the loader knows what to call:
+
+```python
+# tests/conftest.py
+import pytest
+
+@pytest.fixture
+def llm_eval_agent():
+    async def my_agent(messages):
+        return "Your booking is confirmed for tomorrow at 10am.", []
+    return my_agent
+```
+
+## Run the tests
+
+By default, eval tests are **skipped** in CI to avoid unexpected API calls. Enable them explicitly:
+
+=== "Flag"
+
+    ```bash
+    pytest --agent-eval-live
+    ```
+
+=== "Environment"
+
+    ```bash
+    EVAL_LIVE=1 pytest
+    ```
+
+A passing run shows the score alongside the test name:
+
+```
+tests/test_my_agent.py::test_booking_confirmation PASSED [score=1.00 threshold=0.80 runs=3/3]
+```
+
+Use `-vv` for full turn-by-turn details including evaluator reasoning.
+
+## Run in parallel
+
+For large eval suites, install the `xdist` extra and pass `-n` to run tests across worker processes; results from every worker are aggregated into the report:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-agent-eval[xdist]"
+    pytest --agent-eval-live -n auto --agent-eval-report=eval.md
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-agent-eval[xdist]"
+    uv run pytest --agent-eval-live -n auto --agent-eval-report=eval.md
+    ```
+
+
+<!-- source: yaml-api.md -->
+
+# YAML API
+
+YAML transcripts let you define evaluation tests without writing Python. They are loaded automatically from any directory listed in `yaml_dirs`.
+
+## Directory setup
+
+```toml
+# pyproject.toml
+[tool.agent_eval]
+yaml_dirs = ["tests/evals"]
+```
+
+Any `*.yaml` file inside `tests/evals/` (searched recursively) becomes a test.
+
+## Editor and agent support
+
+A published [JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json) describes every transcript field. Add this first line to any transcript to get completion and validation in editors (and to help coding agents write valid files):
+
+```yaml
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+```
+
+## Full annotated transcript
+
+```yaml
+# tests/evals/booking.yaml
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+
+# Unique ID, used as the pytest test name
+id: booking_confirmation
+
+# Fraction of runs that must pass (0.0 – 1.0)
+threshold: 0.8
+
+# Number of times to run the full transcript
+runs: 3
+
+# Optional tags for quality-gate filtering
+tags:
+  - gate:booking
+  - smoke
+
+turns:
+  - user: "Book me a table for 2 tomorrow at 10am."
+
+    expect:
+      # Reply must contain at least one of these strings (case-insensitive)
+      reply_contains_any:
+        - "confirmed"
+        - "booked"
+
+      # Reply must contain ALL of these strings (case-insensitive)
+      reply_contains_all:
+        - "tomorrow"
+        - "10"
+
+      # Tool names that must appear in this turn's tool calls
+      tool_calls_include:
+        - create_booking
+
+      # Tool names that must NOT appear in this turn's tool calls
+      tool_calls_exclude:
+        - cancel_booking
+
+      # LLM-as-judge rubric (requires a model in [tool.agent_eval])
+      judge:
+        rubric: >
+          The reply must confirm a booking with a date, time, and
+          reference number. The tone should be friendly and professional.
+        model: "openai:gpt-4o"   # optional; overrides [tool.agent_eval] model
+
+  - user: "Can you email me the confirmation?"
+    expect:
+      reply_contains_any:
+        - "email"
+        - "sent"
+```
+
+## Field reference
+
+### Top-level fields
+
+| Field       | Type         | Required | Default                      | Description                                   |
+|-------------|--------------|----------|------------------------------|-----------------------------------------------|
+| `id`        | `str`        | yes      | n/a                          | Unique test identifier, used as the test name |
+| `threshold` | `float`      | no       | `[tool.agent_eval]` threshold  | Pass fraction required                        |
+| `runs`      | `int`        | no       | `[tool.agent_eval]` runs       | Number of executions                          |
+| `tags`      | `list[str]`  | no       | `[]`                         | Quality-gate tags for filtering               |
+| `turns`     | `list[Turn]` | yes      | n/a                          | Ordered list of turns                         |
+
+### `turns[].user`
+
+The user message string for this turn. Required for every turn. Also acts as the transcript when an `audio:` fixture is generated for this turn.
+
+### `turns[].audio`
+
+Optional path to a WAV file used by voice adapters (e.g. [`LiveKitAdapter`](adapters.md#livekit-voice)). Resolved relative to the YAML file's directory unless absolute. Text adapters ignore this field; turns can mix audio and non-audio freely.
+
+```yaml
+turns:
+  - user: "Book me a slot tomorrow at 10am."
+    audio: booking_t1.wav        # → tests/evals/booking_t1.wav
+    expect:
+      tool_calls_include: [create_booking]
+```
+
+Generate the WAV from `user:` text via:
+
+```bash
+python -m pytest_agent_eval.synthesize_audio
+```
+
+The CLI hashes `turn.user` into a `<wav>.hash` sidecar and only re-synthesises when the transcript changes. See the [LiveKit adapter docs](adapters.md#livekit-voice) for the full pipeline.
+
+### `turns[].expect`
+
+All `expect` fields are optional. Omit `expect` entirely for turns where you only care about the agent not crashing.
+
+| Field                | Type          | Description                                          |
+|----------------------|---------------|------------------------------------------------------|
+| `reply_contains_any` | `list[str]`   | At least one string must appear in the reply         |
+| `reply_contains_all` | `list[str]`   | All strings must appear in the reply                 |
+| `reply_matches_any`  | `list[str]`   | At least one regex pattern must match the reply      |
+| `reply_matches_all`  | `list[str]`   | All regex patterns must match the reply              |
+| `tool_calls_include` | `list[str]`   | These tool names must be present in the turn's calls |
+| `tool_calls_exclude` | `list[str]`   | These tool names must be absent from the turn's calls|
+| `tool_calls_ordered` | `bool`        | If `true`, `tool_calls_include` must appear in order |
+| `tool_calls_args`    | `list`        | Assertions on the arguments of specific tool calls   |
+| `judge`              | `JudgeConfig` | LLM-as-judge rubric evaluation                       |
+
+String and regex checks are case-insensitive. Regex patterns use Python `re.search` semantics — quote them in YAML so `\d` and friends survive parsing:
+
+```yaml
+expect:
+  reply_matches_any:
+    - "BK-\\d+"
+    - "ref(erence)? number"
+```
+
+### `turns[].expect.tool_calls_args`
+
+Each entry asserts the arguments of one tool. Provide `args` for a deterministic check, `judge` for an LLM-judged rubric, or both:
+
+```yaml
+expect:
+  tool_calls_args:
+    # Deterministic: these keys/values must appear in the call's arguments
+    - tool: book_slot
+      args:
+        time: "10am"
+      mode: subset          # subset (default) or exact
+
+    # LLM-judged: rubric evaluated against the JSON arguments
+    - tool: book_slot
+      judge:
+        rubric: "The booking time must be within business hours."
+```
+
+| Field   | Type          | Default    | Description                                                        |
+|---------|---------------|------------|--------------------------------------------------------------------|
+| `tool`  | `str`         | required   | Tool name to check                                                 |
+| `args`  | `dict`        | `null`     | Expected arguments (deterministic check)                           |
+| `mode`  | `str`         | `"subset"` | `subset`: expected items must appear; `exact`: full dict equality  |
+| `judge` | `JudgeConfig` | `null`     | Rubric + optional model, judged against the call's JSON arguments  |
+
+If the tool is called several times in the turn, the assertion passes when any call matches. Argument capture requires an adapter that records arguments — all bundled adapters do; custom agents must return `ToolCall(name, args)` (see [Adapters](adapters.md#writing-a-custom-adapter)).
+
+### `turns[].expect.judge`
+
+| Field    | Type          | Description                                                |
+|----------|---------------|------------------------------------------------------------|
+| `rubric` | `str`         | Natural-language rubric sent to the judge model            |
+| `model`  | `str \| null` | pydantic-ai model ID override; falls back to global config |
+
+## Agent fixture
+
+YAML-loaded tests require a pytest fixture named `llm_eval_agent` that returns your agent callable:
+
+```python
+# tests/conftest.py
+import pytest
+
+@pytest.fixture
+def llm_eval_agent():
+    async def my_agent(messages):
+        # messages is a list of OpenAI-style {"role": ..., "content": ...} dicts
+        # Return (reply, tool_calls): the reply string plus the tool names called.
+        return "Booking confirmed! Reference BK-1234.", ["create_booking"]
+    return my_agent
+```
+
+The fixture is resolved at collection time, so you can parametrize it or switch agents per test directory.
+
+
+<!-- source: python-api.md -->
+
+# Python API
+
+The Python API lets you write LLM evaluation tests as ordinary async pytest functions.
+
+## The `@pytest.mark.agent_eval` marker
+
+Decorate any async test function to mark it as an LLM evaluation:
+
+```python
+import pytest
+
+@pytest.mark.agent_eval(threshold=0.8, runs=3)
+async def test_my_agent(agent_eval):
+    ...
+```
+
+**Parameters:**
+
+| Parameter   | Type    | Default                   | Description                                 |
+|-------------|---------|---------------------------|---------------------------------------------|
+| `threshold` | `float` | from `[tool.agent_eval]`    | Fraction of runs that must pass (0.0–1.0)   |
+| `runs`      | `int`   | from `[tool.agent_eval]`    | Number of times to execute the transcript   |
+
+Without `--agent-eval-live` or `EVAL_LIVE=1`, marked tests are automatically skipped.
+
+## The `agent_eval` fixture
+
+The `agent_eval` fixture is injected by the plugin. Call `.run()` to execute your transcript:
+
+```python
+result = await agent_eval.run(agent=my_agent, turns=[...])
+```
+
+**`agent_eval.run()` parameters:**
+
+| Parameter   | Type            | Description                                            |
+|-------------|-----------------|--------------------------------------------------------|
+| `agent`     | `Callable`      | Async callable: `(messages) -> (reply, tool_calls)`    |
+| `turns`     | `list[Turn]`    | Ordered list of turns to execute                       |
+
+Threshold and run count come from the `@pytest.mark.agent_eval(threshold=..., runs=...)` marker, falling back to `[tool.agent_eval]` config.
+
+Returns a `TranscriptResult`.
+
+## `Turn`
+
+```python
+from pytest_agent_eval import Turn, Expect
+
+turn = Turn(
+    user="Book me a slot for tomorrow.",
+    expect=Expect(
+        evaluators=[ContainsEvaluator(any_of=["confirmed", "booked"])],
+        tool_calls_include=["create_booking"],
+    ),
+)
+```
+
+| Field    | Type     | Default        | Description                                |
+|----------|----------|----------------|--------------------------------------------|
+| `user`   | `str`    | required       | The user message sent to the agent         |
+| `expect` | `Expect` | `Expect()`     | Expectations checked against the reply     |
+
+## `Expect`
+
+```python
+from pytest_agent_eval import Expect
+
+expect = Expect(
+    evaluators=[...],               # programmatic evaluators
+    reply_contains_any=["confirmed", "booked"],
+    reply_contains_all=["booking", "reference"],
+    tool_calls_include=["create_booking"],
+    tool_calls_exclude=["delete_booking"],
+)
+```
+
+| Field                | Type              | Description                                          |
+|----------------------|-------------------|------------------------------------------------------|
+| `evaluators`         | `list[Evaluator]` | Custom evaluator instances                           |
+| `reply_contains_any` | `list[str]`       | Reply must contain at least one string               |
+| `reply_contains_all` | `list[str]`       | Reply must contain all strings                       |
+| `reply_matches_any`  | `list[str]`       | Reply must match at least one regex pattern          |
+| `reply_matches_all`  | `list[str]`       | Reply must match all regex patterns                  |
+| `tool_calls_include` | `list[str]`       | These tool names must appear in the turn's calls     |
+| `tool_calls_exclude` | `list[str]`       | These tool names must NOT appear in the turn's calls |
+| `tool_calls_ordered` | `bool`            | If `True`, `tool_calls_include` must appear in order |
+| `tool_calls_args`    | `list[ToolCallArgsConfig]` | Assertions on specific tools' call arguments |
+| `judge`              | `JudgeConfig`     | LLM-as-judge rubric (see Evaluators)                 |
+
+## Evaluators
+
+### `ContainsEvaluator`
+
+```python
+from pytest_agent_eval import ContainsEvaluator
+
+ContainsEvaluator(any_of=["confirmed", "booked"])
+ContainsEvaluator(all_of=["booking", "reference number"])
+ContainsEvaluator(matches_any=[r"BK-\d+"])                      # regex via re.search
+ContainsEvaluator(all_of=["Booking"], case_sensitive=True)      # exact-case matching
+```
+
+### `ToolCallEvaluator`
+
+```python
+from pytest_agent_eval import ToolCallEvaluator
+
+ToolCallEvaluator(must_include=["create_booking"], must_exclude=["cancel_booking"])
+```
+
+### `ToolCallArgsEvaluator`
+
+```python
+from pytest_agent_eval import ToolCallArgsEvaluator
+
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})                 # subset (default)
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"}, mode="exact")   # full equality
+```
+
+Requires captured arguments: bundled adapters capture them automatically; custom agents return `ToolCall(name, args)` instead of plain strings.
+
+### `ToolCallArgsJudgeEvaluator`
+
+```python
+from pytest_agent_eval import ToolCallArgsJudgeEvaluator
+
+ToolCallArgsJudgeEvaluator(
+    tool="book_slot",
+    rubric="The booking time must be within business hours.",
+)
+```
+
+### `JudgeEvaluator`
+
+```python
+from pytest_agent_eval import JudgeEvaluator
+
+JudgeEvaluator(
+    rubric="The reply must confirm a booking with a date and reference number.",
+    model="openai:gpt-4o",   # optional; falls back to [tool.agent_eval] model
+)
+```
+
+## `TranscriptResult` and `assert_threshold()`
+
+```python
+result = await agent_eval.run(agent=my_agent, turns=[...])
+
+# Manual inspection
+print(result.score)      # e.g. 0.67
+print(result.passed)     # True / False
+print(result.threshold)  # e.g. 0.8
+print(result.runs)       # list of RunResult
+
+# Raise AssertionError if score < threshold
+result.assert_threshold()
+```
+
+## Full annotated example
+
+```python
+import pytest
+from pytest_agent_eval import (
+    Turn, Expect,
+    ContainsEvaluator, ToolCallEvaluator, JudgeEvaluator,
+)
+
+async def booking_agent(messages):
+    # Your real agent implementation here — return (reply, tool_calls)
+    return "Booking confirmed! Reference: BK-1234 for tomorrow at 10am.", ["create_booking"]
+
+@pytest.mark.agent_eval(threshold=0.8, runs=3)
+async def test_full_booking_flow(agent_eval):
+    result = await agent_eval.run(
+        agent=booking_agent,
+        turns=[
+            Turn(
+                user="I need to book a table for 2 tomorrow at 10am.",
+                expect=Expect(
+                    evaluators=[
+                        ContainsEvaluator(any_of=["confirmed", "booked"]),
+                        ToolCallEvaluator(must_include=["create_booking"]),
+                        JudgeEvaluator(
+                            rubric=(
+                                "The reply must confirm the booking and include "
+                                "a reference number and time."
+                            )
+                        ),
+                    ]
+                ),
+            ),
+            Turn(
+                user="Can you send me a confirmation email?",
+                expect=Expect(
+                    reply_contains_any=["email", "sent", "confirmation"],
+                ),
+            ),
+        ],
+    )
+    result.assert_threshold()
+```
+
+
+<!-- source: evaluators.md -->
+
+# Evaluators
+
+Evaluators decide whether an agent's reply passes or fails a turn. All evaluators implement an async `evaluate(ctx: TurnContext) -> EvalResult` method.
+
+## `ContainsEvaluator`
+
+Checks that the reply contains expected substrings or matches regex patterns (case-insensitive by default).
+
+```python
+from pytest_agent_eval import ContainsEvaluator
+
+# Pass if reply contains at least one of these
+ContainsEvaluator(any_of=["confirmed", "booked"])
+
+# Pass if reply contains ALL of these
+ContainsEvaluator(all_of=["booking", "reference number"])
+
+# Regex patterns (evaluated with re.search)
+ContainsEvaluator(matches_any=[r"ref(erence)? number[:# ]*[A-Z]{2}-\d+"])
+ContainsEvaluator(matches_all=[r"\d{1,2}(am|pm)", r"tomorrow"])
+
+# Substring and regex checks compose freely
+ContainsEvaluator(
+    any_of=["confirmed", "booked"],
+    matches_all=[r"BK-\d+"],
+)
+
+# Exact-case matching
+ContainsEvaluator(all_of=["Booking"], case_sensitive=True)
+```
+
+Invalid regex patterns raise `ValueError` at construction time, so a typo fails the test suite immediately instead of silently failing every turn.
+
+**Parameters:**
+
+| Parameter        | Type        | Description                                                       |
+|------------------|-------------|-------------------------------------------------------------------|
+| `any_of`         | `list[str]` | Reply must contain at least one of these substrings               |
+| `all_of`         | `list[str]` | Reply must contain every one of these substrings                  |
+| `matches_any`    | `list[str]` | Reply must match at least one of these regex patterns (`re.search`) |
+| `matches_all`    | `list[str]` | Reply must match every one of these regex patterns (`re.search`)  |
+| `case_sensitive` | `bool`      | When `False` (default), all checks ignore case                    |
+
+## `ToolCallEvaluator`
+
+Validates that specific tools were (or were not) called during a turn.
+
+```python
+from pytest_agent_eval import ToolCallEvaluator
+
+# Require a tool and forbid another
+ToolCallEvaluator(
+    must_include=["book_slot"],
+    must_exclude=["cancel_slot"],
+)
+
+# Enforce call order
+ToolCallEvaluator(
+    must_include=["authenticate", "fetch_availability", "create_booking"],
+    ordered=True,
+)
+```
+
+**Parameters:**
+
+| Parameter      | Type        | Description                                                        |
+|----------------|-------------|--------------------------------------------------------------------|
+| `must_include` | `list[str]` | Tool names that must appear in the turn's tool calls               |
+| `must_exclude` | `list[str]` | Tool names that must NOT appear in the turn's tool calls           |
+| `ordered`      | `bool`      | If `True`, `must_include` tools must appear in the specified order |
+
+## `ToolCallArgsEvaluator`
+
+Asserts the **arguments** a tool was called with. Requires an adapter (or custom agent) that captures arguments — all bundled adapters do; custom agents return `ToolCall(name, args)` instead of plain strings (see [Adapters](adapters.md#writing-a-custom-adapter)).
+
+```python
+from pytest_agent_eval import ToolCallArgsEvaluator
+
+# Subset (default): expected top-level keys/values must appear; extra observed keys are fine
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am"})
+
+# Exact: observed args must equal the expected dict exactly
+ToolCallArgsEvaluator(tool="book_slot", args={"time": "10am", "date": "tomorrow"}, mode="exact")
+```
+
+Subset matching compares top-level keys only; a nested dict value is compared exactly (`{"opts": {"a": 1}}` does not subset-match `{"opts": {"a": 1, "b": 2}}`). Use `mode="exact"` when you want full equality, or assert the nested keys with a separate entry.
+
+If the tool is called several times in a turn, the check passes when **any** call matches. Failure messages distinguish three cases: the tool was never called, the tool was called but no dict arguments were captured, and a genuine argument mismatch (which shows expected vs observed).
+
+**Parameters:**
+
+| Parameter | Type   | Default    | Description                                        |
+|-----------|--------|------------|----------------------------------------------------|
+| `tool`    | `str`  | required   | Name of the tool to check                          |
+| `args`    | `dict` | required   | Expected arguments                                 |
+| `mode`    | `str`  | `"subset"` | `"subset"` or `"exact"`                            |
+
+## `ToolCallArgsJudgeEvaluator`
+
+Uses an LLM to judge a tool's arguments against a natural-language rubric — for constraints that are awkward to express as exact values ("the time must be within business hours", "the query must mention the user's city").
+
+```python
+from pytest_agent_eval import ToolCallArgsJudgeEvaluator
+
+ToolCallArgsJudgeEvaluator(
+    tool="book_slot",
+    rubric="The booking time must be within business hours (9am-5pm).",
+)
+```
+
+The judge receives the tool name and the JSON arguments of every call to that tool in the turn, and passes if any call satisfies the rubric. Never-called and args-not-captured fail deterministically **before** any LLM call, so no judge tokens are spent on structural failures.
+
+**Parameters:**
+
+| Parameter | Type          | Default  | Description                                                  |
+|-----------|---------------|----------|--------------------------------------------------------------|
+| `tool`    | `str`         | required | Name of the tool whose arguments to judge                    |
+| `rubric`  | `str`         | required | Natural-language rubric for acceptable arguments             |
+| `model`   | `str \| None` | `None`   | pydantic-ai model ID; falls back to `[tool.agent_eval] model` |
+| `retries` | `int`         | `2`      | Retries on API failure                                       |
+| `timeout` | `float`       | `30.0`   | Per-call timeout in seconds                                  |
+
+## `JudgeEvaluator`
+
+Uses an LLM (via pydantic-ai) to evaluate the reply against a natural-language rubric. Good for open-ended quality checks that are hard to express as string patterns.
+
+```python
+from pytest_agent_eval import JudgeEvaluator
+
+JudgeEvaluator(
+    rubric=(
+        "The reply must confirm the booking, include a reference number, "
+        "mention the date and time, and have a friendly professional tone."
+    ),
+    model="openai:gpt-4o",      # optional; falls back to [tool.agent_eval] model
+    retries=2,                   # retry API failures
+    timeout=30.0,                # per-call timeout in seconds
+)
+```
+
+**Parameters:**
+
+| Parameter | Type           | Default       | Description                                                       |
+|-----------|----------------|---------------|-------------------------------------------------------------------|
+| `rubric`  | `str`          | required      | Natural-language description of what a passing reply looks like   |
+| `model`   | `str \| None`  | `None`        | pydantic-ai model ID; falls back to `[tool.agent_eval] model`       |
+| `retries` | `int`          | `2`           | Number of retries on API failure before returning a FAIL verdict  |
+| `timeout` | `float`        | `30.0`        | Seconds before the judge call times out                           |
+
+## Writing a custom evaluator
+
+Implement the `Evaluator` protocol: an object with an async `evaluate` method.
+
+```python
+from pytest_agent_eval.models import TurnContext, EvalResult
+
+class SentimentEvaluator:
+    """Fail if the reply has negative sentiment."""
+
+    def __init__(self, threshold: float = 0.5):
+        self.threshold = threshold
+
+    async def evaluate(self, ctx: TurnContext) -> EvalResult:
+        # ctx.reply:      the agent's string reply
+        # ctx.user:       the user message for this turn
+        # ctx.tool_calls: list of tool names called
+        # ctx.history:    OpenAI-format message history
+
+        score = await compute_sentiment(ctx.reply)   # your own logic
+        passed = score >= self.threshold
+        return EvalResult(
+            passed=passed,
+            reasoning=f"Sentiment score {score:.2f} vs threshold {self.threshold:.2f}",
+        )
+```
+
+Then use it like any built-in evaluator:
+
+```python
+from pytest_agent_eval import Turn, Expect
+
+Turn(
+    user="How was your experience?",
+    expect=Expect(evaluators=[SentimentEvaluator(threshold=0.6)]),
+)
+```
+
+The protocol requires only that `evaluate` is async and returns an `EvalResult`. There is no base class to inherit from.
+
+
+<!-- source: adapters.md -->
+
+# Adapters
+
+Adapters bridge your existing agent framework to the `pytest-agent-eval` callable contract: an async function that accepts a list of OpenAI-style message dicts and returns a `(reply: str, tool_calls: list[str])` tuple.
+
+## `PydanticAIAdapter`
+
+Wraps a pydantic-ai `Agent` instance.
+
+```python
+from pydantic_ai import Agent
+from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
+import pytest
+
+my_agent = Agent("openai:gpt-4o", system_prompt="You are a helpful booking assistant.")
+
+@pytest.fixture
+def llm_eval_agent():
+    return PydanticAIAdapter(my_agent)
+```
+
+The adapter forwards the last message as the user prompt and the preceding messages as `message_history`. Tool calls (names and arguments) are extracted from the tool-call parts of `result.all_messages()`.
+
+**Constructor:**
+
+| Parameter | Type    | Description                             |
+|-----------|---------|-----------------------------------------|
+| `agent`   | `Agent` | A pydantic-ai `Agent` instance          |
+
+## `LangChainAdapter`
+
+Wraps a LangChain Runnable (compiled graph, chain, etc.).
+
+```python
+from pytest_agent_eval.adapters.langchain import LangChainAdapter
+import pytest
+
+# my_langchain_graph is any LangChain Runnable
+@pytest.fixture
+def llm_eval_agent():
+    return LangChainAdapter(my_langchain_graph)
+```
+
+Install the optional extra for LangChain support:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-agent-eval[langchain]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-agent-eval[langchain]"
+    ```
+
+The adapter calls `ainvoke({"messages": history})` and extracts `content` and `tool_calls` from the result. It handles both direct `AIMessage` returns and `{"messages": [...]}` dict returns from compiled graphs.
+
+**Constructor:**
+
+| Parameter  | Type       | Description                              |
+|------------|------------|------------------------------------------|
+| `runnable` | `Runnable` | A LangChain Runnable or compiled graph   |
+
+## `OpenAIAdapter`
+
+Wraps the raw `AsyncOpenAI` or `AsyncAzureOpenAI` client.
+
+```python
+from openai import AsyncOpenAI
+from pytest_agent_eval.adapters.openai import OpenAIAdapter
+import pytest
+
+@pytest.fixture
+def llm_eval_agent():
+    client = AsyncOpenAI()   # reads OPENAI_API_KEY from environment
+    return OpenAIAdapter(
+        client,
+        model="gpt-4o",
+        system_prompt="You are a helpful booking assistant.",
+    )
+```
+
+Install the optional extra for OpenAI support:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-agent-eval[openai]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-agent-eval[openai]"
+    ```
+
+**Constructor:**
+
+| Parameter       | Type             | Description                                               |
+|-----------------|------------------|-----------------------------------------------------------|
+| `client`        | `AsyncOpenAI`    | An `AsyncOpenAI` or `AsyncAzureOpenAI` instance           |
+| `model`         | `str`            | Model name, e.g. `"gpt-4o"`                              |
+| `system_prompt` | `str \| None`    | Optional system prompt prepended to every request         |
+
+## `SmolagentsAdapter`
+
+Wraps a [smolagents](https://github.com/huggingface/smolagents) agent: `ToolCallingAgent`, `CodeAgent`, or any duck-typed agent exposing `.run()` and `.memory.steps`.
+
+```python
+from smolagents import ToolCallingAgent, InferenceClientModel
+from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
+import pytest
+
+model = InferenceClientModel(model_id="meta-llama/Llama-3.3-70B-Instruct")
+agent = ToolCallingAgent(tools=[...], model=model)
+
+@pytest.fixture
+def llm_eval_agent():
+    return SmolagentsAdapter(agent)
+```
+
+Install the optional extra for smolagents support:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-agent-eval[smolagents]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-agent-eval[smolagents]"
+    ```
+
+The adapter offloads the sync `agent.run` to a worker thread with `asyncio.to_thread`. It detects the first turn of a transcript via `len(history) == 1` and passes `reset=True` so each transcript starts with fresh agent memory; subsequent turns pass `reset=False` to continue the conversation.
+
+Tool-call names are collected from new entries in `agent.memory.steps`. Smolagents-internal pseudo-tools (`python_interpreter`, used by `CodeAgent`, and `final_answer`, the termination tool) are filtered by default. Pass `include_internal_tools=True` to see them.
+
+!!! note "CodeAgent and tool-call assertions"
+    `CodeAgent` runs tools by executing generated Python; smolagents records only the `python_interpreter` step, not the inner tool calls. If you need fine-grained tool-call assertions with `ToolCallEvaluator`, use `ToolCallingAgent`.
+
+**Constructor:**
+
+| Parameter                | Type   | Default | Description                                                                  |
+|--------------------------|--------|---------|------------------------------------------------------------------------------|
+| `agent`                  | `Any`  | required | A smolagents agent (`ToolCallingAgent`, `CodeAgent`, or duck-typed equivalent) |
+| `include_internal_tools` | `bool` | `False`  | When `True`, return `python_interpreter` and `final_answer` in tool calls    |
+
+## `LiveKitAdapter` (voice) {#livekit-voice}
+
+Wraps a [LiveKit Agents](https://docs.livekit.io/agents) `AgentSession` so you can drive a real voice agent from a WAV file per turn. The adapter:
+
+1. Reads the WAV path from each turn's `audio:` field (resolved relative to the YAML directory).
+2. Builds a fresh `(AgentSession, Agent)` pair via the user-supplied factory.
+3. Streams the WAV at real-time pace into `session.input.audio`.
+4. Captures `function_tools_executed` events as tool calls and `conversation_item_added` events (filtered to `assistant` items) as the reply.
+5. Returns `(reply, tool_calls)` to the same evaluator surface used by text adapters.
+
+```python
+import pytest
+from livekit.agents.voice import Agent, AgentSession
+from livekit.plugins import openai
+from pytest_agent_eval.adapters.livekit import LiveKitAdapter
+
+def make_session():
+    session = AgentSession(llm=openai.realtime.RealtimeModel())
+    agent = Agent(instructions="You are a booking assistant.", tools=[...])
+    return session, agent
+
+@pytest.fixture
+def llm_eval_agent():
+    return LiveKitAdapter(make_session)
+```
+
+YAML transcript with WAV references (paths resolve relative to the YAML file's directory):
+
+```yaml
+# tests/evals/booking_voice.yaml
+id: booking_voice
+turns:
+  - user: "Book me a slot tomorrow at 10am."
+    audio: booking_t1.wav
+    expect:
+      tool_calls_include: [create_booking]
+      reply_contains_any: [confirmed, booked]
+```
+
+Install the optional extra:
+
+=== "pip"
+
+    ```bash
+    pip install "pytest-agent-eval[livekit]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "pytest-agent-eval[livekit]"
+    ```
+
+The extra pulls `livekit-agents>=0.12`, `livekit-plugins-openai>=0.10`, and `openai>=1.0`.
+
+### Generating audio fixtures
+
+A bundled CLI synthesises WAVs from each turn's `user:` text via OpenAI Realtime (text-in, audio-out). Hash sidecars (`<wav>.hash` = `sha256(turn.user)`) skip re-synthesis when the transcript hasn't changed. Real recordings work just as well; the adapter doesn't care how the WAV was produced.
+
+```bash
+# Synthesise every YAML under [tool.agent_eval].yaml_dirs
+python -m pytest_agent_eval.synthesize_audio
+
+# Explicit paths (file or directory)
+python -m pytest_agent_eval.synthesize_audio tests/evals/
+python -m pytest_agent_eval.synthesize_audio tests/evals/booking_voice.yaml
+
+# Re-synth everything regardless of cache
+python -m pytest_agent_eval.synthesize_audio --force
+```
+
+The CLI requires `OPENAI_API_KEY` and writes a `.gitignore` next to every WAV (`*.wav`, `*.wav.hash`) so generated audio stays local. Commit YAML transcripts only.
+
+**Constructor:**
+
+| Parameter         | Type                                | Default | Description                                                                |
+|-------------------|-------------------------------------|---------|----------------------------------------------------------------------------|
+| `session_factory` | `Callable[[], (AgentSession, Agent)]` | required | Returns a fresh session + agent on every call (one per turn)             |
+| `sample_rate`     | `int`                               | `24000` | WAV sample rate in Hz; must match the input file                          |
+| `frame_ms`        | `int`                               | `20`    | Frame size in ms; default matches OpenAI Realtime's preferred chunk size  |
+| `grace_period_s`  | `float`                             | `8.0`   | Seconds to wait after WAV exhaustion for trailing tool calls              |
+| `timeout_s`       | `float`                             | `30.0`  | Maximum seconds to wait for WAV exhaustion before forcibly closing        |
+
+## Writing a custom adapter
+
+Any async callable that accepts `list[dict]` and returns `(str, list[str])` works directly. No base class needed:
+
+```python
+import pytest
+
+async def my_custom_agent(messages: list[dict]) -> tuple[str, list[str]]:
+    """
+    messages: OpenAI-style [{"role": "user", "content": "..."}, ...]
+    Returns: (reply_text, list_of_tool_names_called)
+    """
+    user_text = messages[-1]["content"]
+    reply = await call_my_backend(user_text)
+    return reply, []    # return empty list if no tool tracking
+
+@pytest.fixture
+def llm_eval_agent():
+    return my_custom_agent
+```
+
+### Capturing tool-call arguments
+
+Plain tool-name strings support name assertions (`tool_calls_include`, `ordered`, ...) but not argument assertions. To enable `tool_calls_args` / `ToolCallArgsEvaluator`, return `ToolCall(name, args)` entries instead — `ToolCall` subclasses `str`, so everything that worked with names keeps working:
+
+The `args` must be a mapping (`dict`). If your framework hands you a JSON string (as OpenAI-style tool calls do), parse it first — the bundled adapters route through an internal `coerce_args` helper that does exactly this:
+
+```python
+import json
+from pytest_agent_eval import ToolCall
+
+def _to_dict(raw):
+    if isinstance(raw, dict):
+        return raw
+    try:
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else None
+    except (TypeError, ValueError):
+        return None
+
+async def my_custom_agent(messages):
+    reply, calls = await call_my_backend(messages[-1]["content"])
+    return reply, [ToolCall(c.name, _to_dict(c.arguments)) for c in calls]
+```
+
+All bundled adapters already capture arguments this way. When arguments are missing or not a dict, argument evaluators fail with an explicit "no dict arguments were captured" message rather than a misleading mismatch.
+
+If your agent wraps a synchronous function, use `asyncio.to_thread`:
+
+```python
+import asyncio
+
+async def my_sync_wrapper(messages):
+    def _sync(text):
+        return my_blocking_agent(text), []
+    return await asyncio.to_thread(_sync, messages[-1]["content"])
+```
+
+
+<!-- source: configuration.md -->
+
+# Configuration
+
+All configuration lives under `[tool.agent_eval]` in `pyproject.toml`.
+
+## Complete example
+
+```toml
+[tool.agent_eval]
+model     = "openai:gpt-4o"
+threshold = 0.8
+runs      = 3
+retries   = 2
+timeout   = 30
+yaml_dirs = ["tests/evals"]
+live      = false
+```
+
+## Fields
+
+### `model`
+
+**Type:** `str`
+**Default:** `"openai:gpt-4o"`
+
+The pydantic-ai model ID used by `JudgeEvaluator` and for YAML-defined judge rubrics.
+Format is `provider:model-name`, e.g.:
+
+- `"openai:gpt-4o"`
+- `"openai:gpt-4o-mini"`
+- `"anthropic:claude-3-5-sonnet-latest"`
+
+### `threshold`
+
+**Type:** `float`
+**Default:** `0.8`
+
+The default pass fraction across runs. A test passes when `passed_runs / total_runs >= threshold`.
+
+Individual tests override this via `@pytest.mark.agent_eval(threshold=0.9)` or the YAML `threshold` field.
+
+### `runs`
+
+**Type:** `int`
+**Default:** `1`
+
+The default number of times each transcript is executed. Higher values reduce the impact of nondeterminism but increase cost.
+
+Individual tests override this via `@pytest.mark.agent_eval(runs=5)` or the YAML `runs` field.
+
+### `retries`
+
+**Type:** `int`
+**Default:** `2`
+
+Number of times a failed LLM-judge call is retried before the judge returns a FAIL verdict. Applies to judge evaluators the plugin builds from YAML `judge` / `tool_calls_args[].judge` config and the `agent_eval` fixture. A `JudgeEvaluator(...)` you construct yourself and pass in `Expect(evaluators=[...])` keeps its own constructor arguments. Agent calls are never retried.
+
+### `timeout`
+
+**Type:** `int`
+**Default:** `30`
+
+Per-judge-call timeout in seconds. A judge call that does not return within this window counts as a failed attempt (see `retries`).
+
+### `yaml_dirs`
+
+**Type:** `list[str]`
+**Default:** `["tests/evals"]`
+
+Directories to search recursively for `*.yaml` evaluation transcripts. Paths are relative to the project root (where `pyproject.toml` lives).
+
+### `live`
+
+**Type:** `bool`
+**Default:** `false`
+
+When `true`, eval tests run without needing `--agent-eval-live` or `EVAL_LIVE=1`. Useful for local development but should remain `false` in shared/CI config.
+
+### `groups`
+
+**Type:** tables under `[tool.agent_eval.groups.<name>]`
+
+Quality-gate groups with aggregate pass thresholds and `must_pass` pins. See [Group thresholds](groups.md) for keys and semantics.
+
+## Precedence
+
+Command-line flag `--agent-eval-live` > `EVAL_LIVE=1` env var > `live = true` in config > default (skip).
+
+Per-test `threshold`/`runs` in the mark or YAML always override the global config values.
+
+
+<!-- source: groups.md -->
+
+# Group thresholds
+
+LLM evals are probabilistic; a suite of them fails somewhere almost every run. Group thresholds let you gate CI on **aggregate pass rates** ("90% of booking evals must pass") instead of every individual test, while still pinning down the tests that must never break.
+
+## Configuration
+
+Groups live under `[tool.agent_eval.groups]` in `pyproject.toml`:
+
+```toml
+[tool.agent_eval.groups.booking]
+threshold = 0.9                          # 90% of matched tests must pass
+tags = ["gate:booking"]                  # match transcripts by tag
+pytest_markers = ["booking"]             # ...and/or plain tests by marker
+must_pass = ["booking_confirmation"]     # these must individually pass
+
+[tool.agent_eval.groups.smoke]
+tags = ["smoke"]                         # threshold defaults to 1.0
+```
+
+| Key              | Type        | Default | Description                                                        |
+|------------------|-------------|---------|--------------------------------------------------------------------|
+| `threshold`      | `float`     | `1.0`   | Fraction of matched, non-skipped tests that must pass (0.0-1.0)    |
+| `tags`           | `list[str]` | `[]`    | Transcript tags that select members                                |
+| `pytest_markers` | `list[str]` | `[]`    | Pytest marker names that select members                            |
+| `must_pass`      | `list[str]` | `[]`    | Test identities that must individually pass whenever they run      |
+
+Group config is validated strictly: unknown keys, bad types, and out-of-range thresholds abort the run with a usage error. A typo'd `must_pass` silently disabling a CI gate would be worse.
+
+Markers named in `pytest_markers` are auto-registered, so `--strict-markers` projects don't need extra `markers =` ini entries.
+
+## Membership
+
+A test belongs to a group when **any** of its tags or markers intersects the group's `tags`/`pytest_markers`:
+
+- YAML transcripts contribute their `tags:` list (also visible as `tags=` on their `agent_eval` marker).
+- Python tests contribute their pytest markers, so `@pytest.mark.booking` joins any group with `pytest_markers = ["booking"]` — plain non-LLM tests included.
+
+A test can belong to several groups; it counts in each.
+
+## `must_pass` semantics
+
+`must_pass` entries are **assertions, not selectors** — they don't add tests to the group. An entry matches a test whose identity equals it exactly or is one of its parametrizations (`test_thing` matches `test_thing[case1]`). Identities are the transcript `id` for YAML tests and the test name for Python tests.
+
+- If any matching test **failed**, the group fails regardless of its pass rate.
+- If no matching test ran (deselected or skipped), the summary prints a warning — partial selection shouldn't flip gates.
+
+## Pass/fail semantics
+
+For each group per session:
+
+- **Denominator** = matched tests that ran. Skipped tests are excluded (so are xfails, which pytest reports as skips). A group whose matches were all skipped renders as `SKIPPED`, never as a vacuous pass.
+- The group **passes** when `passed / total >= threshold` and no `must_pass` entry failed.
+- A group that matches nothing prints a `WARNING` — usually a stale tag.
+
+Under partial selection (`pytest -k booking_smoke`), the denominator is what actually ran, and a note flags the deselection. In CI you'll normally run the full suite, where the distinction vanishes.
+
+## Exit-code override
+
+When tests failed but every gate is green, the exit code is overridden to `0`. The override applies **only** when all of these hold:
+
+- at least one group matched tests that ran,
+- every such group met its threshold (including `must_pass`),
+- **every failed test in the session belongs to a gated group** — a failing plain unit test or an ungrouped transcript keeps CI red,
+- there were no collection errors.
+
+!!! note "The stats bar still shows failures"
+    An absorbed failure is still a failure in pytest's own summary (`1 failed, 3 passed`) — only the exit code changes, and the group summary prints `exit code overridden to 0` so logs stay honest.
+
+## Terminal output
+
+```text
+============================== group summary ===============================
+booking: 9/10 passed (90%) >= 90% required -- PASSED
+  failures: booking_edge_case
+  must_pass: booking_confirmation ok
+smoke: 4/4 passed (100%) >= 100% required -- PASSED
+exit code overridden to 0: all group thresholds met
+```
+
+Failures are always listed when present — even inside a passing group — so absorbed regressions stay visible in logs.
+
+The [markdown report](reporting.md) gains a `## Groups` section with the same numbers when groups are configured.
+
+## Parallel execution
+
+Group aggregation works under `pytest-xdist` (`-n auto`): workers forward each test's identity, tags, and markers to the controller, which aggregates and applies the override exactly as in single-process runs.
+
+
+<!-- source: reporting.md -->
+
+# Reporting
+
+`pytest-agent-eval` adds score information to pytest's standard terminal output and can optionally write a full markdown report.
+
+## Verbosity levels
+
+### Default (no `-v`)
+
+Tests appear with the standard `PASSED`/`FAILED` status. No extra LLM eval detail is shown inline.
+
+```
+tests/test_booking.py::test_booking_flow PASSED
+tests/test_booking.py::test_refund_flow FAILED
+```
+
+### `-v` (one verbose flag)
+
+A score summary line is appended to each eval test's output section:
+
+```
+tests/test_booking.py::test_booking_flow PASSED
+  ---- LLM Eval ----
+  [3/3 runs, score=1.00 >= 0.80]
+    Run 1 ✅
+    Run 2 ✅
+    Run 3 ✅
+```
+
+### `-vv` (two verbose flags)
+
+Per-turn evaluator reasoning is included:
+
+```
+tests/test_booking.py::test_booking_flow PASSED
+  ---- LLM Eval ----
+  [3/3 runs, score=1.00 >= 0.80]
+    Run 1 ✅
+      All substring and pattern checks passed
+      All tool call checks passed
+    Run 2 ✅
+      All substring and pattern checks passed
+      All tool call checks passed
+```
+
+## The `--agent-eval-report` flag
+
+Pass a file path to write a full markdown report after the session:
+
+```bash
+pytest --agent-eval-live --agent-eval-report=eval-report.md
+```
+
+## Markdown report format
+
+The generated report has two sections: a summary table and per-transcript details.
+
+The summary table lists each transcript with its run count, pass count, score, threshold, and pass/fail status.
+The details section shows every run with turn-level evaluator reasoning.
+
+When [group thresholds](groups.md) are configured, a `## Groups` section with per-group pass rates and failures appears between Summary and Details, and a `group summary` section is printed in the terminal.
+
+## Configuring the report path
+
+You can set a default report path in `pyproject.toml` so you do not need to pass the flag every time:
+
+```toml
+[tool.agent_eval]
+report_path = "eval-report.md"
+```
+
+The command-line flag always takes precedence over the config value.
+
+
+<!-- source: agents.md -->
+
+# Using with coding agents
+
+pytest-agent-eval is built to be authored by LLMs as much as by people: transcripts are plain YAML with a published schema, error messages name the field and suggest the fix, and the whole documentation ships in agent-ingestible form.
+
+Point your coding agent (Claude Code, Cursor, Copilot, ...) at these resources:
+
+- **[`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt)** — the index, at the site root per the [llms.txt convention](https://llmstxt.org/)
+- **[`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt)** — the entire documentation as one file, for tools that ingest a single URL
+- **[JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json)** — machine-readable transcript format
+- **[`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples)** — small runnable projects, one per feature
+
+## AGENTS.md snippet
+
+Paste this into your repository's `AGENTS.md` / `CLAUDE.md` so agents write correct evals on the first try:
+
+````markdown
+## Writing agent evals (pytest-agent-eval)
+
+Prefer YAML transcripts over Python tests. Put them in the directory named by
+`yaml_dirs` under `[tool.agent_eval]` in pyproject.toml (default: tests/evals/);
+each file becomes a pytest test automatically. Start every file with:
+
+    # yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+
+Canonical multi-turn transcript:
+
+    id: booking_flow            # unique; becomes the test name
+    threshold: 0.66             # fraction of runs that must pass
+    runs: 3
+    tags: [gate:booking]        # feeds [tool.agent_eval.groups] CI gates
+    turns:
+      - user: "Book me a slot tomorrow at 10am."
+        expect:
+          reply_contains_any: [confirmed, booked]
+          tool_calls_include: [create_booking]
+          tool_calls_args:
+            - tool: create_booking
+              args: {time: "10am"}          # subset match (mode: exact for equality)
+      - user: "Actually make it 11am."
+        expect:
+          tool_calls_include: [update_booking]
+          tool_calls_exclude: [create_booking]
+          judge:
+            rubric: "Confirms the new time and references the original booking."
+
+All expect fields (each optional): reply_contains_any, reply_contains_all,
+reply_matches_any, reply_matches_all (regex via re.search), tool_calls_include,
+tool_calls_exclude, tool_calls_ordered (bool), tool_calls_args (tool/args/mode/judge),
+judge (rubric/model).
+
+Evaluator cheat-sheet: contains/matches = deterministic string checks on the reply;
+tool_calls_* = which tools ran, their order, and their arguments; judge = LLM-graded
+rubric (costs tokens; prefer deterministic checks when possible).
+
+Gotchas:
+- Eval tests are SKIPPED unless run with `--agent-eval-live` or `EVAL_LIVE=1`.
+  "N eval test(s) skipped — live mode is off" in the output means they did not run.
+- A conftest.py fixture named `llm_eval_agent` must return the agent under test:
+  an async callable `(messages) -> (reply, tool_calls)`. Framework adapters exist
+  for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
+
+Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
+https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (schema),
+https://github.com/datarootsio/pytest-agent-eval/tree/main/examples (runnable examples).
+````
+
+## Why agents do well with this plugin
+
+- **Schema-first authoring** — the `yaml-language-server` directive plus `additionalProperties: false` means invalid files fail loudly, not silently.
+- **Didactic errors** — a typo'd field produces `turns[0].expect: unknown field 'tool_call_include'. Did you mean 'tool_calls_include'?` with the full valid-field list, which agents self-correct from.
+- **Runnable examples** — every feature has a minimal project under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples) that CI keeps working, so copied code starts from a known-good state.
