@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{# widget.js appends to document.body with no DOM-ready guard — must load in the scripts block (body-end), NOT extrahead (<head>), or the chat bubble never mounts #}
 {% block scripts %}
   {{ super() }}
   <script src="https://context7.com/widget.js"
