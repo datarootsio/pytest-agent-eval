@@ -292,4 +292,4 @@ async def test_booking(agent_eval):
 pytest --agent-eval-live
 ```
 
-See [Getting Started](getting-started.md) for a full walkthrough.
+See [Getting Started](getting-started.md) for a full walkthrough, or browse the [Examples](examples.md) for a runnable project per feature.

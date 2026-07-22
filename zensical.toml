@@ -8,6 +8,7 @@ repo_name = "datarootsio/pytest-agent-eval"
 nav = [
     { "Home" = "index.md" },
     { "Getting started" = "getting-started.md" },
+    { "Examples" = "examples.md" },
     { "Writing evals" = [{ "YAML API" = "yaml-api.md" }, { "Python API" = "python-api.md" }, { "Evaluators" = "evaluators.md" }, { "Adapters" = "adapters.md" }] },
     { "Running & CI" = [{ "Configuration" = "configuration.md" }, { "Group thresholds" = "groups.md" }, { "Reporting" = "reporting.md" }] },
     { "Using with coding agents" = "agents.md" },
