@@ -24,8 +24,9 @@ import hashlib
 import sys
 import tomllib
 import wave
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import yaml
 
@@ -198,6 +199,14 @@ async def _synth_pcm_via_realtime(
     return b"".join(chunks)
 
 
+class _SynthFn(Protocol):
+    """Synthesises PCM for one piece of text. Injected so tests need no live Realtime session."""
+
+    async def __call__(self, client: Any, *, text: str, voice: str, model: str) -> bytes:
+        """Return raw PCM16 audio for ``text``."""
+        ...
+
+
 async def _synth_with_retry(
     client: Any,
     *,
@@ -205,11 +214,12 @@ async def _synth_with_retry(
     voice: str,
     model: str,
     label: str,
+    synth: _SynthFn = _synth_pcm_via_realtime,
 ) -> bytes:
     last_exc: BaseException | None = None
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            return await _synth_pcm_via_realtime(client, text=text, voice=voice, model=model)
+            return await synth(client, text=text, voice=voice, model=model)
         except Exception as exc:
             last_exc = exc
             if attempt == _MAX_RETRIES or not _is_transient(exc):
@@ -242,6 +252,7 @@ async def _process_one(
     client: Any,
     voice: str,
     model: str,
+    synth: _SynthFn = _synth_pcm_via_realtime,
 ) -> str:
     """Return ``"synthesised"``, ``"up-to-date"``, or ``"failed"``."""
     hash_path = audio_path.with_suffix(audio_path.suffix + ".hash")
@@ -255,13 +266,19 @@ async def _process_one(
         voice=voice,
         model=model,
         label=audio_path.name,
+        synth=synth,
     )
     _write_pcm_as_wav(pcm, audio_path)
     hash_path.write_text(expected_hash + "\n")
     return "synthesised"
 
 
-async def _run(args: argparse.Namespace) -> int:
+async def _run(
+    args: argparse.Namespace,
+    *,
+    synth: _SynthFn = _synth_pcm_via_realtime,
+    client_factory: Callable[[], Any] = _build_client,
+) -> int:
     inputs = [Path(p) for p in args.paths] if args.paths else _resolve_yaml_dirs_from_pyproject()
     if not inputs:
         print(
@@ -294,7 +311,7 @@ async def _run(args: argparse.Namespace) -> int:
 
     client: Any = None
     if needs_synth:
-        client = _build_client()
+        client = client_factory()
 
     synthesised = 0
     failed = 0
@@ -311,6 +328,7 @@ async def _run(args: argparse.Namespace) -> int:
                     client=client,
                     voice=args.voice,
                     model=args.model,
+                    synth=synth,
                 )
             except Exception as exc:
                 print(f"FAIL  {audio_path}: {exc}", file=sys.stderr)
