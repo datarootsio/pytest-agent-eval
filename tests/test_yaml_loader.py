@@ -560,6 +560,18 @@ def test_yaml_item_passes_with_matching_agent(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
+def test_yaml_item_skips_with_didactic_hint_when_agent_fixture_missing(pytester: pytest.Pytester):
+    """A collected transcript with no llm_eval_agent fixture must teach the fix, not error."""
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makefile(".yaml", **{"tests/evals/no_fixture": "id: needs_agent\nturns:\n  - user: hi\n"})
+    # -rs, not -v: the short summary prints the whole skip reason, which -v truncates.
+    result = pytester.runpytest("--agent-eval-live", "-rs")
+    assert result.ret == 0
+    result.assert_outcomes(skipped=1)
+    assert "llm_eval_agent fixture not defined" in result.stdout.str()
+    assert "INTERNALERROR" not in result.stdout.str()
+
+
 def test_non_assertion_failure_defers_to_pytest_traceback(pytester: pytest.Pytester):
     """repr_failure renders threshold assertions plainly but must not swallow real errors."""
     pytester.makeini("[pytest]\nasyncio_mode = auto\n")

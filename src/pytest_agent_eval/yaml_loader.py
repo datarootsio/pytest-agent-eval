@@ -307,8 +307,12 @@ class AgentEvalItem(pytest.Item):
         # Wire up pytest fixture machinery so llm_eval_agent is injected.
         fm = self.session._fixturemanager
         fixtureinfo = fm.getfixtureinfo(node=self, func=None, cls=None)
-        # Append our required fixture to the closure so pytest resolves it.
-        if "llm_eval_agent" not in fixtureinfo.names_closure:
+        # Only request the fixture when it actually resolves for this node. Adding an
+        # undefined name to the closure makes setup() raise FixtureLookupError, whose
+        # formatrepr() does `self.request._pyfuncitem.obj` — an attribute only
+        # function-based items have — turning a forgotten fixture into a pytest
+        # INTERNALERROR instead of the didactic skip in runtest().
+        if fm.getfixturedefs("llm_eval_agent", self) and "llm_eval_agent" not in fixtureinfo.names_closure:
             fixtureinfo.names_closure.append("llm_eval_agent")
         self._fixtureinfo = fixtureinfo
         self.fixturenames = fixtureinfo.names_closure
