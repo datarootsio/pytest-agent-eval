@@ -47,8 +47,12 @@ def test_public_records_are_frozen_and_slotted(record: type) -> None:
 
 @pytest.mark.parametrize("config", MUTABLE_CONFIG, ids=lambda c: c.__name__)
 def test_user_constructed_config_stays_mutable(config: type) -> None:
-    """Documented as a deliberate asymmetry, not an oversight."""
-    assert not config.__dataclass_params__.frozen
+    """Documented as a deliberate asymmetry, not an oversight.
+
+    These are pydantic models (they parse external documents); the check is that
+    validation did not also make them read-only.
+    """
+    assert not config.model_config.get("frozen", False)
 
 
 def test_no_dataclass_hides_attributes_from_its_field_list() -> None:

@@ -6,24 +6,36 @@ change to the agent contract is a one-line edit rather than a sweep.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, NamedTuple, TypeAlias
+from typing import Annotated, Literal, NamedTuple, Protocol, TypeAlias, runtime_checkable
 
-if TYPE_CHECKING:
-    from pytest_agent_eval.evaluators.base import Evaluator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    WithJsonSchema,
+    field_validator,
+    model_validator,
+)
+from pydantic.json_schema import SkipJsonSchema
+from pydantic_ai.models import Model
 
 _PathLike = str | Path
 
 Role: TypeAlias = Literal["user", "assistant", "system"]
 """Who produced a conversation message."""
 
-JsonValue: TypeAlias = "str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]"
-"""Anything that survives a JSON round-trip."""
+JsonMapping: TypeAlias = dict[str, JsonValue]
+"""A JSON object — tool-call arguments, serialised results, config sections.
 
-JsonMapping: TypeAlias = "dict[str, JsonValue]"
-"""A JSON object — tool-call arguments, serialised results, config sections."""
+``JsonValue`` is re-exported from pydantic rather than hand-rolled: a recursive alias
+written as a string cannot be resolved by pydantic when it appears in a model field.
+"""
 
 ToolCalls: TypeAlias = Sequence[str]
 """Tool calls from one turn.
@@ -242,22 +254,91 @@ class TranscriptResult:
             )
 
 
-@dataclass
-class JudgeConfig:
+@runtime_checkable
+class Evaluator(Protocol):
+    """Protocol that all evaluators must satisfy.
+
+    Implement this protocol to create custom evaluators. Defined here, alongside the
+    types it references, so ``Expect.evaluators`` can name it without a circular import;
+    re-exported from ``pytest_agent_eval.evaluators.base`` for back-compatibility.
+
+    Example:
+        ```python
+        @dataclass
+        class MyEvaluator:
+            expected_tone: str
+
+            async def evaluate(self, ctx: TurnContext) -> EvalResult:
+                if self.expected_tone in ctx.reply.lower():
+                    return EvalResult(passed=True)
+                return EvalResult(passed=False, reasoning="Expected tone not found")
+        ```
+    """
+
+    async def evaluate(self, ctx: TurnContext) -> EvalResult:
+        """Evaluate a single turn.
+
+        Args:
+            ctx: The turn context containing user message, reply, tool calls, and history.
+
+        Returns:
+            EvalResult with passed=True/False and optional reasoning.
+        """
+        ...
+
+
+class _StrictModel(BaseModel):
+    """Base for every type parsed from an external document.
+
+    ``extra="forbid"`` is the point: a typo'd field in a transcript would otherwise
+    silently disable the assertion it was meant to express. ``arbitrary_types_allowed``
+    is needed for ``Expect.evaluators``, which holds user objects.
+    """
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=True, arbitrary_types_allowed=True)
+
+
+def _reject_non_numeric(value: object) -> object:
+    """Reject bools and strings before lax coercion silently accepts them.
+
+    Verified against pydantic 2.13: lax mode reads ``threshold: true`` as 1.0 and
+    ``threshold: "0.5"`` as 0.5, both of which today's validation rejects. A YAML author
+    writing either meant something else.
+    """
+    if isinstance(value, bool | str):
+        raise ValueError("must be a number, not a boolean or string")
+    return value
+
+
+def _valid_regex(pattern: str) -> str:
+    """Reject a pattern that will not compile, at load time rather than mid-run."""
+    try:
+        re.compile(pattern, re.IGNORECASE)
+    except re.error as exc:
+        raise ValueError(f"invalid regex pattern {pattern!r}: {exc}") from exc
+    return pattern
+
+
+RegexPattern: TypeAlias = Annotated[str, AfterValidator(_valid_regex)]
+"""A regex validated per item, so the error names the offending index."""
+
+
+class JudgeConfig(_StrictModel):
     """Judge configuration for a YAML transcript turn.
 
     Args:
         rubric: The rubric string passed to the LLM judge.
-        model: Optional pydantic-ai model ID override (e.g. "openai:gpt-4o").
-            Falls back to [tool.agent_eval] model if None.
+        model: Optional pydantic-ai model ID override (e.g. "openai:gpt-4o"), or a
+            pydantic-ai ``Model`` instance. Falls back to [tool.agent_eval] model if None.
     """
 
     rubric: str
-    model: str | None = None
+    # A Model instance, not just an ID: the SDK test models are passed this way, and the
+    # Python API has always accepted them even though the annotation said otherwise.
+    model: str | Model | None = None
 
 
-@dataclass
-class ToolCallArgsConfig:
+class ToolCallArgsConfig(_StrictModel):
     """One tool-argument assertion in a YAML transcript turn.
 
     Args:
@@ -275,20 +356,23 @@ class ToolCallArgsConfig:
     mode: ToolCallArgsMode = "subset"
     judge: JudgeConfig | None = None
 
-    def __post_init__(self) -> None:
+    @model_validator(mode="after")
+    def _needs_args_or_judge(self) -> ToolCallArgsConfig:
+        """An entry with neither is a silently vacuous assertion."""
         if self.args is None and self.judge is None:
             raise ValueError(
                 f"tool_calls_args entry for {self.tool!r} needs 'args' (deterministic check) "
                 "or 'judge' (LLM-judged rubric); got neither"
             )
+        return self
 
 
-@dataclass
-class Expect:
+class Expect(_StrictModel):
     """Expectations for a single transcript turn.
 
     Args:
-        evaluators: Programmatic evaluators (Python API).
+        evaluators: Programmatic evaluators (Python API). Excluded from serialisation
+            and from the JSON schema, since they are Python objects.
         judge: YAML-defined judge config.
         tool_calls_include: Tool names that must appear in tool_calls.
         tool_calls_exclude: Tool names that must NOT appear in tool_calls.
@@ -300,20 +384,23 @@ class Expect:
         reply_matches_all: Reply must match all of these regex patterns.
     """
 
-    evaluators: list[Evaluator] = field(default_factory=list)
+    # SkipJsonSchema because arbitrary user objects have no JSON representation; exclude
+    # because they must not appear in a serialised transcript. With Evaluator being
+    # runtime_checkable, pydantic isinstance-checks each entry — a stronger constraint
+    # than the list[Any] this replaces.
+    evaluators: Annotated[list[Evaluator], SkipJsonSchema(), Field(default_factory=list, exclude=True)]
     judge: JudgeConfig | None = None
-    tool_calls_include: list[str] = field(default_factory=list)
-    tool_calls_exclude: list[str] = field(default_factory=list)
+    tool_calls_include: list[str] = Field(default_factory=list)
+    tool_calls_exclude: list[str] = Field(default_factory=list)
     tool_calls_ordered: bool = False
-    tool_calls_args: list[ToolCallArgsConfig] = field(default_factory=list)
-    reply_contains_any: list[str] = field(default_factory=list)
-    reply_contains_all: list[str] = field(default_factory=list)
-    reply_matches_any: list[str] = field(default_factory=list)
-    reply_matches_all: list[str] = field(default_factory=list)
+    tool_calls_args: list[ToolCallArgsConfig] = Field(default_factory=list)
+    reply_contains_any: list[str] = Field(default_factory=list)
+    reply_contains_all: list[str] = Field(default_factory=list)
+    reply_matches_any: list[RegexPattern] = Field(default_factory=list)
+    reply_matches_all: list[RegexPattern] = Field(default_factory=list)
 
 
-@dataclass
-class Turn:
+class Turn(_StrictModel):
     """A single turn in a transcript.
 
     Args:
@@ -324,12 +411,13 @@ class Turn:
     """
 
     user: str
-    audio: _PathLike | None = None
-    expect: Expect = field(default_factory=Expect)
+    # WithJsonSchema keeps the published schema saying "string"; a bare Path field emits
+    # {"format": "path"}, which editors then flag on a perfectly good transcript.
+    audio: Annotated[_PathLike | None, WithJsonSchema({"type": "string"})] = None
+    expect: Expect = Field(default_factory=Expect)
 
 
-@dataclass
-class Transcript:
+class Transcript(_StrictModel):
     """A multi-turn evaluation transcript.
 
     Args:
@@ -341,7 +429,9 @@ class Transcript:
     """
 
     id: str
-    turns: list[Turn]
-    threshold: float = 0.8
-    runs: int = 1
-    tags: list[str] = field(default_factory=list)
+    turns: list[Turn] = Field(min_length=1)
+    threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    runs: int = Field(default=1, ge=1)
+    tags: list[str] = Field(default_factory=list)
+
+    _reject_bad_numbers = field_validator("threshold", "runs", mode="before")(_reject_non_numeric)

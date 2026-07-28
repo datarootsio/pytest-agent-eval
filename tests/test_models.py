@@ -86,10 +86,16 @@ def test_transcript_result_fails_when_score_below_threshold():
 
 
 def test_transcript_defaults():
-    t = Transcript(id="test", turns=[])
+    t = Transcript(id="test", turns=[Turn(user="hi")])
     assert t.threshold == 0.8
     assert t.runs == 1
     assert t.tags == []
+
+
+def test_transcript_rejects_an_empty_turn_list():
+    """A vacuous transcript would pass without asserting anything."""
+    with pytest.raises(ValueError, match="at least 1 item|too_short"):
+        Transcript(id="test", turns=[])
 
 
 def test_expect_defaults():

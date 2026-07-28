@@ -9,6 +9,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic_ai import Agent
+from pydantic_ai.models import Model
 
 from pytest_agent_eval.models import EvalResult, TurnContext
 
@@ -31,7 +32,7 @@ class _JudgeOutput(BaseModel):
     reasoning: str
 
 
-def _build_judge_agent(model: str | None, system_prompt: str) -> "Agent[None, _JudgeOutput]":
+def _build_judge_agent(model: str | Model | None, system_prompt: str) -> Agent[None, _JudgeOutput]:
     if model is None:
         from pytest_agent_eval.config import load_config_from_toml
 
@@ -39,7 +40,7 @@ def _build_judge_agent(model: str | None, system_prompt: str) -> "Agent[None, _J
     return Agent(model, output_type=_JudgeOutput, system_prompt=system_prompt)
 
 
-async def _run_judge(agent: "Agent[None, _JudgeOutput]", user_msg: str, retries: int, timeout: float) -> EvalResult:
+async def _run_judge(agent: Agent[None, _JudgeOutput], user_msg: str, retries: int, timeout: float) -> EvalResult:
     last_error: Exception | None = None
     for _ in range(retries + 1):
         try:
@@ -85,12 +86,12 @@ class JudgeEvaluator:
     """
 
     rubric: str
-    model: str | None = None
+    model: str | Model | None = None
     retries: int = 2
     timeout: float = 30.0
-    _agent: "Agent[None, _JudgeOutput] | None" = field(default=None, init=False, repr=False)
+    _agent: Agent[None, _JudgeOutput] | None = field(default=None, init=False, repr=False)
 
-    def _get_agent(self) -> "Agent[None, _JudgeOutput]":
+    def _get_agent(self) -> Agent[None, _JudgeOutput]:
         if self._agent is None:
             self._agent = _build_judge_agent(self.model, _SYSTEM_PROMPT)
         return self._agent
@@ -130,12 +131,12 @@ class ToolCallArgsJudgeEvaluator:
 
     tool: str
     rubric: str
-    model: str | None = None
+    model: str | Model | None = None
     retries: int = 2
     timeout: float = 30.0
-    _agent: "Agent[None, _JudgeOutput] | None" = field(default=None, init=False, repr=False)
+    _agent: Agent[None, _JudgeOutput] | None = field(default=None, init=False, repr=False)
 
-    def _get_agent(self) -> "Agent[None, _JudgeOutput]":
+    def _get_agent(self) -> Agent[None, _JudgeOutput]:
         if self._agent is None:
             self._agent = _build_judge_agent(self.model, _ARGS_SYSTEM_PROMPT)
         return self._agent

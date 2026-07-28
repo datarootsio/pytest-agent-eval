@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import json
 from pathlib import Path
 
@@ -12,13 +11,6 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
 from pytest_agent_eval.models import Expect, JudgeConfig, ToolCallArgsConfig, Transcript, Turn
-from pytest_agent_eval.yaml_loader import (
-    EXPECT_FIELDS,
-    JUDGE_FIELDS,
-    TOOL_CALLS_ARGS_FIELDS,
-    TOP_LEVEL_FIELDS,
-    TURN_FIELDS,
-)
 
 REPO_ROOT = Path(__file__).parent.parent
 SCHEMA_PATH = REPO_ROOT / "docs" / "schema" / "transcript.json"
@@ -71,20 +63,66 @@ def test_schema_rejects_tool_calls_args_without_args_or_judge():
         VALIDATOR.validate({"id": "t", "turns": [{"user": "hi", "expect": {"tool_calls_args": [{"tool": "x"}]}}]})
 
 
-def _dataclass_field_names(cls: type) -> set[str]:
-    return {f.name for f in dataclasses.fields(cls) if f.init}
+def _model_field_names(cls: type) -> set[str]:
+    return {name for name, f in cls.model_fields.items() if not f.exclude}
 
 
-def test_three_way_parity_schema_loader_dataclasses():
-    """Schema properties == loader known-field sets == dataclass fields (modulo Python-only fields)."""
-    schema_top = set(SCHEMA["properties"])
-    schema_turn = set(SCHEMA["$defs"]["turn"]["properties"])
-    schema_expect = set(SCHEMA["$defs"]["expect"]["properties"])
-    schema_judge = set(SCHEMA["$defs"]["judge"]["properties"])
-    schema_args = set(SCHEMA["$defs"]["toolCallArgs"]["properties"])
+def test_published_schema_matches_the_models():
+    """The shipped schema and the models must agree field-for-field.
 
-    assert schema_top == set(TOP_LEVEL_FIELDS) == _dataclass_field_names(Transcript)
-    assert schema_turn == set(TURN_FIELDS) == _dataclass_field_names(Turn)
-    assert schema_expect == set(EXPECT_FIELDS) == _dataclass_field_names(Expect) - {"evaluators"}
-    assert schema_judge == set(JUDGE_FIELDS) == _dataclass_field_names(JudgeConfig)
-    assert schema_args == set(TOOL_CALLS_ARGS_FIELDS) == _dataclass_field_names(ToolCallArgsConfig)
+    The models are now the single source of truth — the loader's hand-maintained
+    frozensets are gone — so this checks the *published artifact* has not drifted from
+    them. Editors point at that file, so it can be stale in a way the models cannot.
+    """
+    assert set(SCHEMA["properties"]) == _model_field_names(Transcript)
+    assert set(SCHEMA["$defs"]["turn"]["properties"]) == _model_field_names(Turn)
+    assert set(SCHEMA["$defs"]["expect"]["properties"]) == _model_field_names(Expect)
+    assert set(SCHEMA["$defs"]["judge"]["properties"]) == _model_field_names(JudgeConfig)
+    assert set(SCHEMA["$defs"]["toolCallArgs"]["properties"]) == _model_field_names(ToolCallArgsConfig)
+
+
+def test_evaluators_is_excluded_from_the_schema():
+    """It holds arbitrary Python objects, which have no JSON representation."""
+    assert "evaluators" in Expect.model_fields
+    assert "evaluators" not in _model_field_names(Expect)
+    generated = Transcript.model_json_schema()
+    assert "evaluators" not in generated["$defs"]["Expect"]["properties"]
+
+
+def test_generated_schema_keeps_audio_a_string():
+    """A bare Path field would emit {"format": "path"}, which editors flag on valid YAML."""
+    generated = Transcript.model_json_schema()
+    turn = generated["$defs"]["Turn"]["properties"]["audio"]
+    assert json.dumps(turn).count("path") == 0, turn
+
+
+@pytest.mark.parametrize(
+    ("document", "should_pass"),
+    [
+        ({"id": "t", "turns": [{"user": "hi"}]}, True),
+        ({"id": "t", "threshold": 1, "turns": [{"user": "hi"}]}, True),
+        ({"id": "t", "runs": 2.0, "turns": [{"user": "hi"}]}, True),
+        ({"id": "t", "thresold": 0.8, "turns": [{"user": "hi"}]}, False),
+        ({"id": "t", "threshold": "high", "turns": [{"user": "hi"}]}, False),
+        ({"id": "t", "turns": []}, False),
+        ({"turns": [{"user": "hi"}]}, False),
+    ],
+    ids=["minimal", "int_threshold", "integral_float_runs", "typo", "bad_type", "no_turns", "no_id"],
+)
+def test_models_and_published_schema_agree_on_acceptance(document: dict, should_pass: bool):
+    """Two independent validators must not disagree about what a valid transcript is.
+
+    A document the schema accepts but the loader rejects (or vice versa) means a user's
+    editor and their test run tell them different things.
+    """
+    from pytest_agent_eval.yaml_loader import TranscriptError, validate_transcript_dict
+
+    schema_ok = VALIDATOR.is_valid(document)
+    try:
+        validate_transcript_dict(document)
+        loader_ok = True
+    except TranscriptError:
+        loader_ok = False
+
+    assert schema_ok is should_pass
+    assert loader_ok is should_pass
