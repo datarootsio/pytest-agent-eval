@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import types
 
+import pytest
+
 from pytest_agent_eval.models import TurnContext
 
 # --- pydantic-ai: real Agent + TestModel end-to-end ---
@@ -184,6 +186,7 @@ def _real_chat_completion() -> object:
 
 
 async def test_openai_adapter_against_real_response_objects():
+    pytest.importorskip("openai")
     from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
     completion = _real_chat_completion()
@@ -206,6 +209,7 @@ async def test_openai_adapter_against_real_response_objects():
 
 
 async def test_langchain_adapter_against_real_aimessage():
+    pytest.importorskip("langchain_core")
     from langchain_core.messages import AIMessage
 
     from pytest_agent_eval.adapters.langchain import LangChainAdapter
@@ -243,6 +247,7 @@ async def test_langchain_adapter_against_real_aimessage():
 
 
 async def test_smolagents_adapter_against_real_memory_objects():
+    pytest.importorskip("smolagents")
     from smolagents.memory import ActionStep
     from smolagents.memory import ToolCall as SmolToolCall
     from smolagents.monitoring import Timing
