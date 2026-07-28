@@ -51,7 +51,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
-      - run: uv sync --group dev
+      # --all-extras: pre-commit runs `ty check src/`, and type-checking the adapters
+      # needs their SDKs importable. Without them ty reports unresolved-import for
+      # livekit/openai/langchain/smolagents, which is a missing dependency in the lint
+      # environment rather than a defect in the code.
+      - run: uv sync --all-extras --group dev
       - run: uv run pre-commit run --all-files
 
   docs-build:
