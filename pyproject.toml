@@ -138,14 +138,19 @@ convention = "google"
 # Listed per file rather than globally, so a NEW file is held to the full bar and this
 # list can only shrink. Each entry names the refactor that closes it.
 #
-#   ANN401  -> a Protocol per duck-typed third-party object (adapters, realtime client)
+#   ANN401  -> pytest passthrough only, now that every adapter and the realtime client
+#              take a real type: **kwargs to pytest.Item, self.funcargs, terminalreporter.
+#              Enumerated in tests/test_public_surface.py::ANY_ALLOWLIST.
 #   PLC0415 -> deferred imports need a `# noqa: PLC0415` and a one-line why
-#   PLR0913 -> a JudgeSettings dataclass bundling config_model/judge_model/retries/timeout
-#   PLR0912 -> splitting _run and the makereport hook
-#   PLW0603 -> the `global _class_cache` becomes functools.cache
+#   PLR0911 -> _message's didactic phrasing table, which is a lookup written as returns
+#   PLR0912 -> splitting _errors._message
+#
+# Closed and therefore deleted, rather than left here reading as outstanding debt:
+#   PLR0913 -> JudgeSettings now bundles config_model/judge_model/retries/timeout
+#   PLW0603 -> the `global _class_cache` became functools.cache
+#   PLR0912 on report.py -> the makereport hook was split
 "src/pytest_agent_eval/_errors.py" = ["PLR0911", "PLR0912", "PLC0415", "E501"]
 "src/pytest_agent_eval/plugin.py" = ["ANN401", "PLC0415"]
-"src/pytest_agent_eval/report.py" = ["PLR0912"]
 "src/pytest_agent_eval/runner.py" = ["PLC0415"]
 # stdout is the product of a CLI entry point.
 "src/pytest_agent_eval/synthesize_audio.py" = ["T201"]
@@ -184,18 +189,21 @@ include = ["src"]
 missing-type-argument = "error"
 possibly-unresolved-reference = "warn"
 
-# --- ratchet: 13 findings remaining, down from 33 ---
+# --- ratchet: 21 findings remaining, down from 33 ---
 # Demoted to warnings so the gate is enforcing for every other rule rather than
 # switched off entirely. Each is closed by a refactor that is not done yet:
 #
-#   unresolved-attribute   -> pytest.StashKey[T] instead of stashing _eval_result and
-#                             _agent_eval_live_skipped as attributes on foreign objects
-#   invalid-argument-type  -> typing the xdist user_properties boundary (values arrive as
-#                             `object` and need an explicit narrowing helper), and
-#                             parse_groups' selector-list accumulation
-#   invalid-method-override -> AgentEvalItem.repr_failure returns str where pytest
-#                             declares str | TerminalRepr
+#   invalid-argument-type  -> 15. Typing the xdist user_properties boundary (values arrive
+#                             as `object` and need an explicit narrowing helper), and
+#                             parse_groups' selector-list accumulation.
+#   unresolved-attribute   -> 2. pytest.StashKey[T] instead of stashing _eval_result and
+#                             _agent_eval_live_skipped as attributes on foreign objects.
+#   invalid-method-override -> 1. AgentEvalItem.repr_failure returns str where pytest
+#                             declares str | TerminalRepr.
 #   call-non-callable, invalid-assignment, invalid-return-type -> one site each
+#
+# Counted, not estimated: `uv run ty check src/ --output-format concise`. Every rule below
+# still has at least one finding, so none can be promoted back to `error` yet.
 unresolved-attribute = "warn"
 invalid-argument-type = "warn"
 invalid-method-override = "warn"
