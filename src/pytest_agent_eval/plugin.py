@@ -101,6 +101,10 @@ def agent_eval(request: pytest.FixtureRequest) -> EvalSession:
 
     cfg = load_config(request.config)
     marker = request.node.get_closest_marker("agent_eval")
+    # Presence, not truthiness: `@pytest.mark.agent_eval(threshold=0.0)` is a real value.
+    # yaml_loader.load_transcript answers the same question with pydantic's
+    # model_fields_set; a marker is not a model, so this stays a hand-rolled `in` check.
+    # Keep the two in step — neither may become a truthiness check.
     threshold = marker.kwargs["threshold"] if (marker and "threshold" in marker.kwargs) else cfg.threshold
     runs = marker.kwargs["runs"] if (marker and "runs" in marker.kwargs) else cfg.runs
     return EvalSession(

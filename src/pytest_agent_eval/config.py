@@ -10,6 +10,7 @@ import pytest
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from pytest_agent_eval.groups import GroupConfig, parse_groups
+from pytest_agent_eval.models import DEFAULT_RUNS, DEFAULT_THRESHOLD
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,8 +42,8 @@ class AgentEvalConfig(BaseModel):
 
     model: str = "openai:gpt-4o"
     judge_model: str | None = None
-    threshold: float = Field(default=0.8, ge=0.0, le=1.0)
-    runs: int = Field(default=1, ge=1)
+    threshold: float = Field(default=DEFAULT_THRESHOLD, ge=0.0, le=1.0)
+    runs: int = Field(default=DEFAULT_RUNS, ge=1)
     retries: int = Field(default=2, ge=0)
     timeout: int = Field(default=30, gt=0)
     yaml_dirs: list[str] = Field(default_factory=lambda: ["tests/evals"])

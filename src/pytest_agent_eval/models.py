@@ -68,6 +68,18 @@ OutcomeName: TypeAlias = Literal["passed", "failed", "skipped"]
 PhaseName: TypeAlias = Literal["setup", "call", "teardown"]
 """A pytest runtest phase."""
 
+DEFAULT_THRESHOLD = 0.8
+"""Fraction of runs that must pass when neither the transcript nor the config says.
+
+Named once and referenced from both places that need it — ``Transcript.threshold`` and
+``AgentEvalConfig.threshold`` — because the literal was previously spelled in three.
+``load_transcript`` is the third: it now takes ``None`` for "leave the model default
+alone", so it does not spell the number at all.
+"""
+
+DEFAULT_RUNS = 1
+"""Times to execute a transcript when neither the transcript nor the config says."""
+
 
 @dataclass(frozen=True, slots=True, eq=False)
 class Message(Mapping[str, str]):
@@ -443,8 +455,8 @@ class Transcript(_StrictModel):
 
     id: str
     turns: list[Turn] = Field(min_length=1)
-    threshold: float = Field(default=0.8, ge=0.0, le=1.0)
-    runs: int = Field(default=1, ge=1)
+    threshold: float = Field(default=DEFAULT_THRESHOLD, ge=0.0, le=1.0)
+    runs: int = Field(default=DEFAULT_RUNS, ge=1)
     tags: list[str] = Field(default_factory=list)
 
     _reject_bad_numbers = field_validator("threshold", "runs", mode="before")(_reject_non_numeric)

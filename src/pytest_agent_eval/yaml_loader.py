@@ -65,14 +65,17 @@ def _resolve_audio_paths(transcript: Transcript, yaml_dir: Path) -> None:
         turn.audio = audio if audio.is_absolute() else yaml_dir / audio
 
 
-def load_transcript(path: Path, *, default_threshold: float = 0.8, default_runs: int = 1) -> Transcript:
+def load_transcript(
+    path: Path, *, default_threshold: float | None = None, default_runs: int | None = None
+) -> Transcript:
     """Parse a YAML file into a Transcript.
 
     Args:
         path: Path to the YAML transcript file.
         default_threshold: Threshold when the document omits one (callers pass
-            the [tool.agent_eval] value).
-        default_runs: Run count when the document omits one.
+            the [tool.agent_eval] value). None leaves the model default alone.
+        default_runs: Run count when the document omits one. None leaves the
+            model default alone.
 
     Returns:
         Parsed Transcript with all fields populated.
@@ -80,14 +83,17 @@ def load_transcript(path: Path, *, default_threshold: float = 0.8, default_runs:
     Raises:
         TranscriptError: If the document fails validation.
     """
-    data = yaml.safe_load(path.read_text())
-    transcript = _validate(data, path.name)
-    # Config defaults apply only where the document is silent, which the parsed model
-    # cannot tell us — so consult the raw mapping.
-    raw = data if isinstance(data, dict) else {}
-    if "threshold" not in raw:
+    transcript = _validate(yaml.safe_load(path.read_text()), path.name)
+    # `model_fields_set` is pydantic's own record of which keys the document supplied, so
+    # a config default fills in only where the author was silent. Presence-based, never
+    # truthiness: `threshold: 0.0` is a real value that `or default_threshold` would eat.
+    # Assignment re-validates, because _StrictModel sets validate_assignment=True.
+    # plugin.py solves the same problem for the Python API, over marker.kwargs — a
+    # different mechanism because a pytest marker is not a pydantic model. Keep the two
+    # in step: both are presence checks, and neither may become a truthiness check.
+    if default_threshold is not None and "threshold" not in transcript.model_fields_set:
         transcript.threshold = default_threshold
-    if "runs" not in raw:
+    if default_runs is not None and "runs" not in transcript.model_fields_set:
         transcript.runs = default_runs
     _resolve_audio_paths(transcript, path.parent)
     return transcript
