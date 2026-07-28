@@ -156,7 +156,7 @@ Wraps a [LiveKit Agents](https://docs.livekit.io/agents) `AgentSession` so you c
 2. Builds a fresh `(AgentSession, Agent)` pair via the user-supplied factory.
 3. Streams the WAV at real-time pace into `session.input.audio`.
 4. Captures `function_tools_executed` events as tool calls and `conversation_item_added` events (filtered to `assistant` items) as the reply.
-5. Returns `(reply, tool_calls)` to the same evaluator surface used by text adapters.
+5. Returns `AgentReply(reply, tool_calls)` — still a tuple — to the same evaluator surface used by text adapters.
 
 ```python
 import pytest
@@ -238,7 +238,7 @@ Any async callable that accepts `list[dict]` and returns `(str, list[str])` work
 ```python
 import pytest
 
-async def my_custom_agent(messages: list[dict]) -> tuple[str, list[str]]:
+async def my_custom_agent(messages: list[dict]) -> tuple[str, list[str]]:  # or -> AgentReply
     """
     messages: OpenAI-style [{"role": "user", "content": "..."}, ...]
     Returns: (reply_text, list_of_tool_names_called)
