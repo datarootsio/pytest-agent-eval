@@ -230,7 +230,10 @@ async def _synth_with_retry(
                 file=sys.stderr,
             )
             await asyncio.sleep(delay)
-    raise last_exc  # type: ignore[misc]
+    # Unreachable: the final attempt (attempt == _MAX_RETRIES) always re-raises, and
+    # every earlier one returns or loops. Kept as a guard against a future edit to the
+    # loop bounds silently returning None.
+    raise last_exc  # type: ignore[misc]  # pragma: no cover
 
 
 def _build_client() -> Any:

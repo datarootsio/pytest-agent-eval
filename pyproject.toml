@@ -95,7 +95,9 @@ exclude_also = [
 ]
 show_missing = true
 skip_covered = true
-fail_under = 88
+# A ratchet: this only ever goes up. fail_under = 95 would make that 5% permanent
+# and unauditable, so exclusions are line-scoped and enumerated instead.
+fail_under = 100
 precision = 1
 
 [tool.ruff]
