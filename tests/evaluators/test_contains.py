@@ -4,16 +4,7 @@ import pytest
 
 from pytest_agent_eval.evaluators.base import Evaluator
 from pytest_agent_eval.evaluators.contains import ContainsEvaluator
-from pytest_agent_eval.models import TurnContext
-
-
-def _ctx(reply: str = "", tool_calls: list[str] | None = None) -> TurnContext:
-    return TurnContext(
-        user="test user",
-        reply=reply,
-        tool_calls=tool_calls or [],
-        history=[],
-    )
+from tests.helpers.contexts import turn_context
 
 
 # --- ContainsEvaluator ---
@@ -22,14 +13,14 @@ def _ctx(reply: str = "", tool_calls: list[str] | None = None) -> TurnContext:
 @pytest.mark.asyncio
 async def test_contains_any_of_passes_when_present():
     ev = ContainsEvaluator(any_of=["confirmed", "booked"])
-    result = await ev.evaluate(_ctx(reply="Your booking is confirmed!"))
+    result = await ev.evaluate(turn_context(reply="Your booking is confirmed!"))
     assert result.passed is True
 
 
 @pytest.mark.asyncio
 async def test_contains_any_of_fails_when_absent():
     ev = ContainsEvaluator(any_of=["confirmed", "booked"])
-    result = await ev.evaluate(_ctx(reply="Something went wrong."))
+    result = await ev.evaluate(turn_context(reply="Something went wrong."))
     assert result.passed is False
     assert "confirmed" in result.reasoning or "booked" in result.reasoning
 
@@ -37,21 +28,21 @@ async def test_contains_any_of_fails_when_absent():
 @pytest.mark.asyncio
 async def test_contains_any_of_is_case_insensitive():
     ev = ContainsEvaluator(any_of=["Confirmed"])
-    result = await ev.evaluate(_ctx(reply="your booking is CONFIRMED"))
+    result = await ev.evaluate(turn_context(reply="your booking is CONFIRMED"))
     assert result.passed is True
 
 
 @pytest.mark.asyncio
 async def test_contains_all_of_passes_when_all_present():
     ev = ContainsEvaluator(all_of=["name", "date"])
-    result = await ev.evaluate(_ctx(reply="Your name and date are confirmed."))
+    result = await ev.evaluate(turn_context(reply="Your name and date are confirmed."))
     assert result.passed is True
 
 
 @pytest.mark.asyncio
 async def test_contains_all_of_fails_when_any_missing():
     ev = ContainsEvaluator(all_of=["name", "date"])
-    result = await ev.evaluate(_ctx(reply="Your name is confirmed."))
+    result = await ev.evaluate(turn_context(reply="Your name is confirmed."))
     assert result.passed is False
     assert "date" in result.reasoning
 
@@ -59,21 +50,21 @@ async def test_contains_all_of_fails_when_any_missing():
 @pytest.mark.asyncio
 async def test_contains_empty_config_always_passes():
     ev = ContainsEvaluator()
-    result = await ev.evaluate(_ctx(reply="anything"))
+    result = await ev.evaluate(turn_context(reply="anything"))
     assert result.passed is True
 
 
 @pytest.mark.asyncio
 async def test_contains_matches_any_passes_on_regex_match():
     ev = ContainsEvaluator(matches_any=[r"ref(erence)? number[:# ]*[A-Z]{2}-\d+"])
-    result = await ev.evaluate(_ctx(reply="Your reference number: BK-1234"))
+    result = await ev.evaluate(turn_context(reply="Your reference number: BK-1234"))
     assert result.passed is True
 
 
 @pytest.mark.asyncio
 async def test_contains_matches_any_fails_when_no_pattern_matches():
     ev = ContainsEvaluator(matches_any=[r"\bBK-\d+\b", r"\bREF-\d+\b"])
-    result = await ev.evaluate(_ctx(reply="No reference here."))
+    result = await ev.evaluate(turn_context(reply="No reference here."))
     assert result.passed is False
     assert "did not match" in result.reasoning
 
@@ -81,14 +72,14 @@ async def test_contains_matches_any_fails_when_no_pattern_matches():
 @pytest.mark.asyncio
 async def test_contains_matches_all_passes_when_all_match():
     ev = ContainsEvaluator(matches_all=[r"\d{1,2}(am|pm)", r"tomorrow"])
-    result = await ev.evaluate(_ctx(reply="Booked for tomorrow at 10am."))
+    result = await ev.evaluate(turn_context(reply="Booked for tomorrow at 10am."))
     assert result.passed is True
 
 
 @pytest.mark.asyncio
 async def test_contains_matches_all_fails_and_names_missing_pattern():
     ev = ContainsEvaluator(matches_all=[r"tomorrow", r"BK-\d+"])
-    result = await ev.evaluate(_ctx(reply="Booked for tomorrow."))
+    result = await ev.evaluate(turn_context(reply="Booked for tomorrow."))
     assert result.passed is False
     assert "BK-" in result.reasoning
     assert "tomorrow" not in result.reasoning
@@ -97,25 +88,25 @@ async def test_contains_matches_all_fails_and_names_missing_pattern():
 @pytest.mark.asyncio
 async def test_contains_matches_any_is_case_insensitive_by_default():
     ev = ContainsEvaluator(matches_any=[r"confirmed"])
-    result = await ev.evaluate(_ctx(reply="CONFIRMED!"))
+    result = await ev.evaluate(turn_context(reply="CONFIRMED!"))
     assert result.passed is True
 
 
 @pytest.mark.asyncio
 async def test_contains_case_sensitive_flag_applies_to_regex():
     ev = ContainsEvaluator(matches_any=[r"confirmed"], case_sensitive=True)
-    result = await ev.evaluate(_ctx(reply="CONFIRMED!"))
+    result = await ev.evaluate(turn_context(reply="CONFIRMED!"))
     assert result.passed is False
 
 
 @pytest.mark.asyncio
 async def test_contains_case_sensitive_flag_applies_to_substrings():
     ev = ContainsEvaluator(any_of=["Confirmed"], case_sensitive=True)
-    result = await ev.evaluate(_ctx(reply="your booking is CONFIRMED"))
+    result = await ev.evaluate(turn_context(reply="your booking is CONFIRMED"))
     assert result.passed is False
 
     ev_all = ContainsEvaluator(all_of=["Booking"], case_sensitive=True)
-    result_all = await ev_all.evaluate(_ctx(reply="Booking confirmed"))
+    result_all = await ev_all.evaluate(turn_context(reply="Booking confirmed"))
     assert result_all.passed is True
 
 

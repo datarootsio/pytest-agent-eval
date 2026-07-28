@@ -11,6 +11,7 @@ from pytest_agent_eval.models import (
     Turn,
 )
 from pytest_agent_eval.runner import EvalSession, run_transcript
+from tests.helpers.judge import FailingJudge, PromptCapturingJudge
 
 
 async def _echo_agent(history: list[dict]) -> tuple[str, list[str]]:
@@ -263,18 +264,11 @@ async def test_run_transcript_dispatches_tool_calls_args_deterministic():
 
 @pytest.mark.asyncio
 async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallback():
-    from unittest.mock import AsyncMock, MagicMock, patch
-
+    """config_model reaches the args judge — asserted by handing it a model that records use."""
     from pytest_agent_eval.models import JudgeConfig, ToolCall, ToolCallArgsConfig
 
     async def args_agent(history: list[dict]) -> tuple[str, list]:
         return "done", [ToolCall("book_slot", {"time": "10am"})]
-
-    mock_output = MagicMock()
-    mock_output.passed = True
-    mock_output.reasoning = "ok"
-    mock_result = MagicMock()
-    mock_result.output = mock_output
 
     transcript = Transcript(
         id="args_judge",
@@ -291,25 +285,38 @@ async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallba
         threshold=1.0,
         runs=1,
     )
+    fallback = PromptCapturingJudge(passed=True, reasoning="ok")
 
-    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
-        instance = AsyncMock()
-        instance.run = AsyncMock(return_value=mock_result)
-        MockAgent.return_value = instance
-        result = await run_transcript(transcript, args_agent, config_model="openai:fallback-model")
+    result = await run_transcript(transcript, args_agent, config_model=fallback.model)
 
     assert result.passed is True
-    assert MockAgent.call_args.args[0] == "openai:fallback-model"
+    # The fallback model was the one actually invoked, and it saw the rubric.
+    assert "Business hours only" in fallback.last_prompt
+
+
+@pytest.mark.asyncio
+async def test_per_turn_judge_model_overrides_the_config_model():
+    """Precedence is turn override, then judge_model, then config_model."""
+    from pytest_agent_eval.models import JudgeConfig
+
+    chosen = PromptCapturingJudge(reasoning="from the turn override")
+    ignored = PromptCapturingJudge(reasoning="from config")
+    transcript = Transcript(
+        id="override",
+        turns=[Turn(user="hi", expect=Expect(judge=JudgeConfig(rubric="r", model=chosen.model)))],
+        threshold=0.0,
+        runs=1,
+    )
+
+    await run_transcript(transcript, _echo_agent, config_model=ignored.model)
+
+    assert chosen.prompts
+    assert ignored.prompts == []
 
 
 @pytest.mark.asyncio
 async def test_run_transcript_passes_judge_retries_and_timeout_through():
-    from unittest.mock import AsyncMock, patch
-
     from pytest_agent_eval.models import JudgeConfig
-
-    async def agent(history: list[dict]) -> tuple[str, list[str]]:
-        return "hello", []
 
     transcript = Transcript(
         id="judge_knobs",
@@ -317,14 +324,11 @@ async def test_run_transcript_passes_judge_retries_and_timeout_through():
         threshold=0.0,
         runs=1,
     )
+    judge = FailingJudge(error="API down")
 
-    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
-        instance = AsyncMock()
-        instance.run = AsyncMock(side_effect=Exception("API down"))
-        MockAgent.return_value = instance
-        await run_transcript(transcript, agent, config_model="openai:x", judge_retries=0, judge_timeout=5.0)
+    await run_transcript(transcript, _echo_agent, config_model=judge.model, judge_retries=0, judge_timeout=5.0)
 
-    assert instance.run.call_count == 1
+    assert judge.attempts == 1
 
 
 @pytest.mark.asyncio
