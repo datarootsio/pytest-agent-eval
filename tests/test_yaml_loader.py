@@ -13,6 +13,231 @@ def _load(tmp_path: Path, content: str):
     return load_transcript(yaml_path)
 
 
+# --- the didactic-error surface, exhaustively ---
+#
+# Every rejection the loader can produce, as (case_id, yaml, expected fragments).
+# Each fragment is a substring that must appear in the message; together they pin
+# the location prefix and the didactic phrasing users actually read. This table is
+# the contract that any reimplementation of the validation layer must satisfy.
+
+_REJECTED: list[tuple[str, str, list[str]]] = [
+    # top level
+    ("top_not_mapping", "- not\n- a\n- mapping\n", ["must be a YAML mapping with 'id' and 'turns' keys"]),
+    (
+        "top_unknown_field",
+        "id: t\nthresold: 0.8\nturns:\n  - user: hi\n",
+        ["unknown field 'thresold'", "Did you mean 'threshold'?", "Valid fields"],
+    ),
+    ("top_unknown_no_match", "id: t\nzzzzzz: 1\nturns:\n  - user: hi\n", ["unknown field 'zzzzzz'", "Valid fields"]),
+    ("missing_id", "turns:\n  - user: hi\n", ["missing required field 'id'"]),
+    ("id_not_string", "id: 123\nturns:\n  - user: hi\n", [".id", "must be a string"]),
+    # threshold
+    (
+        "threshold_string",
+        "id: t\nthreshold: high\nturns:\n  - user: hi\n",
+        [".threshold", "must be a number between 0 and 1"],
+    ),
+    (
+        "threshold_bool",
+        "id: t\nthreshold: true\nturns:\n  - user: hi\n",
+        [".threshold", "must be a number between 0 and 1"],
+    ),
+    (
+        "threshold_numeric_string",
+        "id: t\nthreshold: '0.5'\nturns:\n  - user: hi\n",
+        [".threshold", "must be a number between 0 and 1"],
+    ),
+    (
+        "threshold_too_high",
+        "id: t\nthreshold: 1.5\nturns:\n  - user: hi\n",
+        [".threshold", "must be a number between 0 and 1"],
+    ),
+    (
+        "threshold_negative",
+        "id: t\nthreshold: -0.1\nturns:\n  - user: hi\n",
+        [".threshold", "must be a number between 0 and 1"],
+    ),
+    # runs
+    ("runs_zero", "id: t\nruns: 0\nturns:\n  - user: hi\n", [".runs", "must be an integer >= 1"]),
+    ("runs_fractional", "id: t\nruns: 2.5\nturns:\n  - user: hi\n", [".runs", "must be an integer >= 1"]),
+    ("runs_bool", "id: t\nruns: true\nturns:\n  - user: hi\n", [".runs", "must be an integer >= 1"]),
+    ("runs_string", "id: t\nruns: many\nturns:\n  - user: hi\n", [".runs", "must be an integer >= 1"]),
+    # tags
+    (
+        "tags_scalar",
+        "id: t\ntags: one\nturns:\n  - user: hi\n",
+        [".tags", "must be a list of strings", "YAML lists look like"],
+    ),
+    ("tags_list_of_int", "id: t\ntags: [1, 2]\nturns:\n  - user: hi\n", [".tags", "must be a list of strings"]),
+    # turns
+    ("turns_empty", "id: t\nturns: []\n", ["must define at least one turn"]),
+    ("turns_absent", "id: t\n", ["must define at least one turn"]),
+    ("turns_scalar", "id: t\nturns: nope\n", [".turns", "must be a list of turns"]),
+    ("turn_not_mapping", "id: t\nturns:\n  - just a string\n", ["turns[0]", "must be a mapping with a 'user' key"]),
+    (
+        "turn_unknown_field",
+        "id: t\nturns:\n  - user: hi\n    usr: oops\n",
+        ["turns[0]", "unknown field 'usr'", "Did you mean 'user'?"],
+    ),
+    (
+        "turn_missing_user",
+        "id: t\nturns:\n  - user: hi\n  - expect:\n      reply_contains_any: [x]\n",
+        ["turns[1]", "missing required field 'user'"],
+    ),
+    ("turn_user_not_string", "id: t\nturns:\n  - user: 42\n", ["turns[0].user", "must be a string"]),
+    (
+        "turn_audio_not_string",
+        "id: t\nturns:\n  - user: hi\n    audio: 42\n",
+        ["turns[0].audio", "must be a WAV path string"],
+    ),
+    # expect
+    (
+        "expect_not_mapping",
+        "id: t\nturns:\n  - user: hi\n    expect: nope\n",
+        ["turns[0].expect", "must be a mapping of expectations"],
+    ),
+    (
+        "expect_unknown_field",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_call_include: [x]\n",
+        ["turns[0].expect", "unknown field 'tool_call_include'", "Did you mean 'tool_calls_include'?"],
+    ),
+    (
+        "expect_scalar_where_list",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      reply_contains_any: confirmed\n",
+        ["turns[0].expect.reply_contains_any", "must be a list of strings", "YAML lists look like"],
+    ),
+    (
+        "expect_list_of_int",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      reply_contains_all: [1, 2]\n",
+        ["turns[0].expect.reply_contains_all", "must be a list of strings"],
+    ),
+    (
+        "expect_bad_regex",
+        'id: t\nturns:\n  - user: hi\n    expect:\n      reply_matches_any: ["("]\n',
+        ["turns[0].expect.reply_matches_any[0]", "invalid regex pattern"],
+    ),
+    (
+        "expect_bad_regex_all",
+        'id: t\nturns:\n  - user: hi\n    expect:\n      reply_matches_all: ["a", "[b"]\n',
+        ["turns[0].expect.reply_matches_all[1]", "invalid regex pattern"],
+    ),
+    (
+        "expect_ordered_not_bool",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_ordered: yesplease\n",
+        ["turns[0].expect.tool_calls_ordered", "must be true or false"],
+    ),
+    # judge
+    (
+        "judge_not_mapping",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      judge: just-a-string\n",
+        ["turns[0].expect.judge", "must be a mapping with a 'rubric' key"],
+    ),
+    (
+        "judge_unknown_field",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      judge:\n        rubric: r\n        modle: m\n",
+        ["turns[0].expect.judge", "unknown field 'modle'", "Did you mean 'model'?"],
+    ),
+    (
+        "judge_missing_rubric",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      judge:\n        model: openai:gpt-4o\n",
+        ["turns[0].expect.judge", "missing required field 'rubric'"],
+    ),
+    (
+        "judge_rubric_not_string",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      judge:\n        rubric: 42\n",
+        ["turns[0].expect.judge.rubric", "must be a string"],
+    ),
+    (
+        "judge_model_not_string",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      judge:\n        rubric: r\n        model: 42\n",
+        ["turns[0].expect.judge.model", "must be a string like 'openai:gpt-4o'"],
+    ),
+    # tool_calls_args
+    (
+        "tca_not_list",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args: nope\n",
+        ["turns[0].expect.tool_calls_args", "must be a list of tool-argument assertions"],
+    ),
+    (
+        "tca_entry_not_mapping",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n        - scalar\n",
+        ["turns[0].expect.tool_calls_args[0]", "must be a mapping with a 'tool' key"],
+    ),
+    (
+        "tca_unknown_field",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n        - tool: b\n          arg: {}\n",
+        ["turns[0].expect.tool_calls_args[0]", "unknown field 'arg'", "Did you mean 'args'?"],
+    ),
+    (
+        "tca_missing_tool",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n        - args:\n            a: 1\n",
+        ["turns[0].expect.tool_calls_args[0]", "requires a 'tool' field"],
+    ),
+    (
+        "tca_tool_not_string",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n"
+        "        - tool: 42\n          args:\n            a: 1\n",
+        ["turns[0].expect.tool_calls_args[0]", "requires a 'tool' field"],
+    ),
+    (
+        "tca_neither_args_nor_judge",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n        - tool: book_slot\n",
+        ["turns[0].expect.tool_calls_args[0]", "needs 'args'", "got neither"],
+    ),
+    (
+        "tca_args_not_mapping",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n        - tool: b\n          args: nope\n",
+        ["turns[0].expect.tool_calls_args[0].args", "must be a mapping of expected arguments"],
+    ),
+    (
+        "tca_bad_mode",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n"
+        "        - tool: b\n          args:\n            a: 1\n          mode: fuzzy\n",
+        ["turns[0].expect.tool_calls_args[0].mode", "must be 'subset' or 'exact'"],
+    ),
+    (
+        "tca_nested_judge_missing_rubric",
+        "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n"
+        "        - tool: b\n          judge:\n            model: openai:gpt-4o\n",
+        ["turns[0].expect.tool_calls_args[0].judge", "missing required field 'rubric'"],
+    ),
+    # deep location reporting
+    (
+        "deep_location_turn_two",
+        "id: t\nturns:\n  - user: hi\n  - user: again\n    expect:\n      judge:\n        rubrik: oops\n",
+        ["turns[1].expect.judge", "unknown field 'rubrik'", "Did you mean 'rubric'?"],
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("yaml_source", "fragments"), [(y, f) for _, y, f in _REJECTED], ids=[c for c, _, _ in _REJECTED]
+)
+def test_malformed_transcript_is_rejected_didactically(tmp_path: Path, yaml_source: str, fragments: list[str]):
+    """Every rejection names its location, explains the fix, and links the schema."""
+    with pytest.raises(ValueError) as excinfo:
+        _load(tmp_path, yaml_source)
+    message = str(excinfo.value)
+    for fragment in fragments:
+        assert fragment in message, f"{fragment!r} missing from:\n{message}"
+
+
+_ACCEPTED: list[tuple[str, str]] = [
+    ("minimal", "id: t\nturns:\n  - user: hi\n"),
+    ("runs_integral_float", "id: t\nruns: 2.0\nturns:\n  - user: hi\n"),
+    ("threshold_int_one", "id: t\nthreshold: 1\nturns:\n  - user: hi\n"),
+    ("threshold_int_zero", "id: t\nthreshold: 0\nturns:\n  - user: hi\n"),
+    ("empty_expect", "id: t\nturns:\n  - user: hi\n    expect: {}\n"),
+    ("tags_ok", "id: t\ntags: [gate:a, gate:b]\nturns:\n  - user: hi\n"),
+]
+
+
+@pytest.mark.parametrize("yaml_source", [y for _, y in _ACCEPTED], ids=[c for c, _ in _ACCEPTED])
+def test_permissive_documents_keep_parsing(tmp_path: Path, yaml_source: str):
+    """Guards the deliberately lenient cases against a stricter reimplementation."""
+    assert _load(tmp_path, yaml_source).turns
+
+
 # --- validation ---
 
 
@@ -333,6 +558,26 @@ def test_yaml_item_passes_with_matching_agent(pytester: pytest.Pytester):
     result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*booking_ok*PASSED*"])
     assert result.ret == 0
+
+
+def test_non_assertion_failure_defers_to_pytest_traceback(pytester: pytest.Pytester):
+    """repr_failure renders threshold assertions plainly but must not swallow real errors."""
+    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    pytester.makefile(".yaml", **{"tests/evals/boom": "id: exploding\nturns:\n  - user: hi\n"})
+    pytester.makeconftest(
+        """
+        import pytest
+
+        @pytest.fixture
+        def llm_eval_agent():
+            async def agent(history):
+                raise RuntimeError("agent exploded")
+            return agent
+        """
+    )
+    result = pytester.runpytest("--agent-eval-live")
+    assert result.ret != 0
+    result.stdout.fnmatch_lines(["*RuntimeError*agent exploded*"])
 
 
 def test_yaml_item_fails_with_non_matching_agent(pytester: pytest.Pytester):
