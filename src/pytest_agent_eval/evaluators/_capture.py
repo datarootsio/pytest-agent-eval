@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from pytest_agent_eval.models import EvalResult, JsonMapping, ToolCalls
+from pytest_agent_eval.models import EvalResult, ToolArgs, ToolCalls
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,7 +26,7 @@ class CapturedArgs:
         failure: A ready-made failing EvalResult, or None when capture succeeded.
     """
 
-    args: tuple[JsonMapping, ...] = ()
+    args: tuple[ToolArgs, ...] = ()
     failure: EvalResult | None = None
 
 

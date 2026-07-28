@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from pytest_agent_eval.evaluators._capture import capture_tool_args
-from pytest_agent_eval.models import EvalResult, JsonMapping, ToolCallArgsMode, TurnContext
+from pytest_agent_eval.models import EvalResult, JsonMapping, ToolArgs, ToolCallArgsMode, TurnContext
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -86,7 +86,13 @@ class ToolCallArgsEvaluator:
         if self.mode not in ("subset", "exact"):
             raise ValueError(f"ToolCallArgsEvaluator mode must be 'subset' or 'exact', got {self.mode!r}")
 
-    def _matches(self, observed: JsonMapping) -> bool:
+    def _matches(self, observed: ToolArgs) -> bool:
+        """Compare one call's captured arguments against the expected ones.
+
+        ``observed`` is ``ToolArgs`` while ``self.args`` stays ``JsonMapping``: the
+        expected side is written by hand in a transcript and really is JSON, whereas the
+        observed side is whatever an SDK captured.
+        """
         if self.mode == "exact":
             return observed == self.args
         return all(k in observed and observed[k] == v for k, v in self.args.items())

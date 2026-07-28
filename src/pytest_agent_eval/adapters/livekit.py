@@ -6,7 +6,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.adapters._wav_input import WavFileAudioInput
@@ -18,38 +18,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class _SessionInput(Protocol):
-    """A session's input pipes; the adapter swaps the audio one for a WAV replay."""
-
-    audio: object
-
-
-class VoiceSession(Protocol):
-    """The slice of livekit's ``AgentSession`` the adapter drives.
-
-    A Protocol rather than ``AgentSession`` itself: the real class is generic over the
-    session userdata, which this adapter never touches, so naming it would either pin a
-    throwaway type argument or leak an irrelevant type parameter into every user's
-    ``session_factory`` annotation.
-    """
-
-    input: _SessionInput
-
-    def on(self, event: str, callback: Callable[[object], None]) -> object:
-        """Register a handler for one of the session's events."""
-        ...
-
-    async def start(self, agent: Agent) -> object:
-        """Start the session against an agent."""
-        ...
-
-    async def aclose(self) -> None:
-        """Close the session and release its resources."""
-        ...
-
-
-# The real livekit type, not the internal VoiceSession Protocol: a user factory
-# returns a genuine AgentSession, and a narrower structural type would reject it.
+# The real livekit type, and no hand-rolled Protocol beside it. There were two here,
+# named by no annotation and so never checked against anything; they could not have been
+# used anyway, since `AgentSession.on` takes a Literal of event names rather than `str`,
+# which no real session would satisfy. A user factory returns a genuine AgentSession, and
+# the `Any` is livekit's own userdata parameter, which this adapter never touches.
 SessionFactory = Callable[[], "tuple[AgentSession[Any], Agent]"]
 
 

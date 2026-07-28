@@ -26,13 +26,14 @@ import tomllib
 import wave
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Protocol, cast
+from typing import TYPE_CHECKING, Literal, Protocol
 
 import yaml
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-    from contextlib import AbstractAsyncContextManager
+
+    from openai import AsyncOpenAI
 
     from pytest_agent_eval.models import JsonMapping
 
@@ -199,49 +200,7 @@ def _is_transient(exc: BaseException) -> bool:
     return "no audio" in text.lower()
 
 
-class _RealtimeConnection(Protocol):
-    """A live Realtime socket: the two calls the TTS pump makes on one."""
-
-    async def send(self, event: JsonMapping) -> None:
-        """Send one client event."""
-        ...
-
-    async def recv(self) -> object:
-        """Await the next server event. Its fields are read defensively with ``getattr``."""
-        ...
-
-
-class _RealtimeNamespace(Protocol):
-    """``client.beta.realtime``."""
-
-    def connect(self, *, model: str) -> AbstractAsyncContextManager[_RealtimeConnection]:
-        """Return a session for ``model``, to be entered as an async context manager."""
-        ...
-
-
-class _RealtimeBeta(Protocol):
-    """``client.beta``."""
-
-    @property
-    def realtime(self) -> _RealtimeNamespace:
-        """The Realtime API namespace."""
-        ...
-
-
-class _RealtimeClient(Protocol):
-    """The slice of ``openai.AsyncOpenAI`` this script actually uses."""
-
-    @property
-    def beta(self) -> _RealtimeBeta:
-        """The versioned namespace the Realtime API still lives under."""
-        ...
-
-    async def close(self) -> None:
-        """Release the underlying HTTP connections."""
-        ...
-
-
-async def _synth_pcm_via_realtime(client: _RealtimeClient, *, text: str, voice: str, model: str) -> bytes:
+async def _synth_pcm_via_realtime(client: AsyncOpenAI, *, text: str, voice: str, model: str) -> bytes:
     """Open one Realtime session and return the PCM16 audio it speaks for ``text``."""
     chunks: list[bytes] = []
 
@@ -302,23 +261,23 @@ async def _synth_pcm_via_realtime(client: _RealtimeClient, *, text: str, voice: 
 class _SynthFn(Protocol):
     """Synthesises PCM for one piece of text. Injected so tests need no live Realtime session."""
 
-    async def __call__(self, client: _RealtimeClient, *, text: str, voice: str, model: str) -> bytes:
+    async def __call__(self, client: AsyncOpenAI, *, text: str, voice: str, model: str) -> bytes:
         """Return raw PCM16 audio for ``text``."""
         ...
 
 
-def _build_client() -> _RealtimeClient:
+def _build_client() -> AsyncOpenAI:
     """Construct an ``AsyncOpenAI`` client, or exit naming the extra that provides it."""
     try:
-        # Optional extra: a module-scope import would break `--help` for users who never synthesise.
+        # Optional extra: a module-scope import would break `--help` for users who never
+        # synthesise. The annotations use the TYPE_CHECKING import of the same name.
         from openai import AsyncOpenAI  # noqa: PLC0415
     except ImportError as exc:
         raise SystemExit(
             "ERROR: the 'openai' package is required. "
             "Install with: pip install 'pytest-agent-eval[livekit]' (or pip install openai)."
         ) from exc
-    # The SDK's own Realtime event types are wider than the three payloads we send.
-    return cast("_RealtimeClient", AsyncOpenAI())
+    return AsyncOpenAI()
 
 
 class AudioSynthesizer:
@@ -331,7 +290,7 @@ class AudioSynthesizer:
 
     def __init__(
         self,
-        client: _RealtimeClient,
+        client: AsyncOpenAI,
         *,
         voice: str,
         model: str,
@@ -470,7 +429,7 @@ async def _run(
     args: SynthesizeArgs,
     *,
     synth: _SynthFn = _synth_pcm_via_realtime,
-    client_factory: Callable[[], _RealtimeClient] = _build_client,
+    client_factory: Callable[[], AsyncOpenAI] = _build_client,
 ) -> int:
     """Resolve inputs, synthesise whatever is stale, and return the process exit code.
 

@@ -22,6 +22,35 @@ rule has a non-obvious reason, the reason is stated — follow the reason, not t
   assignable to `list[str]` even though `ToolCall` subclasses `str`. That single fact
   caused six of the original type errors.
 
+- **A Protocol's data members are `@property`, never a plain attribute.** A declared
+  attribute is *invariant*, so no real class satisfies it: `memory: _AgentMemory` is a
+  member a real `MultiStepAgent` fails, while `@property def memory(...)` is covariant and
+  it passes. This has caused the same bug twice — once in a shipped release that had to be
+  hot-fixed. Related: a Protocol method's parameter types are contravariant, so declaring
+  `payload: Mapping[str, object]` where the real method takes a `dict` also rejects the
+  real class. Type the parameter as what you actually pass.
+
+  `tests/adapters/_sdk_probe.py` assigns a real SDK object to every adapter's declared
+  parameter type and is type-checked by `tests/adapters/test_sdk_types.py`. That static
+  check is the only thing that catches this — the adapter still imports and passes every
+  fake-based test while being unusable from a typed call site.
+
+- **Put the type on the parameter.** A `client: object` parameter with a `cast(...)` in the
+  body is an unchecked assertion, not a type. Use a Protocol (spelled per the rule above),
+  or the real SDK type under `TYPE_CHECKING` where a Protocol provably cannot express the
+  surface — `openai.AsyncOpenAI` is the one such case, because `create` is overloaded.
+  `hasattr` guards stay regardless: they name the extra to install, which an assignability
+  error does not.
+
+- **Every Protocol must be named by an annotation.** One that isn't is documentation the
+  checker never verifies — three had drifted out of use and two of them described a shape
+  the real class could not have satisfied.
+
+- **No `cast()`.** Construct the type instead: `{str(k): v for k, v in raw.items()}` builds
+  a `ToolArgs` where `cast("ToolArgs", raw)` merely claimed one. If a value's type is
+  genuinely unknown, narrow it with `isinstance` per hop — the cast that replaced
+  `_last_message` asserted three facts and checked one.
+
 - **Closed string sets are `Literal` aliases**, never a bare `str` documented in prose —
   see `ToolCallArgsMode`, `OutcomeName`, `PhaseName`.
 

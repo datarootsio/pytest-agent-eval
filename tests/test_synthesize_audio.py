@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import sys
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -41,8 +41,13 @@ def _args(paths: list[str], *, force: bool = False) -> mod.SynthesizeArgs:
 
 
 def _synthesizer(spy: SynthSpy, *, voice: str = "v", model: str = "m") -> mod.AudioSynthesizer:
-    """An AudioSynthesizer driven by a spy, so the client stands in as None and is never touched."""
-    return mod.AudioSynthesizer(cast("mod._RealtimeClient", None), voice=voice, model=model, synth=spy)
+    """An AudioSynthesizer driven by a spy, which ignores the client it is handed.
+
+    The spy's own fake client rather than None: the parameter is the real ``AsyncOpenAI``
+    now, and widening it to ``| None`` to let a test pass one would put a branch in
+    ``__aexit__`` that only tests reach.
+    """
+    return mod.AudioSynthesizer(spy.client_factory(), voice=voice, model=model, synth=spy)
 
 
 async def test_synth_writes_wav_and_hash(tmp_path: Path, synth_spy: SynthSpy) -> None:

@@ -37,6 +37,19 @@ JsonMapping: TypeAlias = dict[str, JsonValue]
 written as a string cannot be resolved by pydantic when it appears in a model field.
 """
 
+ToolArgs: TypeAlias = dict[str, object]
+"""The arguments an adapter captured off one tool call.
+
+``object`` values rather than ``JsonValue``, because that is the truth: LangChain declares
+its tool-call arguments as an untyped dict, and pydantic-ai's ``args_as_dict()`` returns
+whatever the model emitted, so a value outside JSON reaches us routinely — which is exactly
+why the judge serialises these with ``json.dumps(..., default=str)``. Saying so lets the
+adapters *construct* this type from a raw mapping instead of asserting it with a cast.
+
+``JsonMapping`` stays for data that genuinely is JSON: YAML, TOML, the xdist wire, and
+``ToolCallArgsConfig.args`` (which a transcript author writes by hand).
+"""
+
 ToolCalls: TypeAlias = Sequence[str]
 """Tool calls from one turn.
 
@@ -172,9 +185,9 @@ class ToolCall(str):
 
     __slots__ = ("args",)
 
-    args: JsonMapping | None
+    args: ToolArgs | None
 
-    def __new__(cls, name: str, args: JsonMapping | None = None) -> ToolCall:
+    def __new__(cls, name: str, args: ToolArgs | None = None) -> ToolCall:
         """Create a ToolCall from a tool name and optional captured arguments."""
         obj = super().__new__(cls, name)
         obj.args = args

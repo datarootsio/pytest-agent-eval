@@ -2,25 +2,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import Protocol
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.models import AgentReply, History, ToolCall
 
-if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
-
-
-class _AIMessage(Protocol):
-    """A LangChain message, as read off a runnable's result."""
-
-    content: object
-
 
 class LangChainRunnable(Protocol):
-    """The slice of a LangChain Runnable the adapter uses: one async invocation."""
+    """The slice of a LangChain Runnable the adapter uses: one async invocation.
 
-    async def ainvoke(self, payload: Mapping[str, object], /) -> object:
+    ``payload`` is a ``dict``, not a ``Mapping``: a real ``Runnable[dict[str, object], ...]``
+    accepts only a dict, so a Protocol promising to accept any Mapping is one the real class
+    cannot satisfy. It is also what the adapter actually passes, for the reason in
+    ``__call__``.
+    """
+
+    async def ainvoke(self, payload: dict[str, object], /) -> object:
         """Invoke the runnable on a ``{"messages": [...]}`` state."""
         ...
 
@@ -28,6 +25,21 @@ class LangChainRunnable(Protocol):
 def _tool_calls(message: object) -> list[ToolCall]:
     """Read LangChain's ``tool_calls`` off a message; absent means no tools were called."""
     return [ToolCall(tc["name"], coerce_args(tc.get("args"))) for tc in getattr(message, "tool_calls", []) or []]
+
+
+def _last_message(result: object) -> object | None:
+    """The final message of a graph-shaped ``{"messages": [...]}`` result, if it is one.
+
+    Every hop is checked, because each can fail independently: the result may not be a
+    mapping, may not carry ``messages``, and that value may not be a non-empty list. The
+    cast this replaced asserted all three while checking only the first.
+    """
+    if not isinstance(result, dict):
+        return None
+    messages = result.get("messages")
+    if not isinstance(messages, list) or not messages:
+        return None
+    return messages[-1]
 
 
 class LangChainAdapter:
@@ -49,19 +61,18 @@ class LangChainAdapter:
         ```
     """
 
-    def __init__(self, runnable: object) -> None:
+    def __init__(self, runnable: LangChainRunnable) -> None:
         """Store the LangChain runnable to delegate calls to."""
-        # `object`, not the Protocol: a structural type here would reject the very SDK
-        # class the docstring says we wrap (verified — a real AsyncOpenAI is not
-        # assignable to it). The hasattr guard below is the real check, and it raises a
-        # message naming the extra; the Protocol types what we call after narrowing.
+        # The Protocol is on the parameter, so a type checker rejects a wrong object at the
+        # call site. The guard is for callers without one: it names the extra to install,
+        # which an assignability error does not.
         if not hasattr(runnable, "ainvoke"):
             raise TypeError(
                 f"LangChainAdapter expects a LangChain Runnable with an .ainvoke() method, "
                 f"got {type(runnable).__name__}. Wrap a compiled graph or chain, and make sure "
                 "the extra is installed: pip install 'pytest-agent-eval[langchain]'"
             )
-        self._runnable = cast("LangChainRunnable", runnable)
+        self._runnable = runnable
 
     async def __call__(self, history: History) -> AgentReply:
         """Run the runnable and normalise output to (reply, tool_calls)."""
@@ -71,7 +82,7 @@ class LangChainAdapter:
 
         if hasattr(result, "content"):
             return AgentReply(str(result.content), _tool_calls(result))
-        if isinstance(result, dict) and "messages" in result:
-            last = cast("Mapping[str, Sequence[_AIMessage]]", result)["messages"][-1]
-            return AgentReply(str(last.content), _tool_calls(last))
+        last = _last_message(result)
+        if last is not None:
+            return AgentReply(str(getattr(last, "content", "")), _tool_calls(last))
         return AgentReply(str(result), [])

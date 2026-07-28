@@ -2,65 +2,42 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING
 
 from pytest_agent_eval.adapters._args import coerce_args
-from pytest_agent_eval.models import AgentReply, History, ToolCall
+from pytest_agent_eval.models import AgentReply, History, Message, ToolCall
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from openai import AsyncOpenAI
+    from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessageToolCallUnion
 
 
-class _Function(Protocol):
-    """The function payload of one OpenAI tool call."""
+def _as_param(message: Message) -> ChatCompletionMessageParam:
+    """Convert one Message into the SDK's own per-role message param.
 
-    name: str
-    arguments: str
-
-
-class _ToolCall(Protocol):
-    """One tool call on a chat-completion message."""
-
-    function: _Function
-
-
-class _CompletionMessage(Protocol):
-    """The assistant message the adapter reads off a completion choice."""
-
-    content: str | None
-    tool_calls: Sequence[_ToolCall] | None
+    A role dispatch rather than ``m.to_dict()``: the SDK types ``messages`` as a union of
+    per-role TypedDicts, and a ``dict[str, str]`` is not assignable to any of them. Reading
+    only ``role`` and ``content`` also means the plugin-internal ``audio`` key cannot leak
+    into a request that would reject it.
+    """
+    if message.role == "system":
+        return {"role": "system", "content": message.content}
+    if message.role == "assistant":
+        return {"role": "assistant", "content": message.content}
+    return {"role": "user", "content": message.content}
 
 
-class _Choice(Protocol):
-    """One chat-completion choice."""
+def _tool_call(raw: ChatCompletionMessageToolCallUnion) -> ToolCall:
+    """Normalise either kind of tool call the SDK can return.
 
-    message: _CompletionMessage
-
-
-class _ChatCompletion(Protocol):
-    """A chat-completion response."""
-
-    choices: Sequence[_Choice]
-
-
-class _Completions(Protocol):
-    """The ``chat.completions`` namespace."""
-
-    async def create(self, *, model: str, messages: Sequence[dict[str, str]]) -> _ChatCompletion:
-        """Request one chat completion."""
-        ...
-
-
-class _Chat(Protocol):
-    """The ``chat`` namespace, which is also the attribute the constructor guards on."""
-
-    completions: _Completions
-
-
-class OpenAIClient(Protocol):
-    """The slice of ``AsyncOpenAI`` the adapter uses: one chat-completions call."""
-
-    chat: _Chat
+    ``tool_calls`` is a discriminated union, and only the function member has
+    ``.function`` — the Protocol this replaced asserted otherwise, so a model emitting a
+    custom tool call raised AttributeError here. A custom call's ``input`` is free text, so
+    ``coerce_args`` reports "not captured" unless it happens to be JSON.
+    """
+    if raw.type == "custom":
+        return ToolCall(raw.custom.name, coerce_args(raw.custom.input))
+    return ToolCall(raw.function.name, coerce_args(raw.function.arguments))
 
 
 class OpenAIAdapter:
@@ -85,33 +62,31 @@ class OpenAIAdapter:
 
     def __init__(
         self,
-        client: object,
+        client: AsyncOpenAI,
         model: str,
         system_prompt: str | None = None,
     ) -> None:
         """Store the OpenAI client, model name, and optional system prompt."""
-        # `object`, not the Protocol: a structural type here would reject the very SDK
-        # class the docstring says we wrap (verified — a real AsyncOpenAI is not
-        # assignable to it). The hasattr guard below is the real check, and it raises a
-        # message naming the extra; the Protocol types what we call after narrowing.
+        # The real SDK type, imported under TYPE_CHECKING, and the sole adapter that cannot
+        # use a Protocol: `create` is overloaded (streaming vs not), which no hand-rolled
+        # structural type can express. The guard stays for callers with no type checker —
+        # it is what turns a missing extra into a message naming it.
         if not hasattr(client, "chat"):
             raise TypeError(
                 f"OpenAIAdapter expects an AsyncOpenAI-compatible client with .chat.completions, "
                 f"got {type(client).__name__}. Make sure the extra is installed: "
                 "pip install 'pytest-agent-eval[openai]'"
             )
-        self._client = cast("OpenAIClient", client)
+        self._client = client
         self._model = model
         self._system_prompt = system_prompt
 
     async def __call__(self, history: History) -> AgentReply:
         """Run a chat completion and normalise to (reply, tool_calls)."""
-        messages: list[dict[str, str]] = []
+        messages: list[ChatCompletionMessageParam] = []
         if self._system_prompt:
             messages.append({"role": "system", "content": self._system_prompt})
-        # to_dict() drops the plugin-internal audio key: the API rejects unknown
-        # message keys, and runner.py sets one on every voice turn.
-        messages.extend(m.to_dict() for m in history)
+        messages.extend(_as_param(m) for m in history)
 
         response = await self._client.chat.completions.create(
             model=self._model,
@@ -119,7 +94,4 @@ class OpenAIAdapter:
         )
         message = response.choices[0].message
         reply = message.content or ""
-        tool_calls = [
-            ToolCall(tc.function.name, coerce_args(tc.function.arguments)) for tc in (message.tool_calls or [])
-        ]
-        return AgentReply(reply, tool_calls)
+        return AgentReply(reply, [_tool_call(tc) for tc in (message.tool_calls or [])])

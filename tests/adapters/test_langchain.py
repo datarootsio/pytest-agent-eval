@@ -4,6 +4,8 @@ from pytest_agent_eval.models import Message
 
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 
 class _FakeAIMessage:
     def __init__(self, content: str, tool_calls: list[dict]) -> None:
@@ -61,4 +63,29 @@ async def test_langchain_adapter_stringifies_unrecognised_result() -> None:
     reply, tool_calls = await LangChainAdapter(runnable)([Message(role="user", content="hi")])
 
     assert reply == "just a string"
+    assert tool_calls == []
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        pytest.param({"output": "no messages key"}, id="dict_without_messages"),
+        pytest.param({"messages": []}, id="empty_messages_list"),
+        pytest.param({"messages": "not a list"}, id="messages_not_a_list"),
+    ],
+)
+async def test_langchain_adapter_stringifies_a_graph_result_it_cannot_read(result: dict) -> None:
+    """Each hop into a graph result is checked separately, and any of them may fail.
+
+    The empty and non-list cases used to raise (IndexError, then AttributeError) because a
+    cast asserted the whole shape while only the outer dict was checked.
+    """
+    from pytest_agent_eval.adapters.langchain import LangChainAdapter
+
+    runnable = MagicMock()
+    runnable.ainvoke = AsyncMock(return_value=result)
+
+    reply, tool_calls = await LangChainAdapter(runnable)([Message(role="user", content="hi")])
+
+    assert reply == str(result)
     assert tool_calls == []
