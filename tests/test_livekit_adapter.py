@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import wave
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -211,6 +212,97 @@ async def test_factory_called_per_invocation(tmp_path: Path, patched_wav_input: 
     await adapter([msg])
 
     assert len(sessions) == 2
+
+
+async def test_ignores_events_without_an_item(tmp_path: Path, patched_wav_input: None) -> None:
+    """conversation_item_added can fire with no item attached; that must not blow up."""
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+
+    class FakeWithEmptyEvent(FakeAgentSession):
+        async def start(self, agent: Any) -> None:
+            self.started = True
+            for h in self._handlers.get("conversation_item_added", []):
+                h(SimpleNamespace(item=None))
+                h(_FakeConversationItemAddedEvent("assistant", "real reply"))
+
+    adapter = LiveKitAdapter(lambda: (FakeWithEmptyEvent(), object()), grace_period_s=0.0, timeout_s=1.0)
+    reply, _ = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert reply == "real reply"
+
+
+async def test_falls_back_to_content_parts_when_text_content_is_empty(tmp_path: Path, patched_wav_input: None) -> None:
+    """Some chat items expose their text only as a content list; non-str parts are skipped."""
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+
+    class FakeWithContentList(FakeAgentSession):
+        async def start(self, agent: Any) -> None:
+            self.started = True
+            item = SimpleNamespace(role="assistant", text_content=None, content=["Boo", None, "ked!"])
+            for h in self._handlers.get("conversation_item_added", []):
+                h(SimpleNamespace(item=item))
+
+    adapter = LiveKitAdapter(lambda: (FakeWithContentList(), object()), grace_period_s=0.0, timeout_s=1.0)
+    reply, _ = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert reply == "Booked!"
+
+
+async def test_wav_exhaustion_timeout_is_survivable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A model that never drains the WAV must not hang the suite — the turn still returns."""
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+
+    class NeverExhausts(_FakeWavInput):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__()
+            self._exhausted = asyncio.Event()  # never set
+
+    monkeypatch.setattr(livekit_module, "WavFileAudioInput", NeverExhausts)
+    fake = FakeAgentSession(reply_chunks=["partial"])
+    adapter = LiveKitAdapter(lambda: (fake, object()), grace_period_s=0.0, timeout_s=0.01)
+
+    reply, _ = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert reply == "partial"
+    assert fake.closed
+
+
+async def test_wav_input_close_failure_does_not_mask_the_reply(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cleanup failures are logged, never raised — they would otherwise discard a good turn."""
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+
+    class ClosesBadly(_FakeWavInput):
+        async def aclose(self) -> None:
+            raise RuntimeError("aclose blew up")
+
+    monkeypatch.setattr(livekit_module, "WavFileAudioInput", ClosesBadly)
+    fake = FakeAgentSession(reply_chunks=["confirmed"])
+    adapter = LiveKitAdapter(lambda: (fake, object()), grace_period_s=0.0, timeout_s=1.0)
+
+    reply, _ = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert reply == "confirmed"
+    # The session must still be closed even though the wav input's close raised.
+    assert fake.closed
+
+
+async def test_session_close_failure_does_not_mask_the_reply(tmp_path: Path, patched_wav_input: None) -> None:
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+
+    class SessionClosesBadly(FakeAgentSession):
+        async def aclose(self) -> None:
+            raise RuntimeError("session aclose blew up")
+
+    adapter = LiveKitAdapter(lambda: (SessionClosesBadly(reply_chunks=["ok"]), object()), grace_period_s=0.0)
+
+    reply, _ = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert reply == "ok"
 
 
 async def test_sample_rate_and_frame_ms_passed_to_wav_input(
