@@ -49,15 +49,19 @@ class LangChainAdapter:
         ```
     """
 
-    def __init__(self, runnable: LangChainRunnable) -> None:
+    def __init__(self, runnable: object) -> None:
         """Store the LangChain runnable to delegate calls to."""
+        # `object`, not the Protocol: a structural type here would reject the very SDK
+        # class the docstring says we wrap (verified — a real AsyncOpenAI is not
+        # assignable to it). The hasattr guard below is the real check, and it raises a
+        # message naming the extra; the Protocol types what we call after narrowing.
         if not hasattr(runnable, "ainvoke"):
             raise TypeError(
                 f"LangChainAdapter expects a LangChain Runnable with an .ainvoke() method, "
                 f"got {type(runnable).__name__}. Wrap a compiled graph or chain, and make sure "
                 "the extra is installed: pip install 'pytest-agent-eval[langchain]'"
             )
-        self._runnable = runnable
+        self._runnable = cast("LangChainRunnable", runnable)
 
     async def __call__(self, history: History) -> AgentReply:
         """Run the runnable and normalise output to (reply, tool_calls)."""

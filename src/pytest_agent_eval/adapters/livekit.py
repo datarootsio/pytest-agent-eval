@@ -6,14 +6,14 @@ import asyncio
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.adapters._wav_input import WavFileAudioInput
 from pytest_agent_eval.models import AgentReply, History, ToolCall
 
 if TYPE_CHECKING:
-    from livekit.agents.voice import Agent
+    from livekit.agents.voice import Agent, AgentSession
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,9 @@ class VoiceSession(Protocol):
         ...
 
 
-SessionFactory = Callable[[], "tuple[VoiceSession, Agent]"]
+# The real livekit type, not the internal VoiceSession Protocol: a user factory
+# returns a genuine AgentSession, and a narrower structural type would reject it.
+SessionFactory = Callable[[], "tuple[AgentSession[Any], Agent]"]
 
 
 def _quiet_livekit_loggers() -> None:

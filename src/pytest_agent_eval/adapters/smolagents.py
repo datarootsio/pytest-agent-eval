@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.models import AgentReply, History, ToolCall
@@ -61,15 +61,19 @@ class SmolagentsAdapter:
         ```
     """
 
-    def __init__(self, agent: SmolagentsAgent, *, include_internal_tools: bool = False) -> None:
+    def __init__(self, agent: object, *, include_internal_tools: bool = False) -> None:
         """Store the smolagents agent and the internal-tool filter setting."""
+        # `object`, not the Protocol: a structural type here would reject the very SDK
+        # class the docstring says we wrap (verified — a real AsyncOpenAI is not
+        # assignable to it). The hasattr guard below is the real check, and it raises a
+        # message naming the extra; the Protocol types what we call after narrowing.
         if not hasattr(agent, "run") or not hasattr(agent, "memory"):
             raise TypeError(
                 f"SmolagentsAdapter expects a smolagents agent with .run() and .memory.steps, "
                 f"got {type(agent).__name__}. Make sure the extra is installed: "
                 "pip install 'pytest-agent-eval[smolagents]'"
             )
-        self._agent = agent
+        self._agent = cast("SmolagentsAgent", agent)
         self._include_internal_tools = include_internal_tools
 
     async def __call__(self, history: History) -> AgentReply:

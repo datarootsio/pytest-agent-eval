@@ -108,6 +108,7 @@ def _public_callables(obj: object) -> list[tuple[str, object]]:
 ANY_ALLOWLIST = {
     "yaml_loader.py": "pytest passthrough: **kwargs to pytest.Item, and self.funcargs",
     "plugin.py": "pytest passthrough: terminalreporter",
+    "adapters/livekit.py": "the type argument of livekit's own generic AgentSession",
 }
 
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.models import AgentReply, History, ToolCall
@@ -85,18 +85,22 @@ class OpenAIAdapter:
 
     def __init__(
         self,
-        client: OpenAIClient,
+        client: object,
         model: str,
         system_prompt: str | None = None,
     ) -> None:
         """Store the OpenAI client, model name, and optional system prompt."""
+        # `object`, not the Protocol: a structural type here would reject the very SDK
+        # class the docstring says we wrap (verified — a real AsyncOpenAI is not
+        # assignable to it). The hasattr guard below is the real check, and it raises a
+        # message naming the extra; the Protocol types what we call after narrowing.
         if not hasattr(client, "chat"):
             raise TypeError(
                 f"OpenAIAdapter expects an AsyncOpenAI-compatible client with .chat.completions, "
                 f"got {type(client).__name__}. Make sure the extra is installed: "
                 "pip install 'pytest-agent-eval[openai]'"
             )
-        self._client = client
+        self._client = cast("OpenAIClient", client)
         self._model = model
         self._system_prompt = system_prompt
 
