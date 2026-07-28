@@ -3,6 +3,10 @@
 Seventeen tests hand-rolled the same ``makeini`` call and nine repeated the same
 ``llm_eval_agent`` conftest stub. Both now come from here, so the shape of an inner
 project is stated once and each test says only what makes it different.
+
+The agent sources below are emitted as real conftest files, which makes them documentation
+whether or not anyone reads this module: they use ``history[-1].content`` and
+``AgentReply(...)``, the same forms the docs teach.
 """
 
 from __future__ import annotations
@@ -23,10 +27,12 @@ def static_agent(reply: str = "ok", tool_calls: Sequence[str] = ()) -> str:
     return f"""
         import pytest
 
+        from pytest_agent_eval import AgentReply
+
         @pytest.fixture
         def llm_eval_agent():
             async def agent(history):
-                return {reply!r}, {list(tool_calls)!r}
+                return AgentReply({reply!r}, {list(tool_calls)!r})
             return agent
         """
 
@@ -36,14 +42,16 @@ def keyword_agent(replies: Mapping[str, str], default: str = "sorry") -> str:
     return f"""
         import pytest
 
+        from pytest_agent_eval import AgentReply
+
         @pytest.fixture
         def llm_eval_agent():
             async def agent(history):
-                message = history[-1]["content"].lower()
+                message = history[-1].content.lower()
                 for keyword, reply in {dict(replies)!r}.items():
                     if keyword in message:
-                        return reply, []
-                return {default!r}, []
+                        return AgentReply(reply, [])
+                return AgentReply({default!r}, [])
             return agent
         """
 

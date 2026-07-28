@@ -180,12 +180,14 @@ YAML-loaded tests require a pytest fixture named `llm_eval_agent` that returns y
 # tests/conftest.py
 import pytest
 
+from pytest_agent_eval import AgentReply
+
 @pytest.fixture
 def llm_eval_agent():
-    async def my_agent(messages):
-        # messages is a list of OpenAI-style {"role": ..., "content": ...} dicts
-        # Return (reply, tool_calls): the reply string plus the tool names called.
-        return "Booking confirmed! Reference BK-1234.", ["create_booking"]
+    async def my_agent(history):
+        # history is a list of Message records; history[-1].content is this turn's user text.
+        # Return AgentReply(reply, tool_calls): the reply string plus the tool names called.
+        return AgentReply("Booking confirmed! Reference BK-1234.", ["create_booking"])
     return my_agent
 ```
 

@@ -23,9 +23,9 @@ async def test_turn_audio_is_forwarded_to_the_agent_as_a_message_key() -> None:
     transcript = Transcript(id="voice", turns=[Turn(user="book me", audio=Path("turn1.wav"))], threshold=0.0)
     await run_transcript(transcript, agent)
 
-    assert agent.last_message["audio"] == "turn1.wav"
-    assert isinstance(agent.last_message["audio"], str)
-    assert agent.last_message["content"] == "book me"
+    assert agent.last_message.audio == "turn1.wav"
+    assert isinstance(agent.last_message.audio, str)
+    assert agent.last_message.content == "book me"
 
 
 @pytest.mark.asyncio
@@ -35,7 +35,7 @@ async def test_turn_without_audio_omits_the_key_entirely() -> None:
 
     await run_transcript(Transcript(id="text", turns=[Turn(user="hi")], threshold=0.0), agent)
 
-    assert "audio" not in agent.last_message
+    assert agent.last_message.audio is None
 
 
 @pytest.mark.asyncio
@@ -318,7 +318,7 @@ async def test_history_is_accumulated_across_turns() -> None:
     await run_transcript(transcript, agent)
     assert len(agent.seen[0]) == 1
     assert len(agent.seen[1]) == 3
-    assert agent.seen[1][-1]["content"] == "second"
+    assert agent.seen[1][-1].content == "second"
 
 
 def test_judge_settings_resolve_model_precedence() -> None:

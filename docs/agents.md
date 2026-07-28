@@ -56,7 +56,7 @@ Gotchas:
 - Eval tests are SKIPPED unless run with `--agent-eval-live` or `EVAL_LIVE=1`.
   "N eval test(s) skipped — live mode is off" in the output means they did not run.
 - A conftest.py fixture named `llm_eval_agent` must return the agent under test:
-  an async callable `(messages) -> (reply, tool_calls)`. Framework adapters exist
+  an async callable `(history) -> AgentReply`. Framework adapters exist
   for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
 
 !!! note "`AgentReply` and `Message`"

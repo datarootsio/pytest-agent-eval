@@ -54,7 +54,7 @@ uv add "pytest-agent-eval[smolagents]"
 uv add "pytest-agent-eval[livekit]"
 ```
 
-Bringing your own framework? Any `async def agent(messages) -> (reply, tool_calls)` callable works directly — no base class needed.
+Bringing your own framework? Any `async def agent(history) -> AgentReply` callable works directly — no base class needed. A plain `(reply, tool_calls)` tuple is still accepted.
 
 ## What you can test
 
