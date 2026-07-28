@@ -86,9 +86,11 @@ class Message(Mapping[str, str]):
     """One conversation message in OpenAI format.
 
     A dataclass, so our own code reads ``msg.content`` rather than indexing a dict by
-    string key. Also a ``Mapping``, because the ``history`` handed to user-written
-    agents and evaluators has always been subscriptable and must stay so:
-    ``history[-1]["content"]`` is what every example in the docs does.
+    string key. Also a ``Mapping``, because the ``history`` handed to user-written agents
+    and evaluators has always been subscriptable and must stay so: ``history[-1]["content"]``
+    is what every example in the docs used to do, and what agents in the wild still do. The
+    docs now teach ``.content``; the subscript is a compatibility guarantee, not a
+    deprecation, and ``tests/test_message.py`` exists to keep it honest.
 
     ``eq=False`` lets ``Mapping.__eq__`` take over, so a Message compares equal to the
     plain dict it replaces — which is what makes the swap invisible to callers.
