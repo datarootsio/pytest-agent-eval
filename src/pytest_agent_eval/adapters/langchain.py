@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from pytest_agent_eval.adapters._args import coerce_args
-from pytest_agent_eval.models import ToolCall
+from pytest_agent_eval.models import AgentReply, ToolCall
 
 
 class LangChainAdapter:
@@ -37,7 +37,7 @@ class LangChainAdapter:
             )
         self._runnable = runnable
 
-    async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
         """Run the runnable and normalise output to (reply, tool_calls)."""
         result = await self._runnable.ainvoke({"messages": history})
 
@@ -56,4 +56,4 @@ class LangChainAdapter:
             reply = str(result)
             tool_calls = []
 
-        return reply, tool_calls
+        return AgentReply(reply, tool_calls)

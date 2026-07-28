@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.adapters._wav_input import WavFileAudioInput
-from pytest_agent_eval.models import ToolCall
+from pytest_agent_eval.models import AgentReply, ToolCall
 
 if TYPE_CHECKING:
     from livekit.agents.voice import Agent, AgentSession
@@ -78,7 +78,7 @@ class LiveKitAdapter:
         self._timeout_s = timeout_s
         _quiet_livekit_loggers()
 
-    async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
         """Stream the WAV on the last user turn and return ``(reply, tool_calls)``."""
         if not history or history[-1].get("role") != "user":
             raise ValueError("LiveKitAdapter: history must end with a user turn")
@@ -147,4 +147,4 @@ class LiveKitAdapter:
             except Exception:
                 logger.debug("LiveKitAdapter: session.aclose raised", exc_info=True)
 
-        return "".join(reply_chunks), tool_calls
+        return AgentReply("".join(reply_chunks), tool_calls)

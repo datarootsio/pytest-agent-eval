@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pytest_agent_eval.models import ToolCall
+from pytest_agent_eval.models import AgentReply, ToolCall
 
 # Message parts that represent a tool call. pydantic-ai exposes provider-native
 # (server-side) tool calls under a distinct part_kind; both carry args_as_dict().
@@ -97,7 +97,7 @@ class PydanticAIAdapter:
             )
         self._agent = agent
 
-    async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
         """Run the agent and normalise output to (reply, tool_calls)."""
         user_msg = history[-1]["content"] if history else ""
         message_history = _to_model_messages(history[:-1], _static_system_prompts(self._agent))
@@ -111,4 +111,4 @@ class PydanticAIAdapter:
         ]
 
         reply = result.output if isinstance(result.output, str) else str(result.output)
-        return reply, tool_calls
+        return AgentReply(reply, tool_calls)

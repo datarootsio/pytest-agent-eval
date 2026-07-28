@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from pytest_agent_eval.adapters._args import coerce_args
-from pytest_agent_eval.models import ToolCall
+from pytest_agent_eval.models import AgentReply, ToolCall
 
 
 class OpenAIAdapter:
@@ -45,7 +45,7 @@ class OpenAIAdapter:
         self._model = model
         self._system_prompt = system_prompt
 
-    async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
         """Run a chat completion and normalise to (reply, tool_calls)."""
         messages: list[dict[str, Any]] = []
         if self._system_prompt:
@@ -61,4 +61,4 @@ class OpenAIAdapter:
         tool_calls = [
             ToolCall(tc.function.name, coerce_args(tc.function.arguments)) for tc in (message.tool_calls or [])
         ]
-        return reply, tool_calls
+        return AgentReply(reply, tool_calls)

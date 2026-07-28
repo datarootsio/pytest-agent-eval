@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal, NamedTuple, TypeAlias
 
 if TYPE_CHECKING:
     from pytest_agent_eval.evaluators.base import Evaluator
@@ -42,6 +42,24 @@ OutcomeName: TypeAlias = Literal["passed", "failed", "skipped"]
 
 PhaseName: TypeAlias = Literal["setup", "call", "teardown"]
 """A pytest runtest phase."""
+
+
+class AgentReply(NamedTuple):
+    """What one turn of an agent produced.
+
+    A ``NamedTuple``, so ``reply, tool_calls = await agent(history)`` keeps working
+    unchanged while the fields also have names. Adapters return this; the agent
+    *contract* stays the wider plain tuple, so a hand-written
+    ``async def agent(history) -> tuple[str, list[str]]`` remains valid.
+
+    Args:
+        reply: The agent's text reply for this turn.
+        tool_calls: Tools called during the turn. Plain strings are accepted; the
+            runner normalises them to ``ToolCall`` with ``args=None``.
+    """
+
+    reply: str
+    tool_calls: ToolCalls
 
 
 @dataclass

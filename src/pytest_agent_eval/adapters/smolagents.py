@@ -6,7 +6,7 @@ import asyncio
 from typing import Any
 
 from pytest_agent_eval.adapters._args import coerce_args
-from pytest_agent_eval.models import ToolCall
+from pytest_agent_eval.models import AgentReply, ToolCall
 
 _INTERNAL_TOOLS = frozenset({"python_interpreter", "final_answer"})
 
@@ -49,7 +49,7 @@ class SmolagentsAdapter:
         self._agent = agent
         self._include_internal_tools = include_internal_tools
 
-    async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
         """Run the agent against the latest user message and return (reply, tool_calls)."""
         user_msg = history[-1]["content"] if history else ""
         reset = len(history) == 1
@@ -63,4 +63,4 @@ class SmolagentsAdapter:
         ]
         if not self._include_internal_tools:
             calls = [c for c in calls if c not in _INTERNAL_TOOLS]
-        return str(result), calls
+        return AgentReply(str(result), calls)
