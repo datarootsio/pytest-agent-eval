@@ -197,8 +197,8 @@ class AgentEvalReportPlugin:
     def _is_worker(self) -> bool:
         """True on an xdist worker, which forwards results instead of buffering them.
 
-        A property, not a method: it reads one attribute and is asked at five call sites,
-        so the parentheses were the only thing it added.
+        A property, not a method: it reads one attribute at three call sites, so the
+        parentheses were the only thing it added.
         """
         return hasattr(self._config, "workerinput")
 
