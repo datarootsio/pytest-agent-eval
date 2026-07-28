@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, TypedDict, Unpack
 
 if TYPE_CHECKING:
     import pytest
 
     from pytest_agent_eval.evaluators.base import Evaluator
+
+from pydantic_ai.models import Model
 
 from pytest_agent_eval.evaluators.contains import ContainsEvaluator
 from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
@@ -25,6 +28,37 @@ from pytest_agent_eval.models import (
     TurnContext,
     TurnResult,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class JudgeSettings:
+    """The judge knobs every evaluator in a transcript shares.
+
+    Args:
+        config_model: Fallback model for the judge (from ``[tool.agent_eval] model``).
+        judge_model: Dedicated judge model; takes priority over config_model.
+        retries: Retry attempts for a failed judge call.
+        timeout: Per-judge-call timeout in seconds.
+    """
+
+    config_model: str | Model | None = None
+    judge_model: str | Model | None = None
+    retries: int = 2
+    timeout: float = 30.0
+
+    def resolve_model(self, override: str | Model | None = None) -> str | Model | None:
+        """Pick the judge model: a per-turn override first, then judge_model, then config_model.
+
+        Args:
+            override: Model named on the turn's own judge config, if any.
+
+        Returns:
+            The model to hand the judge, or None to let the judge load its own default.
+        """
+        return override or self.judge_model or self.config_model
+
+
+_DEFAULT_JUDGE = JudgeSettings()
 
 
 def _build_yaml_evaluators(expect: Expect) -> list[Evaluator]:
@@ -50,129 +84,188 @@ def _build_yaml_evaluators(expect: Expect) -> list[Evaluator]:
     return evaluators
 
 
-async def _run_turn(
-    turn: Turn,
-    turn_idx: int,
-    history: History,
-    agent: AgentCallable,
-    config_model: str | None = None,
-    judge_model: str | None = None,
-    judge_retries: int = 2,
-    judge_timeout: float = 30.0,
-) -> tuple[TurnResult, str, list[ToolCall]]:
-    """Execute one turn and evaluate results."""
-    history.append(Message(role="user", content=turn.user, audio=None if turn.audio is None else str(turn.audio)))
-    reply, raw_tool_calls = await agent(history)
-    tool_calls = [tc if isinstance(tc, ToolCall) else ToolCall(tc) for tc in raw_tool_calls]
-    history.append(Message(role="assistant", content=reply))
+class TranscriptRunner:
+    """Runs one transcript against one agent under one judge configuration.
 
-    ctx = TurnContext(
-        user=turn.user,
-        reply=reply,
-        tool_calls=tool_calls,
-        history=history[:-1],  # history up to but not including the assistant reply
-    )
+    Args:
+        agent: Async callable ``(history) -> (reply, tool_calls)``.
+        judge: Model, retry and timeout settings for every judge in the transcript.
+    """
 
-    evaluators = list(turn.expect.evaluators) + _build_yaml_evaluators(turn.expect)
+    def __init__(self, agent: AgentCallable, judge: JudgeSettings) -> None:
+        """Bind the agent and the judge settings shared by every turn and run."""
+        self.agent = agent
+        self.judge = judge
 
-    if turn.expect.judge is not None:
-        from pytest_agent_eval.evaluators.judge import JudgeEvaluator
+    async def run_turn(self, turn: Turn, index: int, history: History) -> TurnResult:
+        """Execute one turn against the agent and evaluate what came back.
 
-        resolved_judge_model = turn.expect.judge.model or judge_model or config_model
-        evaluators.append(
-            JudgeEvaluator(
-                rubric=turn.expect.judge.rubric,
-                model=resolved_judge_model,
-                retries=judge_retries,
-                timeout=judge_timeout,
-            )
+        Args:
+            turn: The turn to send.
+            index: Position of the turn in the transcript.
+            history: Conversation so far; the user message and the reply are appended to it.
+
+        Returns:
+            TurnResult holding one EvalResult per evaluator.
+        """
+        history.append(Message(role="user", content=turn.user, audio=None if turn.audio is None else str(turn.audio)))
+        reply, raw_tool_calls = await self.agent(history)
+        tool_calls = [tc if isinstance(tc, ToolCall) else ToolCall(tc) for tc in raw_tool_calls]
+        history.append(Message(role="assistant", content=reply))
+
+        ctx = TurnContext(
+            user=turn.user,
+            reply=reply,
+            tool_calls=tool_calls,
+            history=history[:-1],  # history up to but not including the assistant reply
         )
 
-    for args_cfg in turn.expect.tool_calls_args:
-        if args_cfg.args is not None:
-            from pytest_agent_eval.evaluators.tool_call import ToolCallArgsEvaluator
+        eval_results = list(await asyncio.gather(*(ev.evaluate(ctx) for ev in self._evaluators(turn.expect))))
+        return TurnResult(turn_index=index, passed=all(r.passed for r in eval_results), eval_results=eval_results)
 
-            evaluators.append(ToolCallArgsEvaluator(tool=args_cfg.tool, args=args_cfg.args, mode=args_cfg.mode))
-        if args_cfg.judge is not None:
-            from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
+    def _evaluators(self, expect: Expect) -> list[Evaluator]:
+        """Collect the turn's explicit evaluators plus the ones its YAML shorthand implies."""
+        evaluators = list(expect.evaluators) + _build_yaml_evaluators(expect)
 
-            resolved = args_cfg.judge.model or judge_model or config_model
+        if expect.judge is not None:
+            from pytest_agent_eval.evaluators.judge import JudgeEvaluator
+
             evaluators.append(
-                ToolCallArgsJudgeEvaluator(
-                    tool=args_cfg.tool,
-                    rubric=args_cfg.judge.rubric,
-                    model=resolved,
-                    retries=judge_retries,
-                    timeout=judge_timeout,
+                JudgeEvaluator(
+                    rubric=expect.judge.rubric,
+                    model=self.judge.resolve_model(expect.judge.model),
+                    retries=self.judge.retries,
+                    timeout=self.judge.timeout,
                 )
             )
 
-    eval_results = list(await asyncio.gather(*(ev.evaluate(ctx) for ev in evaluators)))
-    turn_passed = all(r.passed for r in eval_results)
-    return TurnResult(turn_index=turn_idx, passed=turn_passed, eval_results=eval_results), reply, tool_calls
+        for args_cfg in expect.tool_calls_args:
+            if args_cfg.args is not None:
+                from pytest_agent_eval.evaluators.tool_call import ToolCallArgsEvaluator
 
+                evaluators.append(ToolCallArgsEvaluator(tool=args_cfg.tool, args=args_cfg.args, mode=args_cfg.mode))
+            if args_cfg.judge is not None:
+                from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
 
-async def _run_once(
-    transcript: Transcript,
-    agent: AgentCallable,
-    run_idx: int,
-    config_model: str | None = None,
-    judge_model: str | None = None,
-    judge_retries: int = 2,
-    judge_timeout: float = 30.0,
-) -> RunResult:
-    """Execute all turns once and return a RunResult."""
-    history: History = []
-    turn_results: list[TurnResult] = []
+                evaluators.append(
+                    ToolCallArgsJudgeEvaluator(
+                        tool=args_cfg.tool,
+                        rubric=args_cfg.judge.rubric,
+                        model=self.judge.resolve_model(args_cfg.judge.model),
+                        retries=self.judge.retries,
+                        timeout=self.judge.timeout,
+                    )
+                )
 
-    for turn_idx, turn in enumerate(transcript.turns):
-        turn_result, _, _ = await _run_turn(
-            turn, turn_idx, history, agent, config_model, judge_model, judge_retries, judge_timeout
+        return evaluators
+
+    async def run_once(self, transcript: Transcript, run_index: int) -> RunResult:
+        """Execute every turn of the transcript once.
+
+        Args:
+            transcript: The transcript to execute.
+            run_index: Position of this run among the transcript's runs.
+
+        Returns:
+            RunResult that passed only if every turn passed.
+        """
+        history: History = []
+        turn_results: list[TurnResult] = []
+        # Sequential, not gathered: each turn is answered against the history the
+        # previous turn appended to.
+        for index, turn in enumerate(transcript.turns):
+            turn_results.append(await self.run_turn(turn, index, history))
+
+        return RunResult(
+            run_index=run_index,
+            passed=all(t.passed for t in turn_results),
+            turn_results=turn_results,
         )
-        turn_results.append(turn_result)
 
-    run_passed = all(t.passed for t in turn_results)
-    return RunResult(run_index=run_idx, passed=run_passed, turn_results=turn_results)
+    async def run(self, transcript: Transcript) -> TranscriptResult:
+        """Run the transcript ``transcript.runs`` times and aggregate the score.
+
+        Args:
+            transcript: The transcript to execute.
+
+        Returns:
+            TranscriptResult with score, threshold, and per-run details.
+        """
+        run_results = list(
+            await asyncio.gather(*(self.run_once(transcript, run_index) for run_index in range(transcript.runs)))
+        )
+        score = sum(r.passed for r in run_results) / len(run_results)
+
+        return TranscriptResult(
+            passed=score >= transcript.threshold,
+            score=score,
+            threshold=transcript.threshold,
+            runs=run_results,
+        )
+
+
+class JudgeOverrides(TypedDict, total=False):
+    """The judge keywords :func:`run_transcript` accepts.
+
+    Spelled as a TypedDict rather than four parameters so the wrapper keeps every
+    published keyword, and its type, without a parameter list whose order is
+    load-bearing. Callers that want to name the bundle build a JudgeSettings instead.
+    """
+
+    config_model: str | Model | None
+    judge_model: str | Model | None
+    judge_retries: int
+    judge_timeout: float
+
+
+def _judge_settings(overrides: JudgeOverrides) -> JudgeSettings:
+    """Fold run_transcript's legacy keyword names into the settings object.
+
+    Args:
+        overrides: The judge keywords the caller actually passed.
+
+    Returns:
+        JudgeSettings, defaulted for every keyword the caller omitted.
+
+    Raises:
+        TypeError: If an unknown keyword was passed — the parameter list this replaces
+            rejected those, and silently ignoring a typo'd judge knob would be worse.
+    """
+    unexpected = sorted(set(overrides) - JudgeOverrides.__optional_keys__)
+    if unexpected:
+        raise TypeError(f"run_transcript() got an unexpected keyword argument {unexpected[0]!r}")
+
+    return JudgeSettings(
+        config_model=overrides.get("config_model", _DEFAULT_JUDGE.config_model),
+        judge_model=overrides.get("judge_model", _DEFAULT_JUDGE.judge_model),
+        retries=overrides.get("judge_retries", _DEFAULT_JUDGE.retries),
+        timeout=overrides.get("judge_timeout", _DEFAULT_JUDGE.timeout),
+    )
 
 
 async def run_transcript(
     transcript: Transcript,
     agent: AgentCallable,
-    config_model: str | None = None,
-    judge_model: str | None = None,
-    judge_retries: int = 2,
-    judge_timeout: float = 30.0,
+    **judge_overrides: Unpack[JudgeOverrides],
 ) -> TranscriptResult:
     """Run a transcript N times and aggregate results.
+
+    Kept as the module-level entry point because it is what callers outside the plugin
+    import; it delegates straight to :class:`TranscriptRunner`.
 
     Args:
         transcript: The transcript to execute.
         agent: Async callable ``(history) -> (reply, tool_calls)``.
-        config_model: Fallback model string for JudgeEvaluator (from config).
-        judge_model: Dedicated judge model override; takes priority over config_model.
-        judge_retries: Retry attempts for failed judge calls (from config).
-        judge_timeout: Per-judge-call timeout in seconds (from config).
+        **judge_overrides: ``config_model`` (fallback model string for JudgeEvaluator,
+            from config), ``judge_model`` (dedicated judge model override; takes
+            priority over config_model), ``judge_retries`` (retry attempts for failed
+            judge calls, from config) and ``judge_timeout`` (per-judge-call timeout in
+            seconds, from config).
 
     Returns:
         TranscriptResult with score, threshold, and per-run details.
     """
-    run_results = list(
-        await asyncio.gather(
-            *(
-                _run_once(transcript, agent, run_idx, config_model, judge_model, judge_retries, judge_timeout)
-                for run_idx in range(transcript.runs)
-            )
-        )
-    )
-    score = sum(r.passed for r in run_results) / len(run_results)
-    passed = score >= transcript.threshold
-
-    return TranscriptResult(
-        passed=passed,
-        score=score,
-        threshold=transcript.threshold,
-        runs=run_results,
-    )
+    return await TranscriptRunner(agent, _judge_settings(judge_overrides)).run(transcript)
 
 
 class EvalSession:
@@ -181,10 +274,7 @@ class EvalSession:
     Args:
         threshold: Pass threshold for this session (overrides config).
         runs: Number of runs (overrides config).
-        config_model: Default model fallback for JudgeEvaluator.
-        judge_model: Dedicated judge model; takes priority over config_model.
-        judge_retries: Retry attempts for failed judge calls.
-        judge_timeout: Per-judge-call timeout in seconds.
+        judge: Model, retry and timeout settings for the LLM judge.
         _item: The pytest item node — used by the report plugin to attach score output.
     """
 
@@ -192,19 +282,13 @@ class EvalSession:
         self,
         threshold: float,
         runs: int,
-        config_model: str | None = None,
-        judge_model: str | None = None,
-        judge_retries: int = 2,
-        judge_timeout: float = 30.0,
+        judge: JudgeSettings = _DEFAULT_JUDGE,
         _item: pytest.Item | None = None,
     ) -> None:
-        """Initialise an EvalSession with thresholds, run count, and model fallbacks."""
+        """Initialise an EvalSession with thresholds, run count, and judge settings."""
         self.threshold = threshold
         self.runs = runs
-        self.config_model = config_model
-        self.judge_model = judge_model
-        self.judge_retries = judge_retries
-        self.judge_timeout = judge_timeout
+        self.judge = judge
         self._item = _item
 
     async def run(
@@ -227,9 +311,7 @@ class EvalSession:
             threshold=self.threshold,
             runs=self.runs,
         )
-        result = await run_transcript(
-            transcript, agent, self.config_model, self.judge_model, self.judge_retries, self.judge_timeout
-        )
+        result = await TranscriptRunner(agent, self.judge).run(transcript)
         if self._item is not None:
             self._item._eval_result = result
         return result

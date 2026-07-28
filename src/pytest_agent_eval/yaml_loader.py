@@ -185,7 +185,14 @@ class AgentEvalItem(pytest.Item):
             )
         cfg = load_config(self.config)
         result = asyncio.run(
-            run_transcript(self.transcript, agent, cfg.model, cfg.judge_model, cfg.retries, cfg.timeout)
+            run_transcript(
+                self.transcript,
+                agent,
+                config_model=cfg.model,
+                judge_model=cfg.judge_model,
+                judge_retries=cfg.retries,
+                judge_timeout=cfg.timeout,
+            )
         )
         self._eval_result = result
         result.assert_threshold()

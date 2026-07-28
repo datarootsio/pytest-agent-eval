@@ -10,7 +10,7 @@ from pytest_agent_eval.models import (
     TranscriptResult,
     Turn,
 )
-from pytest_agent_eval.runner import EvalSession, run_transcript
+from pytest_agent_eval.runner import EvalSession, JudgeSettings, TranscriptRunner, run_transcript
 from tests.helpers.agents import RecordingAgent, ScriptedAgent, booking_agent, echo_agent
 from tests.helpers.judge import FailingJudge, PromptCapturingJudge
 
@@ -319,6 +319,36 @@ async def test_history_is_accumulated_across_turns() -> None:
     assert len(agent.seen[0]) == 1
     assert len(agent.seen[1]) == 3
     assert agent.seen[1][-1]["content"] == "second"
+
+
+def test_judge_settings_resolve_model_precedence() -> None:
+    """One place now decides the judge model: turn override, then judge_model, then config_model."""
+    settings = JudgeSettings(config_model="from-config", judge_model="from-judge-model")
+
+    assert settings.resolve_model("from-the-turn") == "from-the-turn"
+    assert settings.resolve_model() == "from-judge-model"
+    assert JudgeSettings(config_model="from-config").resolve_model() == "from-config"
+    assert JudgeSettings().resolve_model() is None
+
+
+@pytest.mark.asyncio
+async def test_run_transcript_rejects_an_unknown_judge_keyword() -> None:
+    """A typo'd judge knob must still fail loudly, as a plain parameter list did."""
+    transcript = Transcript(id="typo", turns=[Turn(user="hi")], threshold=0.0, runs=1)
+
+    with pytest.raises(TypeError, match="unexpected keyword argument 'judge_retires'"):
+        await run_transcript(transcript, echo_agent, judge_retires=0)
+
+
+@pytest.mark.asyncio
+async def test_transcript_runner_runs_a_transcript_directly() -> None:
+    """The class is the API the wrapper delegates to; it must work on its own."""
+    runner = TranscriptRunner(echo_agent, JudgeSettings())
+
+    result = await runner.run(Transcript(id="direct", turns=[Turn(user="hello")], threshold=1.0, runs=2))
+
+    assert result.passed is True
+    assert len(result.runs) == 2
 
 
 @pytest.mark.asyncio

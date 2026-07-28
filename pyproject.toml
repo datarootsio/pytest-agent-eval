@@ -152,7 +152,7 @@ convention = "google"
 "src/pytest_agent_eval/adapters/smolagents.py" = ["ANN401"]
 "src/pytest_agent_eval/plugin.py" = ["ANN401", "PLC0415"]
 "src/pytest_agent_eval/report.py" = ["PLR0912"]
-"src/pytest_agent_eval/runner.py" = ["PLR0913", "PLC0415"]
+"src/pytest_agent_eval/runner.py" = ["PLC0415"]
 "src/pytest_agent_eval/synthesize_audio.py" = ["T201", "ANN401", "PLC0415", "PLR0913", "PLR0912", "PTH123", "SIM103"]
 "src/pytest_agent_eval/yaml_loader.py" = ["ANN401", "PLC0415"]
 

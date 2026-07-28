@@ -97,7 +97,7 @@ def agent_eval(request: pytest.FixtureRequest) -> EvalSession:
             result.assert_threshold()
         ```
     """
-    from pytest_agent_eval.runner import EvalSession
+    from pytest_agent_eval.runner import EvalSession, JudgeSettings
 
     cfg = load_config(request.config)
     marker = request.node.get_closest_marker("agent_eval")
@@ -106,9 +106,11 @@ def agent_eval(request: pytest.FixtureRequest) -> EvalSession:
     return EvalSession(
         threshold=threshold,
         runs=runs,
-        config_model=cfg.model,
-        judge_model=cfg.judge_model,
-        judge_retries=cfg.retries,
-        judge_timeout=cfg.timeout,
+        judge=JudgeSettings(
+            config_model=cfg.model,
+            judge_model=cfg.judge_model,
+            retries=cfg.retries,
+            timeout=cfg.timeout,
+        ),
         _item=request.node,
     )
