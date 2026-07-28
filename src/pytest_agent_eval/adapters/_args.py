@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING, cast
 
-from pytest_agent_eval.models import JsonMapping
+if TYPE_CHECKING:
+    from pytest_agent_eval.models import JsonMapping
 
 
 def coerce_args(raw: object) -> JsonMapping | None:
@@ -20,11 +22,11 @@ def coerce_args(raw: object) -> JsonMapping | None:
         distinctly from an argument mismatch.
     """
     if isinstance(raw, dict):
-        return raw
-    if isinstance(raw, str):
-        try:
-            parsed = json.loads(raw)
-        except ValueError:
-            return None
-        return parsed if isinstance(parsed, dict) else None
-    return None
+        return cast("JsonMapping", raw)
+    if not isinstance(raw, str):
+        return None
+    try:
+        parsed = json.loads(raw)
+    except ValueError:
+        return None
+    return cast("JsonMapping", parsed) if isinstance(parsed, dict) else None

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from pytest_agent_eval.models import TurnContext
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def turn_context(

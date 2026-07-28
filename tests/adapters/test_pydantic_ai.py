@@ -1,10 +1,11 @@
 from pytest_agent_eval.models import Message
+
 """Tests for the pydantic-ai adapter."""
 
 from unittest.mock import AsyncMock, MagicMock
 
 
-async def test_pydantic_ai_adapter_extracts_tool_calls_from_message_parts():
+async def test_pydantic_ai_adapter_extracts_tool_calls_from_message_parts() -> None:
     """Regression: modern pydantic-ai messages carry tool calls in .parts, not .tool_name."""
     from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 
@@ -29,7 +30,7 @@ async def test_pydantic_ai_adapter_extracts_tool_calls_from_message_parts():
     assert tool_calls[0].args == {"time": "10am"}
 
 
-async def test_pydantic_ai_adapter_maps_system_role_to_system_prompt_part():
+async def test_pydantic_ai_adapter_maps_system_role_to_system_prompt_part() -> None:
     """A system entry in history must become a SystemPromptPart, not a user prompt."""
     from pytest_agent_eval.adapters.pydantic_ai import _to_model_messages
 
@@ -38,7 +39,7 @@ async def test_pydantic_ai_adapter_maps_system_role_to_system_prompt_part():
     assert [getattr(p, "part_kind", None) for m in messages for p in m.parts] == ["system-prompt"]
 
 
-async def test_pydantic_ai_adapter_does_not_duplicate_an_existing_system_prompt():
+async def test_pydantic_ai_adapter_does_not_duplicate_an_existing_system_prompt() -> None:
     """History already opening with a system message must not gain a second copy."""
     from pytest_agent_eval.adapters.pydantic_ai import _to_model_messages
 

@@ -2,12 +2,11 @@ from pathlib import Path
 
 import pytest
 
+from pytest_agent_eval.config import AgentEvalConfig, load_config, load_config_from_toml
 from tests.helpers.config_fakes import FakePytestConfig
 
-from pytest_agent_eval.config import AgentEvalConfig, load_config, load_config_from_toml
 
-
-def test_default_config():
+def test_default_config() -> None:
     cfg = AgentEvalConfig()
     assert cfg.model == "openai:gpt-4o"
     assert cfg.threshold == 0.8
@@ -19,7 +18,7 @@ def test_default_config():
     assert cfg.report_path is None
 
 
-def test_load_from_toml(tmp_path: Path):
+def test_load_from_toml(tmp_path: Path) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.agent_eval]\nmodel = "anthropic:claude-3-5-sonnet-latest"\nthreshold = 0.9\nruns = 3\nlive = true\n'
@@ -32,26 +31,26 @@ def test_load_from_toml(tmp_path: Path):
     assert cfg.retries == 2  # default preserved
 
 
-def test_load_from_toml_missing_section(tmp_path: Path):
+def test_load_from_toml_missing_section(tmp_path: Path) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text("[tool.other]\nfoo = 1\n")
     cfg = load_config_from_toml(pyproject)
     assert cfg == AgentEvalConfig()  # all defaults
 
 
-def test_load_from_toml_nonexistent_file(tmp_path: Path):
+def test_load_from_toml_nonexistent_file(tmp_path: Path) -> None:
     cfg = load_config_from_toml(tmp_path / "missing.toml")
     assert cfg == AgentEvalConfig()
 
 
-def test_yaml_dirs_list(tmp_path: Path):
+def test_yaml_dirs_list(tmp_path: Path) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text('[tool.agent_eval]\nyaml_dirs = ["tests/a", "tests/b"]\n')
     cfg = load_config_from_toml(pyproject)
     assert cfg.yaml_dirs == ["tests/a", "tests/b"]
 
 
-def test_load_config_env_var_sets_live(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def test_load_config_env_var_sets_live(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """EVAL_LIVE=1 env var enables live mode even when TOML says live=false."""
     monkeypatch.setenv("EVAL_LIVE", "1")
     pyproject = tmp_path / "pyproject.toml"
@@ -66,7 +65,7 @@ def test_load_config_env_var_sets_live(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert cfg.live is True
 
 
-def test_load_config_cli_flag_sets_live(tmp_path: Path):
+def test_load_config_cli_flag_sets_live(tmp_path: Path) -> None:
     """--agent-eval-live CLI flag enables live mode."""
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text("[tool.agent_eval]\nlive = false\n")

@@ -9,16 +9,20 @@ existed. This module replaces six of them, so their phrasing lives in one place.
 from __future__ import annotations
 
 import difflib
-from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from pydantic import BaseModel, ValidationError
     from pydantic_core import ErrorDetails
 
 SCHEMA_URL = "https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json"
 
 Loc = tuple[str | int, ...]
+
+# A union tag can only appear on a field, so the loc must be at least (field, tag).
+_NESTED = 2
 
 # The didactic tail each of these gets, explaining what the field is *for*. Losing these
 # was the main risk in replacing the hand-rolled validators.
@@ -91,7 +95,7 @@ def _most_informative(errors: Sequence[ErrorDetails]) -> ErrorDetails:
 
 def _strip_union_tag(loc: Loc) -> Loc:
     """Drop pydantic's trailing union-member tag, which is not a field name."""
-    if len(loc) >= 2 and isinstance(loc[-1], str) and loc[-1] in _UNION_TAGS:
+    if len(loc) >= _NESTED and isinstance(loc[-1], str) and loc[-1] in _UNION_TAGS:
         return loc[:-1]
     return loc
 

@@ -10,7 +10,7 @@ from pytest_agent_eval.models import EvalResult, TurnContext
 
 @dataclass(slots=True)
 class ContainsEvaluator:
-    """Check that the reply contains expected substrings or matches regex patterns.
+    r"""Check that the reply contains expected substrings or matches regex patterns.
 
     Args:
         any_of: Reply must contain at least one of these strings.
@@ -38,6 +38,7 @@ class ContainsEvaluator:
     case_sensitive: bool = False
 
     def __post_init__(self) -> None:
+        """Validate every pattern at construction time."""
         # Compile and discard: a bad pattern is an authoring error and must fail at
         # construction time, not surface as a per-turn evaluation failure. The compiled
         # objects are not stored, so this stays a plain dataclass with no hidden

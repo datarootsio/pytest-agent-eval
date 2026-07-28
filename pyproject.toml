@@ -103,14 +103,83 @@ precision = 1
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "D102", "D103", "D107"]
+select = [
+    "E", "F", "I", "W",          # the originals
+    "D",                         # full pydocstyle: docstrings on private functions too
+    "ANN",                       # annotate everything, including return types
+    "UP", "B", "C4", "PERF", "SIM", "RET", "PTH", "TC", "PL", "RUF",
+    "N", "ARG", "S", "FBT", "ISC", "PIE", "RSE", "TID", "LOG", "DTZ",
+]
+# Deliberately excluded:
+#   EM and TRY003 — this plugin's long, multi-line didactic error messages are a
+#   feature. Hoisting each into a local or a bespoke exception class would make the
+#   messages harder to read, which is the opposite of the point.
+ignore = ["TRY003"]
+
+[tool.ruff.lint.flake8-type-checking]
+# Pydantic resolves annotations at runtime, so an import moved into a TYPE_CHECKING
+# block breaks model construction. Without these, TC's fixes are actively wrong here.
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = ["dataclasses.dataclass", "pydantic.dataclasses.dataclass"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 8
+
+[tool.ruff.lint.pylint]
+max-args = 5
 
 [tool.ruff.lint.pydocstyle]
+# Google, not reStructuredText: zensical.toml sets docstring_style = "google" for
+# mkdocstrings, so changing it would break the published API reference.
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D102", "D103", "D107"]
-"examples/*" = ["D102", "D103", "D107"]
+# --- ratchet: families still being worked through in src/ ---
+# Listed per file rather than globally, so a NEW file is held to the full bar and this
+# list can only shrink. Each entry names the refactor that closes it.
+#
+#   ANN401  -> a Protocol per duck-typed third-party object (adapters, realtime client)
+#   PLC0415 -> deferred imports need a `# noqa: PLC0415` and a one-line why
+#   PLR0913 -> a JudgeSettings dataclass bundling config_model/judge_model/retries/timeout
+#   PLR0912 -> splitting _run and the makereport hook
+#   PLW0603 -> the `global _class_cache` becomes functools.cache
+"src/pytest_agent_eval/_errors.py" = ["PLR0911", "PLR0912", "PLC0415", "E501"]
+"src/pytest_agent_eval/adapters/_wav_input.py" = ["ANN401", "PLC0415", "PLW0603", "N806"]
+"src/pytest_agent_eval/adapters/langchain.py" = ["ANN401"]
+"src/pytest_agent_eval/adapters/livekit.py" = ["ANN401"]
+"src/pytest_agent_eval/adapters/openai.py" = ["ANN401"]
+"src/pytest_agent_eval/adapters/pydantic_ai.py" = ["ANN401", "PLC0415"]
+"src/pytest_agent_eval/adapters/smolagents.py" = ["ANN401"]
+"src/pytest_agent_eval/evaluators/judge.py" = ["PLC0415"]
+"src/pytest_agent_eval/plugin.py" = ["ANN401", "PLC0415"]
+"src/pytest_agent_eval/report.py" = ["ANN401", "PLC0415", "PLR0912", "PLR2004", "PERF401"]
+"src/pytest_agent_eval/runner.py" = ["PLR0913", "PLC0415"]
+"src/pytest_agent_eval/synthesize_audio.py" = ["T201", "ANN401", "PLC0415", "PLR0913", "PLR0912", "PTH123", "SIM103"]
+"src/pytest_agent_eval/yaml_loader.py" = ["ANN401", "PLC0415"]
+
+# Tests are held to the annotation bar but not the docstring bar. The rest are
+# deliberate test idioms, not debt:
+#   PLC0415 - optional-SDK imports must stay inside the test that needs them, so a
+#             missing extra skips rather than breaks collection
+#   ANN401  - fakes stand in for duck-typed third-party objects
+#   ARG     - every finding is a legitimate side-effect fixture
+#   SLF001  - white-box assertions on the plugin's own buffers
+"tests/**" = [
+    "D1", "ARG", "S101", "PLR2004", "SLF001", "PLR0913", "FBT001", "FBT002", "FBT003",
+    "PLC0415", "ANN401", "N801", "RUF043", "E402", "ANN001", "ANN202", "ANN003", "ANN205",
+    "SIM105", "E501",
+]
+# ...except tests/helpers, whose docstrings are the shared vocabulary the suite reads.
+"tests/helpers/**" = [
+    "ARG", "S101", "PLR2004", "SLF001", "PLR0913", "FBT001", "FBT002", "FBT003",
+    "PLC0415", "ANN401",
+]
+# User-facing snippets stay minimal, and two idioms there are load-bearing:
+#   ARG001  - the agent signature takes `history` whether or not a demo reads it
+#   PLC0415 - the livekit example imports inside its factory on purpose, so the file
+#             can be collected without the extra installed
+"examples/**" = ["D", "ANN", "S101", "T201", "ARG001", "PLC0415", "INP001"]
+"scripts/**" = ["T201", "PLC0415"]
 
 [tool.ty.src]
 include = ["src"]
@@ -120,3 +189,22 @@ include = ["src"]
 # catches a bare `dict` or an unparameterised `pytest.CallInfo`.
 missing-type-argument = "error"
 possibly-unresolved-reference = "warn"
+
+# --- ratchet: 13 findings remaining, down from 33 ---
+# Demoted to warnings so the gate is enforcing for every other rule rather than
+# switched off entirely. Each is closed by a refactor that is not done yet:
+#
+#   unresolved-attribute   -> pytest.StashKey[T] instead of stashing _eval_result and
+#                             _agent_eval_live_skipped as attributes on foreign objects
+#   invalid-argument-type  -> typing the xdist user_properties boundary (values arrive as
+#                             `object` and need an explicit narrowing helper), and
+#                             parse_groups' selector-list accumulation
+#   invalid-method-override -> AgentEvalItem.repr_failure returns str where pytest
+#                             declares str | TerminalRepr
+#   call-non-callable, invalid-assignment, invalid-return-type -> one site each
+unresolved-attribute = "warn"
+invalid-argument-type = "warn"
+invalid-method-override = "warn"
+invalid-assignment = "warn"
+call-non-callable = "warn"
+invalid-return-type = "warn"

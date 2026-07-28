@@ -8,7 +8,7 @@ from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
 from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
 
 
-def test_adapter_constructors_reject_wrong_objects():
+def test_adapter_constructors_reject_wrong_objects() -> None:
     with pytest.raises(TypeError, match=r"ainvoke.*pytest-agent-eval\[langchain\]"):
         LangChainAdapter("not a runnable")
     with pytest.raises(TypeError, match=r"chat\.completions.*pytest-agent-eval\[openai\]"):

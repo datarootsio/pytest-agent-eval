@@ -26,7 +26,7 @@ def _error(model: type[BaseModel], document: object) -> ValidationError:
     return excinfo.value
 
 
-def test_every_message_links_the_schema():
+def test_every_message_links_the_schema() -> None:
     """The reference is what turns a rejection into something a user can act on."""
     err = as_transcript_error(_error(Transcript, {"turns": [{"user": "hi"}]}), "t.yaml", Transcript)
     assert err.args[0].endswith(f"Schema reference: {SCHEMA_URL}")
@@ -34,7 +34,7 @@ def test_every_message_links_the_schema():
     assert isinstance(err, ValueError), "callers catch ValueError"
 
 
-def test_unmapped_error_types_still_produce_a_located_message():
+def test_unmapped_error_types_still_produce_a_located_message() -> None:
     """A future pydantic error type must degrade to something readable, not a KeyError."""
 
     class Odd(BaseModel):
@@ -46,7 +46,7 @@ def test_unmapped_error_types_still_produce_a_located_message():
     assert "123" in message
 
 
-def test_non_evaluator_objects_are_rejected_with_a_useful_message():
+def test_non_evaluator_objects_are_rejected_with_a_useful_message() -> None:
     """Expect.evaluators isinstance-checks against the Evaluator protocol."""
 
     class NotAnEvaluator:
@@ -57,7 +57,7 @@ def test_non_evaluator_objects_are_rejected_with_a_useful_message():
     assert "NotAnEvaluator" in err.args[0]
 
 
-def test_real_evaluators_are_accepted():
+def test_real_evaluators_are_accepted() -> None:
     from pytest_agent_eval.evaluators.contains import ContainsEvaluator
 
     assert Expect(evaluators=[ContainsEvaluator(any_of=["x"])]).evaluators
@@ -66,7 +66,7 @@ def test_real_evaluators_are_accepted():
 # --- model-tree walking, which backs the "Did you mean?" suggestions ---
 
 
-def test_model_of_looks_through_lists_and_unions():
+def test_model_of_looks_through_lists_and_unions() -> None:
     assert _model_of(Turn) is Turn
     assert _model_of(list[Turn]) is Turn
     assert _model_of(JudgeConfig | None) is JudgeConfig
@@ -74,18 +74,18 @@ def test_model_of_looks_through_lists_and_unions():
     assert _model_of(list[str]) is None
 
 
-def test_fields_at_walks_to_the_rejecting_container():
+def test_fields_at_walks_to_the_rejecting_container() -> None:
     assert set(_fields_at(Transcript, ("thresold",))) == set(Transcript.model_fields)
     assert set(_fields_at(Transcript, ("turns", 0, "usr"))) == set(Turn.model_fields)
     assert set(_fields_at(Transcript, ("turns", 0, "expect", "judge", "modle"))) == set(JudgeConfig.model_fields)
 
 
-def test_fields_at_stops_at_a_non_model_field():
+def test_fields_at_stops_at_a_non_model_field() -> None:
     """A loc pointing through a scalar cannot be walked further; suggest what we reached."""
     assert set(_fields_at(Transcript, ("turns", 0, "user", "deeper"))) == set(Turn.model_fields)
 
 
-def test_fields_at_omits_excluded_fields_from_suggestions():
-    """evaluators is Python-only, so suggesting it for a YAML typo would mislead."""
+def test_fields_at_omits_excluded_fields_from_suggestions() -> None:
+    """Evaluators is Python-only, so suggesting it for a YAML typo would mislead."""
     assert "evaluators" not in _fields_at(Transcript, ("turns", 0, "expect", "judge"))
     assert "evaluators" not in _fields_at(Expect, ("nope",))

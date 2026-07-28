@@ -13,20 +13,20 @@ import pytest
 from pytest_agent_eval.models import Message
 
 
-def test_our_code_reads_attributes():
+def test_our_code_reads_attributes() -> None:
     msg = Message(role="user", content="hi")
     assert msg.role == "user"
     assert msg.content == "hi"
     assert msg.audio is None
 
 
-def test_callers_can_still_subscript():
+def test_callers_can_still_subscript() -> None:
     """Every documented agent example does history[-1]["content"]."""
     assert Message(role="user", content="hi")["content"] == "hi"
     assert Message(role="user", content="hi")["role"] == "user"
 
 
-def test_compares_equal_to_the_dict_it_replaced():
+def test_compares_equal_to_the_dict_it_replaced() -> None:
     """eq=False hands equality to Mapping, which is what makes the swap invisible."""
     assert Message(role="user", content="hi") == {"role": "user", "content": "hi"}
     assert Message(role="user", content="hi", audio="a.wav") == {
@@ -37,12 +37,12 @@ def test_compares_equal_to_the_dict_it_replaced():
     assert Message(role="user", content="hi") != {"role": "user", "content": "bye"}
 
 
-def test_unpacks_into_a_dict():
+def test_unpacks_into_a_dict() -> None:
     assert dict(Message(role="assistant", content="ok")) == {"role": "assistant", "content": "ok"}
     assert {**Message(role="assistant", content="ok")} == {"role": "assistant", "content": "ok"}
 
 
-def test_absent_audio_is_absent_not_none():
+def test_absent_audio_is_absent_not_none() -> None:
     """A None audio must look like a missing key, or text adapters would forward it."""
     msg = Message(role="user", content="hi")
     assert "audio" not in msg
@@ -53,7 +53,7 @@ def test_absent_audio_is_absent_not_none():
         msg["audio"]
 
 
-def test_present_audio_is_a_real_key():
+def test_present_audio_is_a_real_key() -> None:
     msg = Message(role="user", content="hi", audio="turn1.wav")
     assert "audio" in msg
     assert msg["audio"] == "turn1.wav"
@@ -61,24 +61,24 @@ def test_present_audio_is_a_real_key():
     assert len(msg) == 3
 
 
-def test_unknown_keys_raise_key_error():
+def test_unknown_keys_raise_key_error() -> None:
     with pytest.raises(KeyError):
         Message(role="user", content="hi")["nope"]
 
 
-def test_to_dict_drops_the_plugin_internal_audio_key():
+def test_to_dict_drops_the_plugin_internal_audio_key() -> None:
     """The OpenAI API rejects unknown message keys, and the runner sets audio on voice turns."""
     msg = Message(role="user", content="hi", audio="turn1.wav")
     assert msg.to_dict() == {"role": "user", "content": "hi"}
     assert msg.to_dict(include_audio=True) == {"role": "user", "content": "hi", "audio": "turn1.wav"}
 
 
-def test_is_immutable():
+def test_is_immutable() -> None:
     with pytest.raises(Exception, match="cannot assign|immutable|frozen"):
         Message(role="user", content="hi").content = "changed"  # type: ignore[misc]
 
 
-def test_direct_json_serialisation_is_refused():
+def test_direct_json_serialisation_is_refused() -> None:
     """Deliberate: it forces every serialisation boundary to say to_dict() out loud."""
     with pytest.raises(TypeError):
         json.dumps(Message(role="user", content="hi"))
@@ -89,5 +89,5 @@ def test_direct_json_serialisation_is_refused():
     }
 
 
-def test_has_no_instance_dict_under_slots():
+def test_has_no_instance_dict_under_slots() -> None:
     assert not hasattr(Message(role="user", content="hi"), "__dict__")

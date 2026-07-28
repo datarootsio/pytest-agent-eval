@@ -1,16 +1,17 @@
 from pytest_agent_eval.models import Message
+
 """Tests for the LangChain Runnable adapter."""
 
 from unittest.mock import AsyncMock, MagicMock
 
 
 class _FakeAIMessage:
-    def __init__(self, content: str, tool_calls: list[dict]):
+    def __init__(self, content: str, tool_calls: list[dict]) -> None:
         self.content = content
         self.tool_calls = tool_calls
 
 
-async def test_langchain_adapter_captures_args_from_message_result():
+async def test_langchain_adapter_captures_args_from_message_result() -> None:
     from pytest_agent_eval.adapters.langchain import LangChainAdapter
 
     msg = _FakeAIMessage("done", [{"name": "book_slot", "args": {"time": "10am"}}])
@@ -24,7 +25,7 @@ async def test_langchain_adapter_captures_args_from_message_result():
     assert tool_calls[0].args == {"time": "10am"}
 
 
-async def test_langchain_adapter_captures_args_from_graph_result():
+async def test_langchain_adapter_captures_args_from_graph_result() -> None:
     from pytest_agent_eval.adapters.langchain import LangChainAdapter
 
     msg = _FakeAIMessage("done", [{"name": "book_slot", "args": {"time": "10am"}}])
@@ -37,7 +38,7 @@ async def test_langchain_adapter_captures_args_from_graph_result():
     assert tool_calls[0].args == {"time": "10am"}
 
 
-async def test_langchain_adapter_handles_missing_args_key():
+async def test_langchain_adapter_handles_missing_args_key() -> None:
     from pytest_agent_eval.adapters.langchain import LangChainAdapter
 
     msg = _FakeAIMessage("done", [{"name": "book_slot"}])
@@ -50,7 +51,7 @@ async def test_langchain_adapter_handles_missing_args_key():
     assert tool_calls[0].args is None
 
 
-async def test_langchain_adapter_stringifies_unrecognised_result():
+async def test_langchain_adapter_stringifies_unrecognised_result() -> None:
     """A chain ending in a plain str/StrOutputParser has neither .content nor 'messages'."""
     from pytest_agent_eval.adapters.langchain import LangChainAdapter
 

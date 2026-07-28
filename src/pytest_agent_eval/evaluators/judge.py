@@ -150,7 +150,9 @@ class ToolCallArgsJudgeEvaluator:
                 reasoning=f"Tool {self.tool!r} was never called (tools called: {[str(tc) for tc in ctx.tool_calls]!r})",
             )
 
-        captured = [tc.args for tc in matching if isinstance(getattr(tc, "args", None), dict)]
+        # Walrus, not getattr-then-isinstance: the latter narrows the *expression*, so
+        # tc.args stayed JsonMapping | None and the None leaked into the comparison.
+        captured = [args for tc in matching if isinstance(args := getattr(tc, "args", None), dict)]
         if not captured:
             return EvalResult(
                 passed=False,

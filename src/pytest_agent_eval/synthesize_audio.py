@@ -24,11 +24,13 @@ import hashlib
 import sys
 import tomllib
 import wave
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import yaml
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _DEFAULT_VOICE = "alloy"
 _SAMPLE_RATE_HZ = 24_000

@@ -13,12 +13,14 @@ import asyncio
 import sys
 import types
 import wave
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from pytest_agent_eval.adapters import _wav_input
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _SAMPLE_RATE = 24_000
 _FRAME_MS = 20

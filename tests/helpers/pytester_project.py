@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-import pytest
+if TYPE_CHECKING:
+    import pytest
 
 # Inner runs get their own ini and so cannot see the outer asyncio settings.
 _DEFAULT_INI = "asyncio_mode = auto\n"

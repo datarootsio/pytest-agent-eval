@@ -18,7 +18,7 @@ from pytest_agent_eval.models import Message, TurnContext
 # --- pydantic-ai: real Agent + TestModel end-to-end ---
 
 
-async def test_pydantic_ai_adapter_against_real_agent():
+async def test_pydantic_ai_adapter_against_real_agent() -> None:
     from pydantic_ai import Agent
     from pydantic_ai.models.test import TestModel
 
@@ -40,7 +40,7 @@ async def test_pydantic_ai_adapter_against_real_agent():
     assert "time" in tool_calls[0].args
 
 
-async def test_pydantic_ai_adapter_against_real_agent_multi_turn():
+async def test_pydantic_ai_adapter_against_real_agent_multi_turn() -> None:
     """Regression: pydantic-ai's message_history takes ModelMessage objects, not OpenAI dicts.
 
     Passing raw dicts crashes with AttributeError on pydantic-ai 1.x+; the fake-based
@@ -63,7 +63,7 @@ async def test_pydantic_ai_adapter_against_real_agent_multi_turn():
     assert isinstance(tool_calls, list)
 
 
-async def test_pydantic_ai_adapter_preserves_system_prompt_across_turns():
+async def test_pydantic_ai_adapter_preserves_system_prompt_across_turns() -> None:
     """message_history reconstruction must re-embed the agent's static system prompt.
 
     pydantic-ai only auto-applies system_prompt when message_history is empty, so a
@@ -96,7 +96,7 @@ async def test_pydantic_ai_adapter_preserves_system_prompt_across_turns():
     assert saw_system == [True]
 
 
-def test_pydantic_ai_adapter_excludes_native_tool_search():
+def test_pydantic_ai_adapter_excludes_native_tool_search() -> None:
     """builtin-tool-call covers native tool-search meta-ops; those must not be counted."""
     from pytest_agent_eval.adapters.pydantic_ai import _is_tool_call_part
 
@@ -118,7 +118,7 @@ def test_pydantic_ai_adapter_excludes_native_tool_search():
     assert _is_tool_call_part(_TextPart()) is False
 
 
-async def test_judge_evaluator_against_real_agent_with_structured_output():
+async def test_judge_evaluator_against_real_agent_with_structured_output() -> None:
     from pydantic_ai.models.test import TestModel
 
     from pytest_agent_eval.evaluators.judge import JudgeEvaluator
@@ -131,7 +131,7 @@ async def test_judge_evaluator_against_real_agent_with_structured_output():
     assert result.reasoning == "meets the rubric"
 
 
-async def test_tool_call_args_judge_against_real_agent():
+async def test_tool_call_args_judge_against_real_agent() -> None:
     from pydantic_ai.models.test import TestModel
 
     from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
@@ -185,7 +185,7 @@ def _real_chat_completion() -> object:
     )
 
 
-async def test_openai_adapter_against_real_response_objects():
+async def test_openai_adapter_against_real_response_objects() -> None:
     pytest.importorskip("openai")
     from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
@@ -208,7 +208,7 @@ async def test_openai_adapter_against_real_response_objects():
 # --- langchain-core: real AIMessage, both adapter branches ---
 
 
-async def test_langchain_adapter_against_real_aimessage():
+async def test_langchain_adapter_against_real_aimessage() -> None:
     pytest.importorskip("langchain_core")
     from langchain_core.messages import AIMessage
 
@@ -246,7 +246,7 @@ async def test_langchain_adapter_against_real_aimessage():
 # --- smolagents: real memory-step and ToolCall classes ---
 
 
-async def test_smolagents_adapter_against_real_memory_objects():
+async def test_smolagents_adapter_against_real_memory_objects() -> None:
     pytest.importorskip("smolagents")
     from smolagents.memory import ActionStep
     from smolagents.memory import ToolCall as SmolToolCall
@@ -276,7 +276,7 @@ async def test_smolagents_adapter_against_real_memory_objects():
     assert tool_calls[0].args == {"time": "10am"}
 
 
-async def test_langchain_adapter_history_survives_real_message_coercion():
+async def test_langchain_adapter_history_survives_real_message_coercion() -> None:
     """The adapter forwards history into the runnable, where LangChain coerces it.
 
     langchain_core.convert_to_messages() raises NotImplementedError on a Mapping that is
@@ -295,9 +295,7 @@ async def test_langchain_adapter_history_survives_real_message_coercion():
             coerced.extend(convert_to_messages(payload["messages"]))
             return AIMessage(content="Booked!", tool_calls=[])
 
-    reply, _ = await LangChainAdapter(CoercingRunnable())(
-        [Message(role="user", content="book me", audio="turn1.wav")]
-    )
+    reply, _ = await LangChainAdapter(CoercingRunnable())([Message(role="user", content="book me", audio="turn1.wav")])
 
     assert reply == "Booked!"
     assert [type(m).__name__ for m in coerced] == ["HumanMessage"]

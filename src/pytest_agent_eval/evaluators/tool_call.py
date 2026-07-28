@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from pytest_agent_eval.models import EvalResult, JsonMapping, ToolCallArgsMode, TurnContext
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def _is_ordered_subsequence(needle: Sequence[str], haystack: Sequence[str]) -> bool:
@@ -36,19 +39,15 @@ class ToolCallEvaluator:
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Evaluate tool call presence and ordering."""
         failures: list[str] = []
-
         if not self.ordered:
-            for tool in self.must_include:
-                if tool not in ctx.tool_calls:
-                    failures.append(f"Expected tool {tool!r} not in {ctx.tool_calls!r}")
-
-        for tool in self.must_exclude:
-            if tool in ctx.tool_calls:
-                failures.append(f"Forbidden tool {tool!r} was called")
-
-        if self.ordered and self.must_include:
-            if not _is_ordered_subsequence(self.must_include, ctx.tool_calls):
-                failures.append(f"Tools {self.must_include!r} not called in order in {ctx.tool_calls!r}")
+            failures += [
+                f"Expected tool {tool!r} not in {ctx.tool_calls!r}"
+                for tool in self.must_include
+                if tool not in ctx.tool_calls
+            ]
+        failures += [f"Forbidden tool {tool!r} was called" for tool in self.must_exclude if tool in ctx.tool_calls]
+        if self.ordered and self.must_include and not _is_ordered_subsequence(self.must_include, ctx.tool_calls):
+            failures.append(f"Tools {self.must_include!r} not called in order in {ctx.tool_calls!r}")
 
         if failures:
             return EvalResult(passed=False, reasoning="\n".join(failures))
@@ -82,6 +81,7 @@ class ToolCallArgsEvaluator:
     mode: ToolCallArgsMode = "subset"
 
     def __post_init__(self) -> None:
+        """Reject an unknown comparison mode at construction time."""
         if self.mode not in ("subset", "exact"):
             raise ValueError(f"ToolCallArgsEvaluator mode must be 'subset' or 'exact', got {self.mode!r}")
 
@@ -99,7 +99,9 @@ class ToolCallArgsEvaluator:
                 reasoning=f"Tool {self.tool!r} was never called (tools called: {[str(tc) for tc in ctx.tool_calls]!r})",
             )
 
-        captured = [tc.args for tc in matching if isinstance(getattr(tc, "args", None), dict)]
+        # Walrus, not getattr-then-isinstance: the latter narrows the *expression*, so
+        # tc.args stayed JsonMapping | None and the None leaked into the comparison.
+        captured = [args for tc in matching if isinstance(args := getattr(tc, "args", None), dict)]
         if not captured:
             return EvalResult(
                 passed=False,

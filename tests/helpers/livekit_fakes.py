@@ -12,9 +12,11 @@ import asyncio
 import wave
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass(frozen=True)

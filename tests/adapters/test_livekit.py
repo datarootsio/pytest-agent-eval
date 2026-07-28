@@ -5,11 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pytest_agent_eval.models import Message
 import pytest
 
 from pytest_agent_eval.adapters import livekit as livekit_module
 from pytest_agent_eval.adapters.livekit import LiveKitAdapter
+from pytest_agent_eval.models import Message
 from tests.helpers.livekit_fakes import (
     FakeAgentSession,
     FakeWavInput,

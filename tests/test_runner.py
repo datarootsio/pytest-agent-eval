@@ -15,10 +15,8 @@ from tests.helpers.agents import RecordingAgent, ScriptedAgent, booking_agent, e
 from tests.helpers.judge import FailingJudge, PromptCapturingJudge
 
 
-
-
 @pytest.mark.asyncio
-async def test_turn_audio_is_forwarded_to_the_agent_as_a_message_key():
+async def test_turn_audio_is_forwarded_to_the_agent_as_a_message_key() -> None:
     """Voice adapters read the WAV path off the user message; it must be a str, not a Path."""
     agent = RecordingAgent()
 
@@ -31,7 +29,7 @@ async def test_turn_audio_is_forwarded_to_the_agent_as_a_message_key():
 
 
 @pytest.mark.asyncio
-async def test_turn_without_audio_omits_the_key_entirely():
+async def test_turn_without_audio_omits_the_key_entirely() -> None:
     """An absent audio key is what tells a text adapter this is not a voice turn."""
     agent = RecordingAgent()
 
@@ -41,7 +39,7 @@ async def test_turn_without_audio_omits_the_key_entirely():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_single_turn_passes():
+async def test_run_transcript_single_turn_passes() -> None:
     transcript = Transcript(
         id="test",
         turns=[Turn(user="hello")],
@@ -56,7 +54,7 @@ async def test_run_transcript_single_turn_passes():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_with_contains_evaluator():
+async def test_run_transcript_with_contains_evaluator() -> None:
     transcript = Transcript(
         id="test",
         turns=[
@@ -74,7 +72,7 @@ async def test_run_transcript_with_contains_evaluator():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_with_tool_call_evaluator():
+async def test_run_transcript_with_tool_call_evaluator() -> None:
     transcript = Transcript(
         id="test",
         turns=[
@@ -91,7 +89,7 @@ async def test_run_transcript_with_tool_call_evaluator():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
+async def test_run_transcript_builds_contains_evaluator_from_regex_expect() -> None:
     transcript = Transcript(
         id="regex",
         turns=[
@@ -117,7 +115,7 @@ async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_enforces_tool_calls_ordered_from_expect():
+async def test_run_transcript_enforces_tool_calls_ordered_from_expect() -> None:
     async def ordered_agent(history: list[dict]) -> tuple[str, list[str]]:
         return "done", ["fetch", "auth"]
 
@@ -141,7 +139,7 @@ async def test_run_transcript_enforces_tool_calls_ordered_from_expect():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_fails_when_evaluator_fails():
+async def test_run_transcript_fails_when_evaluator_fails() -> None:
     transcript = Transcript(
         id="test",
         turns=[
@@ -159,7 +157,7 @@ async def test_run_transcript_fails_when_evaluator_fails():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_multiple_runs_score():
+async def test_run_transcript_multiple_runs_score() -> None:
     transcript = Transcript(
         id="flaky",
         turns=[
@@ -178,7 +176,7 @@ async def test_run_transcript_multiple_runs_score():
 
 
 @pytest.mark.asyncio
-async def test_runner_normalises_plain_strings_to_tool_calls():
+async def test_runner_normalises_plain_strings_to_tool_calls() -> None:
     from pytest_agent_eval.models import EvalResult, ToolCall
 
     captured: list[list] = []
@@ -204,7 +202,7 @@ async def test_runner_normalises_plain_strings_to_tool_calls():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_dispatches_tool_calls_args_deterministic():
+async def test_run_transcript_dispatches_tool_calls_args_deterministic() -> None:
     from pytest_agent_eval.models import ToolCall, ToolCallArgsConfig
 
     async def args_agent(history: list[dict]) -> tuple[str, list]:
@@ -240,7 +238,7 @@ async def test_run_transcript_dispatches_tool_calls_args_deterministic():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallback():
+async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallback() -> None:
     """config_model reaches the args judge — asserted by handing it a model that records use."""
     from pytest_agent_eval.models import JudgeConfig, ToolCall, ToolCallArgsConfig
 
@@ -272,7 +270,7 @@ async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallba
 
 
 @pytest.mark.asyncio
-async def test_per_turn_judge_model_overrides_the_config_model():
+async def test_per_turn_judge_model_overrides_the_config_model() -> None:
     """Precedence is turn override, then judge_model, then config_model."""
     from pytest_agent_eval.models import JudgeConfig
 
@@ -292,7 +290,7 @@ async def test_per_turn_judge_model_overrides_the_config_model():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_passes_judge_retries_and_timeout_through():
+async def test_run_transcript_passes_judge_retries_and_timeout_through() -> None:
     from pytest_agent_eval.models import JudgeConfig
 
     transcript = Transcript(
@@ -309,7 +307,7 @@ async def test_run_transcript_passes_judge_retries_and_timeout_through():
 
 
 @pytest.mark.asyncio
-async def test_history_is_accumulated_across_turns():
+async def test_history_is_accumulated_across_turns() -> None:
     agent = RecordingAgent()
 
     transcript = Transcript(
@@ -324,7 +322,7 @@ async def test_history_is_accumulated_across_turns():
 
 
 @pytest.mark.asyncio
-async def test_eval_session_run_stores_result_on_item():
+async def test_eval_session_run_stores_result_on_item() -> None:
     """EvalSession.run() returns result and stores it on _item._eval_result."""
     import types
 
@@ -341,7 +339,7 @@ async def test_eval_session_run_stores_result_on_item():
 
 
 @pytest.mark.asyncio
-async def test_eval_session_without_an_item_still_returns_a_result():
+async def test_eval_session_without_an_item_still_returns_a_result() -> None:
     """The Python API is usable outside a pytest item; there is then nothing to stash onto."""
     session = EvalSession(threshold=0.0, runs=1)
     result = await session.run(echo_agent, [Turn(user="hello")])

@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import os
 import tomllib
-from pathlib import Path
+from typing import TYPE_CHECKING
+
 import pytest
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from pytest_agent_eval.groups import GroupConfig, parse_groups
-from pytest_agent_eval.models import JsonMapping
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from pytest_agent_eval.models import JsonMapping
 
 
 class AgentEvalConfig(BaseModel):

@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 
-from pytest_agent_eval.evaluators.base import Evaluator
+if TYPE_CHECKING:
+    import pytest
+
+    from pytest_agent_eval.evaluators.base import Evaluator
+
 from pytest_agent_eval.evaluators.contains import ContainsEvaluator
 from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
 from pytest_agent_eval.models import (
@@ -20,6 +25,7 @@ from pytest_agent_eval.models import (
     TurnContext,
     TurnResult,
 )
+
 
 def _build_yaml_evaluators(expect: Expect) -> list[Evaluator]:
     """Convert YAML shorthand fields in Expect to evaluator instances."""

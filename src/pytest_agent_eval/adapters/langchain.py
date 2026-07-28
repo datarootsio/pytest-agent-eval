@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from pytest_agent_eval.adapters._args import coerce_args
-from pytest_agent_eval.models import AgentReply, ToolCall
+from pytest_agent_eval.models import AgentReply, History, ToolCall
 
 
 class LangChainAdapter:
@@ -37,7 +37,7 @@ class LangChainAdapter:
             )
         self._runnable = runnable
 
-    async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
+    async def __call__(self, history: History) -> AgentReply:
         """Run the runnable and normalise output to (reply, tool_calls)."""
         # Plain dicts, not Messages: langchain_core.convert_to_messages() raises
         # NotImplementedError on a Mapping that is not a dict.

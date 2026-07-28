@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -62,7 +62,8 @@ def build_markdown_report(
     Returns:
         Formatted markdown string.
     """
-    today = run_date or date.today().isoformat()
+    # UTC, not local: a report's date must not depend on the runner's timezone.
+    today = run_date or datetime.now(tz=UTC).date().isoformat()
     lines = [f"# LLM Eval Report — {today}", "", "## Summary", ""]
     lines.append("| Transcript | Runs | Passed | Score | Threshold | Status |")
     lines.append("|---|---|---|---|---|---|")
@@ -177,7 +178,7 @@ class AgentEvalReportPlugin:
         return self._xdist_active() and not self._is_xdist_worker()
 
     @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_makereport(self, item: pytest.Item, call: pytest.CallInfo) -> Any:
+    def pytest_runtest_makereport(self, item: pytest.Item, call: pytest.CallInfo[None]) -> Any:
         """Capture per-test eval results and outcomes, forwarding across xdist workers."""
         outcome = yield
         report = outcome.get_result()

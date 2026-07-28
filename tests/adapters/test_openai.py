@@ -7,7 +7,7 @@ from pytest_agent_eval.adapters.openai import OpenAIAdapter
 from pytest_agent_eval.models import Message, ToolCall
 
 
-async def test_openai_adapter_captures_tool_call_args():
+async def test_openai_adapter_captures_tool_call_args() -> None:
     from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
     tc = SimpleNamespace(function=SimpleNamespace(name="book_slot", arguments='{"time": "10am"}'))
@@ -24,7 +24,7 @@ async def test_openai_adapter_captures_tool_call_args():
     assert tool_calls[0].args == {"time": "10am"}
 
 
-async def test_openai_adapter_prepends_system_prompt():
+async def test_openai_adapter_prepends_system_prompt() -> None:
     from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
     message = SimpleNamespace(content="done", tool_calls=None)
@@ -39,7 +39,7 @@ async def test_openai_adapter_prepends_system_prompt():
     assert sent[1]["content"] == "hi"
 
 
-async def test_plugin_internal_audio_key_is_not_sent_to_the_api():
+async def test_plugin_internal_audio_key_is_not_sent_to_the_api() -> None:
     """runner.py sets audio on every voice turn; the chat API rejects unknown message keys."""
     message = SimpleNamespace(content="done", tool_calls=None)
     client = MagicMock()

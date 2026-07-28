@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.adapters._wav_input import WavFileAudioInput
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-SessionFactory = Callable[[], "tuple[AgentSession, Agent]"]
+SessionFactory = Callable[[], "tuple[AgentSession[Any], Agent]"]
 
 
 def _quiet_livekit_loggers() -> None:
@@ -134,7 +135,7 @@ class LiveKitAdapter:
             await session.start(agent)
             try:
                 await asyncio.wait_for(wav_input.wait_for_exhaustion(), timeout=self._timeout_s)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("LiveKitAdapter: timed out waiting for WAV exhaustion")
             await asyncio.sleep(self._grace_period_s)
         finally:

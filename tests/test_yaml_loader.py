@@ -219,7 +219,7 @@ _REJECTED: list[tuple[str, str, list[str]]] = [
 @pytest.mark.parametrize(
     ("yaml_source", "fragments"), [(y, f) for _, y, f in _REJECTED], ids=[c for c, _, _ in _REJECTED]
 )
-def test_malformed_transcript_is_rejected_didactically(tmp_path: Path, yaml_source: str, fragments: list[str]):
+def test_malformed_transcript_is_rejected_didactically(tmp_path: Path, yaml_source: str, fragments: list[str]) -> None:
     """Every rejection names its location, explains the fix, and links the schema."""
     with pytest.raises(ValueError) as excinfo:
         _load(tmp_path, yaml_source)
@@ -239,7 +239,7 @@ _ACCEPTED: list[tuple[str, str]] = [
 
 
 @pytest.mark.parametrize("yaml_source", [y for _, y in _ACCEPTED], ids=[c for c, _ in _ACCEPTED])
-def test_permissive_documents_keep_parsing(tmp_path: Path, yaml_source: str):
+def test_permissive_documents_keep_parsing(tmp_path: Path, yaml_source: str) -> None:
     """Guards the deliberately lenient cases against a stricter reimplementation."""
     assert _load(tmp_path, yaml_source).turns
 
@@ -247,7 +247,7 @@ def test_permissive_documents_keep_parsing(tmp_path: Path, yaml_source: str):
 # --- validation ---
 
 
-def test_unknown_expect_field_suggests_close_match(tmp_path: Path):
+def test_unknown_expect_field_suggests_close_match(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError) as excinfo:
         _load(tmp_path, "id: t\nturns:\n  - user: hi\n    expect:\n      tool_call_include: [x]\n")
     message = str(excinfo.value)
@@ -257,42 +257,42 @@ def test_unknown_expect_field_suggests_close_match(tmp_path: Path):
     assert "schema/transcript.json" in message
 
 
-def test_unknown_top_level_field_reports_location(tmp_path: Path):
+def test_unknown_top_level_field_reports_location(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError, match="thresold"):
         _load(tmp_path, "id: t\nthresold: 0.8\nturns:\n  - user: hi\n")
 
 
-def test_missing_id_is_didactic(tmp_path: Path):
+def test_missing_id_is_didactic(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError, match="missing required field 'id'"):
         _load(tmp_path, "turns:\n  - user: hi\n")
 
 
-def test_missing_user_reports_turn_index(tmp_path: Path):
+def test_missing_user_reports_turn_index(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError, match=r"turns\[1\].*missing required field 'user'"):
         _load(tmp_path, "id: t\nturns:\n  - user: hi\n  - expect:\n      reply_contains_any: [x]\n")
 
 
-def test_missing_rubric_in_judge(tmp_path: Path):
+def test_missing_rubric_in_judge(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError, match=r"turns\[0\].expect.judge.*rubric"):
         _load(tmp_path, "id: t\nturns:\n  - user: hi\n    expect:\n      judge:\n        model: openai:gpt-4o\n")
 
 
-def test_scalar_where_list_expected(tmp_path: Path):
+def test_scalar_where_list_expected(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError, match="must be a list of strings"):
         _load(tmp_path, "id: t\nturns:\n  - user: hi\n    expect:\n      reply_contains_any: confirmed\n")
 
 
-def test_threshold_out_of_range(tmp_path: Path):
+def test_threshold_out_of_range(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError, match="between 0 and 1"):
         _load(tmp_path, "id: t\nthreshold: 1.5\nturns:\n  - user: hi\n")
 
 
-def test_runs_must_be_positive_int(tmp_path: Path):
+def test_runs_must_be_positive_int(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError, match="integer >= 1"):
         _load(tmp_path, "id: t\nruns: 0\nturns:\n  - user: hi\n")
 
 
-def test_empty_turns_is_an_error(tmp_path: Path):
+def test_empty_turns_is_an_error(tmp_path: Path) -> None:
     """Behavior change: an empty transcript used to collect and vacuously PASS."""
     with pytest.raises(TranscriptError, match="at least one turn"):
         _load(tmp_path, "id: t\nturns: []\n")
@@ -300,12 +300,12 @@ def test_empty_turns_is_an_error(tmp_path: Path):
         _load(tmp_path, "id: t\n")
 
 
-def test_invalid_regex_pattern_fails_validation_with_location(tmp_path: Path):
+def test_invalid_regex_pattern_fails_validation_with_location(tmp_path: Path) -> None:
     with pytest.raises(TranscriptError, match=r"turns\[0\].expect.reply_matches_any\[0\].*invalid regex"):
         _load(tmp_path, 'id: t\nturns:\n  - user: hi\n    expect:\n      reply_matches_any: ["("]\n')
 
 
-def test_runs_accepts_integral_float(tmp_path: Path):
+def test_runs_accepts_integral_float(tmp_path: Path) -> None:
     transcript = _load(tmp_path, "id: t\nruns: 2.0\nturns:\n  - user: hi\n")
     assert transcript.runs == 2
     assert isinstance(transcript.runs, int)
@@ -313,7 +313,7 @@ def test_runs_accepts_integral_float(tmp_path: Path):
         _load(tmp_path, "id: t\nruns: 2.5\nturns:\n  - user: hi\n")
 
 
-def test_load_transcript_honours_config_defaults(tmp_path: Path):
+def test_load_transcript_honours_config_defaults(tmp_path: Path) -> None:
     yaml_path = tmp_path / "t.yaml"
     yaml_path.write_text("id: t\nturns:\n  - user: hi\n")
     transcript = load_transcript(yaml_path, default_threshold=0.5, default_runs=4)
@@ -327,7 +327,7 @@ def test_load_transcript_honours_config_defaults(tmp_path: Path):
     assert transcript.runs == 2
 
 
-def test_yaml_syntax_error_shows_clean_collect_error(pytester: pytest.Pytester):
+def test_yaml_syntax_error_shows_clean_collect_error(pytester: pytest.Pytester) -> None:
     EvalProject(
         conftest=static_agent(),
         transcripts={"tests/evals/broken_syntax": "id: broken\nturns:\n  - user: hi\n   expect:\n      judge: x\n"},
@@ -338,7 +338,7 @@ def test_yaml_syntax_error_shows_clean_collect_error(pytester: pytest.Pytester):
     assert "yaml.parser" not in result.stdout.str()
 
 
-def test_yaml_transcript_defaults_come_from_config(pytester: pytest.Pytester):
+def test_yaml_transcript_defaults_come_from_config(pytester: pytest.Pytester) -> None:
     pytester.makepyprojecttoml(
         """
         [tool.agent_eval]
@@ -359,22 +359,24 @@ def test_yaml_transcript_defaults_come_from_config(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
-def test_validate_transcript_dict_rejects_non_mapping():
+def test_validate_transcript_dict_rejects_non_mapping() -> None:
     with pytest.raises(TranscriptError, match="must be a YAML mapping"):
         validate_transcript_dict(["not", "a", "dict"], source="x.yaml")
 
 
-def test_invalid_yaml_shows_clean_collect_error(pytester: pytest.Pytester):
+def test_invalid_yaml_shows_clean_collect_error(pytester: pytest.Pytester) -> None:
     EvalProject(
         conftest=static_agent(),
-        transcripts={"tests/evals/broken": "id: broken\nturns:\n  - user: hi\n    expect:\n      reply_contain_any: [x]\n"},
+        transcripts={
+            "tests/evals/broken": "id: broken\nturns:\n  - user: hi\n    expect:\n      reply_contain_any: [x]\n"
+        },
     ).write(pytester)
     result = pytester.runpytest("--agent-eval-live")
     assert result.ret != 0
     result.stdout.fnmatch_lines(["*Did you mean 'reply_contains_any'?*"])
 
 
-def test_load_transcript_parses_fields():
+def test_load_transcript_parses_fields() -> None:
     t = load_transcript(SAMPLE)
     assert t.id == "sample_booking"
     assert t.threshold == 1.0
@@ -386,7 +388,7 @@ def test_load_transcript_parses_fields():
     assert t.turns[0].expect.tool_calls_include == ["book_slot"]
 
 
-def test_load_transcript_parses_regex_expect_fields(tmp_path: Path):
+def test_load_transcript_parses_regex_expect_fields(tmp_path: Path) -> None:
     yaml_path = tmp_path / "regex.yaml"
     yaml_path.write_text(
         "id: t\n"
@@ -403,7 +405,7 @@ def test_load_transcript_parses_regex_expect_fields(tmp_path: Path):
     assert transcript.turns[0].expect.reply_matches_all == ["tomorrow"]
 
 
-def test_load_transcript_parses_tool_calls_ordered(tmp_path: Path):
+def test_load_transcript_parses_tool_calls_ordered(tmp_path: Path) -> None:
     yaml_path = tmp_path / "ordered.yaml"
     yaml_path.write_text(
         "id: t\n"
@@ -418,7 +420,7 @@ def test_load_transcript_parses_tool_calls_ordered(tmp_path: Path):
     assert load_transcript(SAMPLE).turns[0].expect.tool_calls_ordered is False
 
 
-def test_load_transcript_parses_tool_calls_args(tmp_path: Path):
+def test_load_transcript_parses_tool_calls_args(tmp_path: Path) -> None:
     yaml_path = tmp_path / "args.yaml"
     yaml_path.write_text(
         "id: t\n"
@@ -445,7 +447,7 @@ def test_load_transcript_parses_tool_calls_args(tmp_path: Path):
     assert entries[1].judge.rubric == "Time within business hours"
 
 
-def test_load_transcript_rejects_tool_calls_args_without_args_or_judge(tmp_path: Path):
+def test_load_transcript_rejects_tool_calls_args_without_args_or_judge(tmp_path: Path) -> None:
     yaml_path = tmp_path / "bad_args.yaml"
     yaml_path.write_text(
         "id: t\nturns:\n  - user: hi\n    expect:\n      tool_calls_args:\n        - tool: book_slot\n"
@@ -454,21 +456,21 @@ def test_load_transcript_rejects_tool_calls_args_without_args_or_judge(tmp_path:
         load_transcript(yaml_path)
 
 
-def test_audio_field_defaults_to_none(tmp_path: Path):
+def test_audio_field_defaults_to_none(tmp_path: Path) -> None:
     yaml_path = tmp_path / "no_audio.yaml"
     yaml_path.write_text("id: t\nturns:\n  - user: hi\n")
     transcript = load_transcript(yaml_path)
     assert transcript.turns[0].audio is None
 
 
-def test_audio_field_resolves_relative_to_yaml_dir(tmp_path: Path):
+def test_audio_field_resolves_relative_to_yaml_dir(tmp_path: Path) -> None:
     yaml_path = tmp_path / "with_audio.yaml"
     yaml_path.write_text("id: t\nturns:\n  - user: hi\n    audio: turn1.wav\n")
     transcript = load_transcript(yaml_path)
     assert transcript.turns[0].audio == tmp_path / "turn1.wav"
 
 
-def test_audio_field_keeps_absolute_path(tmp_path: Path):
+def test_audio_field_keeps_absolute_path(tmp_path: Path) -> None:
     abs_audio = tmp_path / "elsewhere" / "x.wav"
     yaml_path = tmp_path / "abs.yaml"
     yaml_path.write_text(f"id: t\nturns:\n  - user: hi\n    audio: {abs_audio}\n")
@@ -476,7 +478,7 @@ def test_audio_field_keeps_absolute_path(tmp_path: Path):
     assert transcript.turns[0].audio == abs_audio
 
 
-def test_yaml_discovery_and_collection(pytester: pytest.Pytester):
+def test_yaml_discovery_and_collection(pytester: pytest.Pytester) -> None:
     EvalProject(
         conftest=static_agent("confirmed"),
         transcripts={"tests/evals/hello": "id: hello_test\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n"},
@@ -485,7 +487,7 @@ def test_yaml_discovery_and_collection(pytester: pytest.Pytester):
     result.stdout.fnmatch_lines(["*hello_test*"])
 
 
-def test_yaml_item_passes_with_matching_agent(pytester: pytest.Pytester):
+def test_yaml_item_passes_with_matching_agent(pytester: pytest.Pytester) -> None:
     EvalProject(
         conftest=static_agent("booking confirmed!"),
         transcripts={"tests/evals/booking": _CONFIRMED_TRANSCRIPT.format(id="booking_ok")},
@@ -495,7 +497,7 @@ def test_yaml_item_passes_with_matching_agent(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
-def test_yaml_item_skips_with_didactic_hint_when_agent_fixture_missing(pytester: pytest.Pytester):
+def test_yaml_item_skips_with_didactic_hint_when_agent_fixture_missing(pytester: pytest.Pytester) -> None:
     """A collected transcript with no llm_eval_agent fixture must teach the fix, not error."""
     EvalProject(transcripts={"tests/evals/no_fixture": "id: needs_agent\nturns:\n  - user: hi\n"}).write(pytester)
     # -rs, not -v: the short summary prints the whole skip reason, which -v truncates.
@@ -506,7 +508,7 @@ def test_yaml_item_skips_with_didactic_hint_when_agent_fixture_missing(pytester:
     assert "INTERNALERROR" not in result.stdout.str()
 
 
-def test_non_assertion_failure_defers_to_pytest_traceback(pytester: pytest.Pytester):
+def test_non_assertion_failure_defers_to_pytest_traceback(pytester: pytest.Pytester) -> None:
     """repr_failure renders threshold assertions plainly but must not swallow real errors."""
     EvalProject(
         conftest=raising_agent("agent exploded"),
@@ -517,7 +519,7 @@ def test_non_assertion_failure_defers_to_pytest_traceback(pytester: pytest.Pytes
     result.stdout.fnmatch_lines(["*RuntimeError*agent exploded*"])
 
 
-def test_yaml_item_fails_with_non_matching_agent(pytester: pytest.Pytester):
+def test_yaml_item_fails_with_non_matching_agent(pytester: pytest.Pytester) -> None:
     EvalProject(
         conftest=static_agent("error"),
         transcripts={"tests/evals/fail_test": _CONFIRMED_TRANSCRIPT.format(id="fail_case")},

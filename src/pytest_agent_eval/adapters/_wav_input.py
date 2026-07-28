@@ -9,8 +9,12 @@ from __future__ import annotations
 
 import asyncio
 import wave
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+_PCM16_BYTES = 2
 
 
 def _import_livekit() -> tuple[Any, Any]:
@@ -58,7 +62,7 @@ def _make_wav_file_audio_input_class() -> Any:
             with wave.open(str(self._wav_path), "rb") as wav:
                 if wav.getnchannels() != 1:
                     raise ValueError(f"{self._wav_path}: expected mono, got {wav.getnchannels()} ch")
-                if wav.getsampwidth() != 2:
+                if wav.getsampwidth() != _PCM16_BYTES:
                     raise ValueError(f"{self._wav_path}: expected 16-bit PCM, got {wav.getsampwidth() * 8}-bit")
                 if wav.getframerate() != self._sample_rate:
                     raise ValueError(f"{self._wav_path}: expected {self._sample_rate} Hz, got {wav.getframerate()} Hz")

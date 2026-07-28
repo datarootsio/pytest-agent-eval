@@ -128,8 +128,7 @@ def test_any_is_confined_to_the_allowlist() -> None:
     for path in sorted(src.rglob("*.py")):
         rel = str(path.relative_to(src))
         uses_any = any(
-            re.search(r"\bAny\b", line) and not line.lstrip().startswith("#")
-            for line in path.read_text().splitlines()
+            re.search(r"\bAny\b", line) and not line.lstrip().startswith("#") for line in path.read_text().splitlines()
         )
         if uses_any and rel not in ANY_ALLOWLIST:
             unexpected.append(rel)

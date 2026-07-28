@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import yaml
@@ -14,6 +14,9 @@ from pytest_agent_eval._errors import SCHEMA_URL, TranscriptError, as_transcript
 from pytest_agent_eval.config import load_config
 from pytest_agent_eval.models import Transcript
 from pytest_agent_eval.runner import run_transcript
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 __all__ = [
     "SCHEMA_URL",
@@ -96,8 +99,7 @@ def pytest_collect_file(parent: pytest.Collector, file_path: Path) -> pytest.Col
         return None
 
     cfg = load_config(parent.config)
-    rootdir = Path(str(parent.config.rootdir))
-    yaml_dirs = [rootdir / d for d in cfg.yaml_dirs]
+    yaml_dirs = [parent.config.rootpath / d for d in cfg.yaml_dirs]
 
     for yaml_dir in yaml_dirs:
         try:

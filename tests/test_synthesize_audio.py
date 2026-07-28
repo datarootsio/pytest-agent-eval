@@ -5,15 +5,16 @@ from __future__ import annotations
 import argparse
 import base64
 import sys
-from dataclasses import dataclass
-from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from pytest_agent_eval import synthesize_audio as mod
 from tests.helpers.spies import SynthSpy
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _make_yaml(path: Path, *, audio_name: str, user: str = "Hello") -> None:
