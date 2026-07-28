@@ -518,3 +518,19 @@ def test_build_group_markdown_lines_omits_a_failure_note_when_all_pass() -> None
     lines = build_group_markdown_lines(evaluate_groups([group], [_outcome("a", "passed", tags=["t"])]))
     assert any("| clean | 1 | 1 |" in line for line in lines)
     assert not any("failures" in line for line in lines)
+
+
+def test_build_group_markdown_lines_stays_silent_about_passing_must_pass_entries():
+    """The terminal summary lists every must_pass entry; the markdown notes only problems.
+
+    A passing entry must therefore produce no note at all — otherwise the report grows a
+    line per healthy gate and the real failures stop standing out.
+    """
+    group = GroupConfig(name="gate", tags=["t"], must_pass=["critical"])
+    outcomes = [_outcome("critical", "passed", tags=["t"])]
+
+    markdown = build_group_markdown_lines(evaluate_groups([group], outcomes))
+    terminal = format_group_summary_lines(evaluate_groups([group], outcomes))
+
+    assert not any("critical" in line for line in markdown)
+    assert any("must_pass: critical ok" in line for line in terminal)
