@@ -68,7 +68,9 @@ In parallel:
 uv run pytest tests/ -n auto
 ```
 
-If you're testing a change to a specific adapter (e.g. `smolagents`), make sure the matching extra is installed (`uv sync --extra smolagents`) — adapter modules import their respective frameworks at module load time and will skip if unavailable.
+If you're testing a change to a specific adapter (e.g. `smolagents`), install the matching extra (`uv sync --extra smolagents`). Adapter modules do **not** import their frameworks — they are duck-typed and raise a `TypeError` naming the extra if handed the wrong object — so the adapter's own tests run either way. What needs the extra is the SDK *contract* tests in `tests/test_contract_sdk.py`, which construct real SDK objects and `importorskip` when the extra is missing. CI runs `uv sync --all-extras` and asserts those tests do not skip.
+
+Coverage is deliberately extras-independent: the `test-no-extras` CI job reaches the same 100%, because the extras contribute no unique lines.
 
 ## Linting and formatting
 
@@ -92,11 +94,21 @@ Ruff config lives in `pyproject.toml` under `[tool.ruff]`. Line length is **120*
 These are enforced by ruff but worth knowing up front:
 
 - **Type annotations on every function** — parameters and return types. Use `from __future__ import annotations` at the top of every file.
-- **`pathlib.Path`**, never `os.path`.
+- **Never `typing.Any`.** Use `object` plus narrowing for unknown input, a `Protocol` for a duck-typed third-party object, the real type under `TYPE_CHECKING` when the dependency ships types, and `JsonMapping` for JSON. The remaining uses are allowlisted in `tests/test_public_surface.py`, and that list only shrinks.
+- **Accept `Sequence`, return `list`.** `list` is invariant, which is the single biggest source of spurious type errors in this codebase.
+- **`frozen=True, slots=True`** on records the plugin produces; types a *user* constructs stay mutable.
+- **Pydantic at every external boundary** (YAML, TOML, CLI, LLM output) with `extra="forbid"`; plain dataclasses inside.
+- **Return a record, never an anonymous tuple**, and never index one of our own records by string key — a `dict` is a serialisation format, produced at the edge by `to_dict()` / `model_dump()`.
+- **`pathlib.Path`**, never `os.path`, and `Path.read_text()` rather than builtin `open()`.
 - **f-strings**, never `%` or `.format()`.
 - **Comprehensions over loops** — prefer `[x for x in ...]` and `asyncio.gather(*(coro for ...))` over `for ... append`.
 - **Comments only for the WHY**, never the WHAT. Names should be self-documenting; don't write multi-line comment blocks.
-- **No mocking of internal modules in tests** — exercise the public interface.
+- **No mocking of internal modules in tests** — exercise the public interface, and prefer a real test double from the library (pydantic-ai ships `TestModel` and `FunctionModel`). Where a test needs a seam, add the parameter.
+- **Coverage is a 100% ratchet**, statements and branches. Measure with `coverage run -m pytest`, never `pytest --cov` — the plugin loads through its `pytest11` entry point before `pytest-cov` starts tracing, understating the total by ~15 points.
+
+Two divergences from the wider house style are intentional: line length is **120** (reformatting to 88 would touch every file) and docstrings are **Google** style (`zensical.toml` sets `docstring_style = "google"`, so changing it breaks the published API reference).
+
+`pyproject.toml` carries two explicit ratchets — per-file ruff ignores and demoted `ty` rules — each naming the refactor that closes it. They are meant to shrink.
 
 The full Python style guide lives in [`CLAUDE.md`](CLAUDE.md).
 
