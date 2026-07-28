@@ -4,20 +4,24 @@ from __future__ import annotations
 
 import os
 import tomllib
-from dataclasses import dataclass, field
 from pathlib import Path
 import pytest
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from pytest_agent_eval.groups import GroupConfig, parse_groups
 from pytest_agent_eval.models import JsonMapping
 
 
-@dataclass
-class AgentEvalConfig:
+class AgentEvalConfig(BaseModel):
     """Runtime configuration for pytest-agent-eval.
+
+    Unknown keys under ``[tool.agent_eval]`` are ignored, which is deliberate and
+    contrasts with ``[tool.agent_eval.groups]``: a typo there would silently disable a
+    CI gate, whereas a typo here leaves a documented default in place.
 
     Args:
         model: pydantic-ai model string used by JudgeEvaluator (e.g. "openai:gpt-4o").
+        judge_model: Dedicated judge model; takes priority over ``model``.
         threshold: Default fraction of runs that must pass (0.0-1.0).
         runs: Default number of times to run each test/transcript.
         retries: Number of retry attempts for the LLM judge on failure.
@@ -28,16 +32,28 @@ class AgentEvalConfig:
         groups: Quality-gate groups parsed from [tool.agent_eval.groups].
     """
 
+    model_config = ConfigDict(extra="ignore", validate_assignment=True)
+
     model: str = "openai:gpt-4o"
     judge_model: str | None = None
-    threshold: float = 0.8
-    runs: int = 1
-    retries: int = 2
-    timeout: int = 30
-    yaml_dirs: list[str] = field(default_factory=lambda: ["tests/evals"])
+    threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    runs: int = Field(default=1, ge=1)
+    retries: int = Field(default=2, ge=0)
+    timeout: int = Field(default=30, gt=0)
+    yaml_dirs: list[str] = Field(default_factory=lambda: ["tests/evals"])
     live: bool = False
     report_path: str | None = None
-    groups: list[GroupConfig] = field(default_factory=list)
+    groups: list[GroupConfig] = Field(default_factory=list)
+
+    @field_validator("groups", mode="before")
+    @classmethod
+    def _parse_group_tables(cls, value: object) -> object:
+        """Turn the raw [tool.agent_eval.groups] tables into GroupConfigs.
+
+        Kept as a before-validator so parse_groups' strict, didactic messages survive
+        rather than being replaced by pydantic's generic ones.
+        """
+        return parse_groups(value) if isinstance(value, dict) else value
 
 
 def load_config_from_toml(path: Path) -> AgentEvalConfig:
@@ -49,19 +65,11 @@ def load_config_from_toml(path: Path) -> AgentEvalConfig:
     Returns:
         AgentEvalConfig with values from the file, defaults for missing keys.
     """
-    cfg = AgentEvalConfig()
     if not path.exists():
-        return cfg
-    with open(path, "rb") as f:
-        data = tomllib.load(f)
+        return AgentEvalConfig()
+    data = tomllib.loads(path.read_text())
     section: JsonMapping = dict(data.get("tool", {}).get("agent_eval", {}))
-    raw_groups = section.pop("groups", None)
-    if raw_groups is not None:
-        cfg.groups = parse_groups(raw_groups)
-    for key, value in section.items():
-        if hasattr(cfg, key):
-            setattr(cfg, key, value)
-    return cfg
+    return AgentEvalConfig.model_validate(section)
 
 
 def load_config(pytest_config: pytest.Config) -> AgentEvalConfig:
@@ -75,8 +83,7 @@ def load_config(pytest_config: pytest.Config) -> AgentEvalConfig:
     Returns:
         Resolved AgentEvalConfig.
     """
-    rootdir = Path(str(pytest_config.rootdir))
-    cfg = load_config_from_toml(rootdir / "pyproject.toml")
+    cfg = load_config_from_toml(pytest_config.rootpath / "pyproject.toml")
 
     # Env var override
     if os.environ.get("EVAL_LIVE", "").lower() in ("1", "true", "yes"):
