@@ -5,29 +5,37 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypeAlias
 
-from pytest_agent_eval.models import OutcomeName
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+
+from pytest_agent_eval.models import OutcomeName, _reject_non_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-@dataclass
-class GroupConfig:
+class GroupConfig(BaseModel):
     """Configuration for one quality-gate group under [tool.agent_eval.groups].
 
+    Validated strictly, unlike the rest of [tool.agent_eval] where unknown keys are
+    ignored: a typo'd key or threshold here would silently disable a CI gate.
+
     Args:
-        name: Group name (the table key).
+        name: Group name (the table key, not a key inside the table).
         threshold: Fraction of matched, non-skipped tests that must pass (0.0-1.0).
         tags: Transcript tags selecting members (OR-combined with pytest_markers).
         pytest_markers: Pytest marker names selecting members.
         must_pass: Test identities that must individually pass whenever they run.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str
-    threshold: float = 1.0
-    tags: list[str] = field(default_factory=list)
-    pytest_markers: list[str] = field(default_factory=list)
-    must_pass: list[str] = field(default_factory=list)
+    threshold: float = Field(default=1.0, ge=0.0, le=1.0)
+    tags: list[str] = Field(default_factory=list)
+    pytest_markers: list[str] = Field(default_factory=list)
+    must_pass: list[str] = Field(default_factory=list)
+
+    _reject_bad_threshold = field_validator("threshold", mode="before")(_reject_non_numeric)
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,7 +271,8 @@ def build_group_markdown_lines(results: list[GroupResult]) -> list[str]:
     return lines
 
 
-_KNOWN_KEYS = ("threshold", "tags", "pytest_markers", "must_pass")
+# `name` comes from the table key, so it is not a key users may set inside the table.
+_CONFIGURABLE_KEYS = ("threshold", "tags", "pytest_markers", "must_pass")
 
 
 def parse_groups(raw: object) -> list[GroupConfig]:
@@ -285,35 +294,37 @@ def parse_groups(raw: object) -> list[GroupConfig]:
     """
     if not isinstance(raw, dict):
         raise ValueError(f"[tool.agent_eval.groups] must be a table of group tables, got {type(raw).__name__}")
+    return [_parse_group(name, cfg) for name, cfg in raw.items()]
 
-    groups: list[GroupConfig] = []
-    for name, cfg in raw.items():
-        prefix = f"[tool.agent_eval.groups.{name}]"
-        if not isinstance(cfg, dict):
-            raise ValueError(f"{prefix} must be a table, got {type(cfg).__name__}")
 
-        unknown = sorted(set(cfg) - set(_KNOWN_KEYS))
-        if unknown:
-            raise ValueError(f"{prefix}: unknown key(s) {unknown}; valid keys are {list(_KNOWN_KEYS)}")
+def _parse_group(name: str, cfg: object) -> GroupConfig:
+    """Validate one group table, reporting problems against its [table.path]."""
+    prefix = f"[tool.agent_eval.groups.{name}]"
+    if not isinstance(cfg, dict):
+        raise ValueError(f"{prefix} must be a table, got {type(cfg).__name__}")
 
-        threshold = cfg.get("threshold", 1.0)
-        if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not 0.0 <= threshold <= 1.0:
-            raise ValueError(f"{prefix}.threshold must be a number between 0 and 1, got {threshold!r}")
+    # Checked before the model, because `name` is a field there but not a key a user may
+    # write, so extra="forbid" alone would quietly accept it.
+    unknown = sorted(set(cfg) - set(_CONFIGURABLE_KEYS))
+    if unknown:
+        raise ValueError(f"{prefix}: unknown key(s) {unknown}; valid keys are {list(_CONFIGURABLE_KEYS)}")
 
-        lists: dict[str, list[str]] = {}
-        for key in ("tags", "pytest_markers", "must_pass"):
-            value = cfg.get(key, [])
-            if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
-                raise ValueError(f"{prefix}.{key} must be a list of strings, got {value!r}")
-            lists[key] = value
+    try:
+        return GroupConfig(name=name, **cfg)
+    except ValidationError as exc:
+        raise ValueError(_group_error(prefix, exc, cfg)) from exc
 
-        groups.append(
-            GroupConfig(
-                name=name,
-                threshold=float(threshold),
-                tags=lists["tags"],
-                pytest_markers=lists["pytest_markers"],
-                must_pass=lists["must_pass"],
-            )
-        )
-    return groups
+
+def _group_error(prefix: str, exc: ValidationError, cfg: dict[str, object]) -> str:
+    """Render a pydantic failure in the same didactic shape as the rest of the config.
+
+    The value reported is the one the user wrote, taken from cfg rather than from the
+    error: for a bad item in a list pydantic reports the item, and "must be a list of
+    strings, got 1" is a worse message than showing them the list they wrote.
+    """
+    error = exc.errors()[0]
+    field_name = str(error["loc"][0]) if error["loc"] else ""
+    written = cfg.get(field_name, error.get("input"))
+    if field_name == "threshold":
+        return f"{prefix}.threshold must be a number between 0 and 1, got {written!r}"
+    return f"{prefix}.{field_name} must be a list of strings, got {written!r}"
