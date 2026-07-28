@@ -129,7 +129,7 @@ class AgentReply(NamedTuple):
     tool_calls: ToolCalls
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class EvalResult:
     """Result from a single evaluator on a single turn."""
 
@@ -158,6 +158,8 @@ class ToolCall(str):
         ```
     """
 
+    __slots__ = ("args",)
+
     args: JsonMapping | None
 
     def __new__(cls, name: str, args: JsonMapping | None = None) -> ToolCall:
@@ -172,7 +174,7 @@ class ToolCall(str):
         return str(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TurnContext:
     """Context passed to every evaluator for a turn.
 
@@ -192,7 +194,7 @@ class TurnContext:
     history: History
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TurnResult:
     """Aggregated result for a single turn across all evaluators."""
 
@@ -201,7 +203,7 @@ class TurnResult:
     eval_results: list[EvalResult]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class RunResult:
     """Result of one full run of a transcript (all turns)."""
 
@@ -210,7 +212,7 @@ class RunResult:
     turn_results: list[TurnResult]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TranscriptResult:
     """Aggregated result across all runs of a transcript.
 

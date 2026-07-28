@@ -103,6 +103,21 @@ def _score_line(result: TranscriptResult) -> str:
     return f"[{p}/{n} runs, score={result.score:.2f} {symbol} {result.threshold:.2f}]"
 
 
+def _advance_outcome(entry: EvalOutcome, when: str, outcome: str) -> EvalOutcome:
+    """Fold one phase report into the item's recorded outcome.
+
+    setup only downgrades (a skip or error there decides the item); call is
+    authoritative; teardown can only turn a pass into a failure.
+    """
+    if when == "setup" and outcome in ("skipped", "failed"):
+        return dataclasses.replace(entry, outcome=outcome)
+    if when == "call":
+        return dataclasses.replace(entry, outcome=outcome)
+    if when == "teardown" and outcome == "failed" and entry.outcome == "passed":
+        return dataclasses.replace(entry, outcome="failed")
+    return entry
+
+
 _XDIST_RESULT_KEY = "llm_eval_result"
 _XDIST_NAME_KEY = "llm_eval_name"
 _XDIST_META_KEY = "llm_eval_meta"
@@ -136,23 +151,14 @@ class AgentEvalReportPlugin:
         return {"identity": item.name, "tags": tags, "markers": [m.name for m in item.iter_markers()]}
 
     def _record_outcome(self, nodeid: str, meta: dict[str, Any], when: str, outcome: str) -> None:
-        entry = self._outcomes.get(nodeid)
-        if entry is None:
-            entry = EvalOutcome(
-                identity=meta["identity"],
-                nodeid=nodeid,
-                outcome="passed",
-                tags=list(meta["tags"]),
-                markers=list(meta["markers"]),
-            )
-            self._outcomes[nodeid] = entry
-        if when == "setup":
-            if outcome in ("skipped", "failed"):
-                entry.outcome = outcome
-        elif when == "call":
-            entry.outcome = outcome
-        elif when == "teardown" and outcome == "failed" and entry.outcome == "passed":
-            entry.outcome = "failed"
+        entry = self._outcomes.get(nodeid) or EvalOutcome(
+            identity=meta["identity"],
+            nodeid=nodeid,
+            outcome="passed",
+            tags=list(meta["tags"]),
+            markers=list(meta["markers"]),
+        )
+        self._outcomes[nodeid] = _advance_outcome(entry, when, outcome)
 
     def add_result(self, name: str, result: TranscriptResult) -> None:
         """Append a transcript result to the in-memory report buffer."""

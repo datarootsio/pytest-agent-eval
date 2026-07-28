@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any
+
+from pytest_agent_eval.models import OutcomeName
 
 
 @dataclass
@@ -25,7 +27,7 @@ class GroupConfig:
     must_pass: list[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class EvalOutcome:
     """Outcome of one test item, as consumed by group aggregation.
 
@@ -40,12 +42,12 @@ class EvalOutcome:
 
     identity: str
     nodeid: str
-    outcome: str
+    outcome: OutcomeName
     tags: list[str] = field(default_factory=list)
     markers: list[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class GroupResult:
     """Aggregated result of one group over a session's outcomes.
 
@@ -98,7 +100,35 @@ def _matches_identity(entry: str, identity: str) -> bool:
     return identity == entry or identity.startswith(entry + "[")
 
 
-def evaluate_groups(groups: list[GroupConfig], outcomes: list[EvalOutcome]) -> list[GroupResult]:
+def _evaluate_group(group: GroupConfig, outcomes: Sequence[EvalOutcome]) -> GroupResult:
+    """Aggregate one group's membership and must_pass assertions into a result."""
+    members = [o for o in outcomes if _matches_group(group, o)]
+    ran = [o for o in members if o.outcome != "skipped"]
+    # `failing` is "not passed" while must_pass below is "== failed". Both are
+    # deliberate and not interchangeable: an unexpected outcome name counts against
+    # the pass rate but must not trip a must_pass gate.
+    failed = [o for o in ran if o.outcome != "passed"]
+
+    must_pass_ran = {entry: _ran_for(entry, outcomes) for entry in group.must_pass}
+    return GroupResult(
+        group=group,
+        total=len(ran),
+        passed_count=len(ran) - len(failed),
+        skipped_count=len(members) - len(ran),
+        failing=[o.identity for o in failed],
+        failed_nodeids=[o.nodeid for o in failed],
+        # Config order, because test output pins the exact line order.
+        must_pass_failed=[e for e, r in must_pass_ran.items() if r and any(o.outcome == "failed" for o in r)],
+        must_pass_missing=[e for e, r in must_pass_ran.items() if not r],
+    )
+
+
+def _ran_for(entry: str, outcomes: Sequence[EvalOutcome]) -> list[EvalOutcome]:
+    """Every non-skipped outcome whose identity the must_pass entry names."""
+    return [o for o in outcomes if _matches_identity(entry, o.identity) and o.outcome != "skipped"]
+
+
+def evaluate_groups(groups: Sequence[GroupConfig], outcomes: Sequence[EvalOutcome]) -> list[GroupResult]:
     """Aggregate session outcomes into per-group results.
 
     Membership is tag/marker based (OR). must_pass entries are assertions over
@@ -113,31 +143,7 @@ def evaluate_groups(groups: list[GroupConfig], outcomes: list[EvalOutcome]) -> l
     Returns:
         One GroupResult per group, in config order.
     """
-    results: list[GroupResult] = []
-    for group in groups:
-        result = GroupResult(group=group)
-        for outcome in outcomes:
-            if not _matches_group(group, outcome):
-                continue
-            if outcome.outcome == "skipped":
-                result.skipped_count += 1
-                continue
-            result.total += 1
-            if outcome.outcome == "passed":
-                result.passed_count += 1
-            else:
-                result.failing.append(outcome.identity)
-                result.failed_nodeids.append(outcome.nodeid)
-
-        for entry in group.must_pass:
-            ran = [o for o in outcomes if _matches_identity(entry, o.identity) and o.outcome != "skipped"]
-            if not ran:
-                result.must_pass_missing.append(entry)
-            elif any(o.outcome == "failed" for o in ran):
-                result.must_pass_failed.append(entry)
-
-        results.append(result)
-    return results
+    return [_evaluate_group(group, outcomes) for group in groups]
 
 
 def format_group_summary_lines(results: list[GroupResult]) -> list[str]:
@@ -216,7 +222,7 @@ def build_group_markdown_lines(results: list[GroupResult]) -> list[str]:
 _KNOWN_KEYS = ("threshold", "tags", "pytest_markers", "must_pass")
 
 
-def parse_groups(raw: Any) -> list[GroupConfig]:
+def parse_groups(raw: object) -> list[GroupConfig]:
     """Parse the raw [tool.agent_eval.groups] mapping into GroupConfig objects.
 
     Unlike the rest of [tool.agent_eval] (where unknown keys are silently

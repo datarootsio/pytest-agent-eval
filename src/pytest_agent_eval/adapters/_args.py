@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+
+from pytest_agent_eval.models import JsonMapping
 
 
-def coerce_args(raw: Any) -> dict[str, Any] | None:
+def coerce_args(raw: object) -> JsonMapping | None:
     """Coerce a framework's tool-call arguments into a dict, or None when uncapturable.
 
     Args:

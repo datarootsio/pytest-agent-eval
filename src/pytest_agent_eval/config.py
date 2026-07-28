@@ -6,11 +6,10 @@ import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
-
 import pytest
 
 from pytest_agent_eval.groups import GroupConfig, parse_groups
+from pytest_agent_eval.models import JsonMapping
 
 
 @dataclass
@@ -55,7 +54,7 @@ def load_config_from_toml(path: Path) -> AgentEvalConfig:
         return cfg
     with open(path, "rb") as f:
         data = tomllib.load(f)
-    section: dict[str, Any] = dict(data.get("tool", {}).get("agent_eval", {}))
+    section: JsonMapping = dict(data.get("tool", {}).get("agent_eval", {}))
     raw_groups = section.pop("groups", None)
     if raw_groups is not None:
         cfg.groups = parse_groups(raw_groups)
