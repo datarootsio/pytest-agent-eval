@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any
 
-from pytest_agent_eval.models import EvalResult, TurnContext
+from pytest_agent_eval.models import EvalResult, JsonMapping, ToolCallArgsMode, TurnContext
 
 
-def _is_ordered_subsequence(needle: list[str], haystack: list[str]) -> bool:
+def _is_ordered_subsequence(needle: Sequence[str], haystack: Sequence[str]) -> bool:
     it = iter(haystack)
     return all(n in it for n in needle)
 
@@ -78,14 +78,14 @@ class ToolCallArgsEvaluator:
     """
 
     tool: str
-    args: dict[str, Any]
-    mode: str = "subset"
+    args: JsonMapping
+    mode: ToolCallArgsMode = "subset"
 
     def __post_init__(self) -> None:
         if self.mode not in ("subset", "exact"):
             raise ValueError(f"ToolCallArgsEvaluator mode must be 'subset' or 'exact', got {self.mode!r}")
 
-    def _matches(self, observed: dict[str, Any]) -> bool:
+    def _matches(self, observed: JsonMapping) -> bool:
         if self.mode == "exact":
             return observed == self.args
         return all(k in observed and observed[k] == v for k, v in self.args.items())

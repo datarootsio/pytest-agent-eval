@@ -1,16 +1,47 @@
-"""Shared data types for pytest-agent-eval."""
+"""Shared data types and type aliases for pytest-agent-eval.
+
+Structural types are spelled once here and referred to by name everywhere else, so a
+change to the agent contract is a one-line edit rather than a sweep.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 if TYPE_CHECKING:
-    pass
-
+    from pytest_agent_eval.evaluators.base import Evaluator
 
 _PathLike = str | Path
+
+Role: TypeAlias = Literal["user", "assistant", "system"]
+"""Who produced a conversation message."""
+
+JsonValue: TypeAlias = "str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]"
+"""Anything that survives a JSON round-trip."""
+
+JsonMapping: TypeAlias = "dict[str, JsonValue]"
+"""A JSON object — tool-call arguments, serialised results, config sections."""
+
+ToolCalls: TypeAlias = Sequence[str]
+"""Tool calls from one turn.
+
+``Sequence``, not ``list``: ``list`` is invariant, so ``list[ToolCall]`` is not
+assignable to ``list[str]`` even though ``ToolCall`` subclasses ``str``. Every adapter
+and the tool-call evaluator hit that, and widening to ``Sequence`` fixes all of them at
+once while letting a ``ToolCall`` flow through the contract without a cast.
+"""
+
+ToolCallArgsMode: TypeAlias = Literal["subset", "exact"]
+"""How ``ToolCallArgsEvaluator`` compares observed arguments to expected ones."""
+
+OutcomeName: TypeAlias = Literal["passed", "failed", "skipped"]
+"""A test item's outcome, as group aggregation consumes it."""
+
+PhaseName: TypeAlias = Literal["setup", "call", "teardown"]
+"""A pytest runtest phase."""
 
 
 @dataclass
@@ -42,9 +73,9 @@ class ToolCall(str):
         ```
     """
 
-    args: dict[str, Any] | None
+    args: JsonMapping | None
 
-    def __new__(cls, name: str, args: dict[str, Any] | None = None) -> ToolCall:
+    def __new__(cls, name: str, args: JsonMapping | None = None) -> ToolCall:
         """Create a ToolCall from a tool name and optional captured arguments."""
         obj = super().__new__(cls, name)
         obj.args = args
@@ -152,8 +183,8 @@ class ToolCallArgsConfig:
     """
 
     tool: str
-    args: dict[str, Any] | None = None
-    mode: str = "subset"
+    args: JsonMapping | None = None
+    mode: ToolCallArgsMode = "subset"
     judge: JudgeConfig | None = None
 
     def __post_init__(self) -> None:
@@ -181,7 +212,7 @@ class Expect:
         reply_matches_all: Reply must match all of these regex patterns.
     """
 
-    evaluators: list[Any] = field(default_factory=list)
+    evaluators: list[Evaluator] = field(default_factory=list)
     judge: JudgeConfig | None = None
     tool_calls_include: list[str] = field(default_factory=list)
     tool_calls_exclude: list[str] = field(default_factory=list)
