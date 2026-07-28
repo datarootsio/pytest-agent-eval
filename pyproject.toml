@@ -153,7 +153,8 @@ convention = "google"
 "src/pytest_agent_eval/plugin.py" = ["ANN401", "PLC0415"]
 "src/pytest_agent_eval/report.py" = ["PLR0912"]
 "src/pytest_agent_eval/runner.py" = ["PLC0415"]
-"src/pytest_agent_eval/synthesize_audio.py" = ["T201", "ANN401", "PLC0415", "PLR0913", "PLR0912", "PTH123", "SIM103"]
+# stdout is the product of a CLI entry point.
+"src/pytest_agent_eval/synthesize_audio.py" = ["T201"]
 "src/pytest_agent_eval/yaml_loader.py" = ["ANN401", "PLC0415"]
 
 # Tests are held to the annotation bar but not the docstring bar. The rest are

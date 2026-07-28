@@ -108,7 +108,6 @@ def _public_callables(obj: object) -> list[tuple[str, object]]:
 ANY_ALLOWLIST = {
     "yaml_loader.py": "pytest passthrough: **kwargs to pytest.Item, and self.funcargs",
     "plugin.py": "pytest passthrough: terminalreporter",
-    "synthesize_audio.py": "duck-typed OpenAI Realtime client",
     "adapters/livekit.py": "duck-typed livekit session and event objects",
     "adapters/_wav_input.py": "livekit types unavailable without the extra",
     "adapters/openai.py": "duck-typed AsyncOpenAI client",

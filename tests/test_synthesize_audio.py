@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import argparse
 import base64
 import sys
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -28,17 +27,22 @@ def synth_spy(monkeypatch: pytest.MonkeyPatch) -> SynthSpy:
     return SynthSpy()
 
 
-async def _run_with(spy: SynthSpy, args: argparse.Namespace) -> int:
+async def _run_with(spy: SynthSpy, args: mod.SynthesizeArgs) -> int:
     return await mod._run(args, synth=spy, client_factory=spy.client_factory)
 
 
-def _args(paths: list[str], *, force: bool = False) -> argparse.Namespace:
-    return argparse.Namespace(
-        paths=paths,
+def _args(paths: list[str], *, force: bool = False) -> mod.SynthesizeArgs:
+    return mod.SynthesizeArgs(
+        paths=tuple(paths),
         force=force,
         voice="alloy",
         model="gpt-4o-realtime-preview",
     )
+
+
+def _synthesizer(spy: SynthSpy, *, voice: str = "v", model: str = "m") -> mod.AudioSynthesizer:
+    """An AudioSynthesizer driven by a spy, so the client stands in as None and is never touched."""
+    return mod.AudioSynthesizer(cast("mod._RealtimeClient", None), voice=voice, model=model, synth=spy)
 
 
 async def test_synth_writes_wav_and_hash(tmp_path: Path, synth_spy: SynthSpy) -> None:
@@ -199,7 +203,7 @@ def test_load_turns_ignores_a_non_mapping_document(tmp_path: Path) -> None:
 def test_load_turns_skips_non_mapping_turns(tmp_path: Path) -> None:
     path = tmp_path / "t.yaml"
     path.write_text("id: t\nturns:\n  - just a string\n  - user: real\n    audio: r.wav\n")
-    assert [text for text, _ in mod._load_turns(path)] == ["real"]
+    assert [fixture.transcript for fixture in mod._load_turns(path)] == ["real"]
 
 
 def test_read_stored_hash_returns_none_for_an_empty_sidecar(tmp_path: Path) -> None:
@@ -211,6 +215,13 @@ def test_read_stored_hash_returns_none_for_an_empty_sidecar(tmp_path: Path) -> N
 
 
 def test_resolve_yaml_dirs_returns_empty_without_a_pyproject(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert mod._resolve_yaml_dirs_from_pyproject() == []
+
+
+def test_resolve_yaml_dirs_ignores_a_non_list_setting(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A bare string would otherwise expand to one path per character."""
+    (tmp_path / "pyproject.toml").write_text('[tool.agent_eval]\nyaml_dirs = "tests/evals"\n')
     monkeypatch.chdir(tmp_path)
     assert mod._resolve_yaml_dirs_from_pyproject() == []
 
@@ -347,7 +358,7 @@ def no_retry_delay(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_retries_a_transient_failure_then_succeeds(no_retry_delay: None) -> None:
     spy = SynthSpy(fail_with=RuntimeError("HTTP 429 slow down"), fail_times=2)
 
-    pcm = await mod._synth_with_retry(None, text="t", voice="v", model="m", label="t.wav", synth=spy)
+    pcm = await _synthesizer(spy).synthesize_with_retry("t", label="t.wav")
 
     assert pcm
     assert spy.count == 3
@@ -358,7 +369,7 @@ async def test_does_not_retry_a_non_transient_failure(no_retry_delay: None) -> N
     spy = SynthSpy(fail_with=RuntimeError("HTTP 400 Bad Request"))
 
     with pytest.raises(RuntimeError, match="HTTP 400"):
-        await mod._synth_with_retry(None, text="t", voice="v", model="m", label="t.wav", synth=spy)
+        await _synthesizer(spy).synthesize_with_retry("t", label="t.wav")
 
     assert spy.count == 1
 
@@ -367,7 +378,7 @@ async def test_gives_up_after_max_retries(no_retry_delay: None) -> None:
     spy = SynthSpy(fail_with=RuntimeError("HTTP 500 boom"))
 
     with pytest.raises(RuntimeError, match="HTTP 500"):
-        await mod._synth_with_retry(None, text="t", voice="v", model="m", label="t.wav", synth=spy)
+        await _synthesizer(spy).synthesize_with_retry("t", label="t.wav")
 
     assert spy.count == mod._MAX_RETRIES + 1
 
@@ -375,7 +386,7 @@ async def test_gives_up_after_max_retries(no_retry_delay: None) -> None:
 async def test_retry_progress_is_reported_on_stderr(no_retry_delay: None, capsys: pytest.CaptureFixture[str]) -> None:
     spy = SynthSpy(fail_with=RuntimeError("HTTP 429 slow down"), fail_times=1)
 
-    await mod._synth_with_retry(None, text="t", voice="v", model="m", label="turn1.wav", synth=spy)
+    await _synthesizer(spy).synthesize_with_retry("t", label="turn1.wav")
 
     assert "retrying turn1.wav" in capsys.readouterr().err
 
@@ -398,23 +409,42 @@ def test_build_client_without_openai_names_the_install_command(monkeypatch: pyte
         mod._build_client()
 
 
-# --- _process_one in isolation ---
+# --- one fixture in isolation ---
 
 
-async def test_process_one_reports_up_to_date_without_synthesising(tmp_path: Path) -> None:
-    """The cache check lives in _process_one too, so a direct caller cannot skip it."""
+async def test_process_reports_up_to_date_without_synthesising(tmp_path: Path) -> None:
+    """The cache check lives in AudioSynthesizer.process too, so a direct caller cannot skip it."""
     audio = tmp_path / "t.wav"
     audio.write_bytes(b"existing")
     (tmp_path / "t.wav.hash").write_text(mod._transcript_hash("Hello") + "\n")
     spy = SynthSpy()
+    fixture = mod.AudioFixture(transcript="Hello", audio_path=audio)
 
-    action = await mod._process_one(
-        transcript="Hello", audio_path=audio, force=False, client=None, voice="v", model="m", synth=spy
-    )
+    action = await _synthesizer(spy).process(fixture, force=False)
 
     assert action == "up-to-date"
     assert spy.count == 0
     assert audio.read_bytes() == b"existing"
+
+
+async def test_the_synthesizer_closes_its_client_on_the_way_out() -> None:
+    """The client lifecycle is the synthesizer's, so a raising turn cannot leak the socket."""
+    spy = SynthSpy()
+
+    with pytest.raises(RuntimeError, match="boom"):
+        async with mod.AudioSynthesizer(spy.client_factory(), voice="v", model="m", synth=spy):
+            raise RuntimeError("boom")
+
+    assert spy.client_closed
+
+
+def test_audio_fixture_derives_its_sidecar_path_and_digest(tmp_path: Path) -> None:
+    """The sidecar sits beside the WAV with the suffix appended, not replaced."""
+    fixture = mod.AudioFixture(transcript="Hello", audio_path=tmp_path / "clip.wav")
+
+    assert fixture.hash_path == tmp_path / "clip.wav.hash"
+    assert fixture.expected_hash == mod._transcript_hash("Hello")
+    assert not fixture.is_up_to_date(force=False)
 
 
 # --- CLI-level failure paths ---
@@ -494,7 +524,7 @@ def test_absolute_audio_paths_are_left_alone(tmp_path: Path) -> None:
     yaml_path.parent.mkdir(parents=True)
     yaml_path.write_text(f"id: t\nturns:\n  - user: hi\n    audio: {absolute}\n")
 
-    assert mod._load_turns(yaml_path) == [("hi", absolute)]
+    assert mod._load_turns(yaml_path) == [mod.AudioFixture(transcript="hi", audio_path=absolute)]
 
 
 async def test_duplicate_audio_targets_are_synthesised_once(
