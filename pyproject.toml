@@ -150,7 +150,6 @@ convention = "google"
 "src/pytest_agent_eval/adapters/openai.py" = ["ANN401"]
 "src/pytest_agent_eval/adapters/pydantic_ai.py" = ["ANN401", "PLC0415"]
 "src/pytest_agent_eval/adapters/smolagents.py" = ["ANN401"]
-"src/pytest_agent_eval/evaluators/judge.py" = ["PLC0415"]
 "src/pytest_agent_eval/plugin.py" = ["ANN401", "PLC0415"]
 "src/pytest_agent_eval/report.py" = ["ANN401", "PLC0415", "PLR0912", "PLR2004", "PERF401"]
 "src/pytest_agent_eval/runner.py" = ["PLR0913", "PLC0415"]

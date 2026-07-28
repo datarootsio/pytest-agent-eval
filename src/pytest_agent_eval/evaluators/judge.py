@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
+from typing import ClassVar
 
 from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.models import Model
 
+from pytest_agent_eval.evaluators._capture import capture_tool_args
 from pytest_agent_eval.models import EvalResult, TurnContext
 
 _SYSTEM_PROMPT = (
@@ -18,6 +21,8 @@ _SYSTEM_PROMPT = (
     "You will receive a rubric, the agent's reply, and the preceding conversation. "
     "Evaluate whether the reply satisfies the rubric."
 )
+
+_DEFAULT_CONFIG_PATH = Path("pyproject.toml")
 
 _ARGS_SYSTEM_PROMPT = (
     "You are a strict evaluator of the arguments an LLM agent passed to a tool. "
@@ -32,11 +37,23 @@ class _JudgeOutput(BaseModel):
     reasoning: str
 
 
-def _build_judge_agent(model: str | Model | None, system_prompt: str) -> Agent[None, _JudgeOutput]:
-    if model is None:
-        from pytest_agent_eval.config import load_config_from_toml
+def _build_judge_agent(
+    model: str | Model | None,
+    system_prompt: str,
+    config_path: Path = _DEFAULT_CONFIG_PATH,
+) -> Agent[None, _JudgeOutput]:
+    """Build a judge agent, resolving a None model from [tool.agent_eval].
 
-        model = load_config_from_toml(Path("pyproject.toml")).model
+    config_path is a parameter rather than a hard-coded literal so the fallback is visible
+    and testable without chdir. It stays relative by default: this path is only reached
+    when an evaluator is constructed directly from the Python API with no model, where the
+    working directory is the only thing we know about.
+    """
+    if model is None:
+        # Deferred: importing config at module scope would make models <-> config circular.
+        from pytest_agent_eval.config import load_config_from_toml  # noqa: PLC0415
+
+        model = load_config_from_toml(config_path).model
     return Agent(model, output_type=_JudgeOutput, system_prompt=system_prompt)
 
 
@@ -63,8 +80,42 @@ def _format_judge_prompt(rubric: str, ctx: TurnContext) -> str:
     )
 
 
-@dataclass
-class JudgeEvaluator:
+@dataclass(kw_only=True)
+class _JudgeEvaluatorBase:
+    """Model resolution and call limits shared by both judge evaluators.
+
+    kw_only so a subclass may declare a field without a default after the defaults here;
+    every construction site already uses keywords. Subclasses set ``_system_prompt``.
+
+    Args:
+        model: pydantic-ai model string (e.g. ``"openai:gpt-4o"``) or a Model instance.
+            Falls back to ``[tool.agent_eval] model`` in pyproject.toml if None.
+        retries: Number of retry attempts on API failure before returning a FAIL verdict.
+        timeout: Seconds before the judge call times out.
+    """
+
+    model: str | Model | None = None
+    retries: int = 2
+    timeout: float = 30.0
+
+    _system_prompt: ClassVar[str]
+
+    @cached_property
+    def _agent(self) -> Agent[None, _JudgeOutput]:
+        """The judge agent, built once per instance.
+
+        cached_property rather than a None sentinel plus a _get_agent() accessor, which was
+        duplicated verbatim in both subclasses and showed up in dataclasses.fields().
+        """
+        return _build_judge_agent(self.model, self._system_prompt)
+
+    def _get_agent(self) -> Agent[None, _JudgeOutput]:
+        """Return the memoised judge agent."""
+        return self._agent
+
+
+@dataclass(kw_only=True)
+class JudgeEvaluator(_JudgeEvaluatorBase):
     """Use an LLM to evaluate the reply against a rubric.
 
     Uses pydantic-ai under the hood; supports any pydantic-ai compatible model.
@@ -86,15 +137,8 @@ class JudgeEvaluator:
     """
 
     rubric: str
-    model: str | Model | None = None
-    retries: int = 2
-    timeout: float = 30.0
-    _agent: Agent[None, _JudgeOutput] | None = field(default=None, init=False, repr=False)
 
-    def _get_agent(self) -> Agent[None, _JudgeOutput]:
-        if self._agent is None:
-            self._agent = _build_judge_agent(self.model, _SYSTEM_PROMPT)
-        return self._agent
+    _system_prompt: ClassVar[str] = _SYSTEM_PROMPT
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Run the LLM judge against the turn and return its verdict."""
@@ -102,8 +146,8 @@ class JudgeEvaluator:
         return await _run_judge(self._get_agent(), user_msg, self.retries, self.timeout)
 
 
-@dataclass
-class ToolCallArgsJudgeEvaluator:
+@dataclass(kw_only=True)
+class ToolCallArgsJudgeEvaluator(_JudgeEvaluatorBase):
     """Use an LLM to evaluate a tool's call arguments against a rubric.
 
     Deterministic short-circuits run before any LLM call: if the tool was never
@@ -131,37 +175,15 @@ class ToolCallArgsJudgeEvaluator:
 
     tool: str
     rubric: str
-    model: str | Model | None = None
-    retries: int = 2
-    timeout: float = 30.0
-    _agent: Agent[None, _JudgeOutput] | None = field(default=None, init=False, repr=False)
 
-    def _get_agent(self) -> Agent[None, _JudgeOutput]:
-        if self._agent is None:
-            self._agent = _build_judge_agent(self.model, _ARGS_SYSTEM_PROMPT)
-        return self._agent
+    _system_prompt: ClassVar[str] = _ARGS_SYSTEM_PROMPT
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Judge the tool's captured arguments, short-circuiting when there is nothing to judge."""
-        matching = [tc for tc in ctx.tool_calls if tc == self.tool]
-        if not matching:
-            return EvalResult(
-                passed=False,
-                reasoning=f"Tool {self.tool!r} was never called (tools called: {[str(tc) for tc in ctx.tool_calls]!r})",
-            )
-
-        # Walrus, not getattr-then-isinstance: the latter narrows the *expression*, so
-        # tc.args stayed JsonMapping | None and the None leaked into the comparison.
-        captured = [args for tc in matching if isinstance(args := getattr(tc, "args", None), dict)]
-        if not captured:
-            return EvalResult(
-                passed=False,
-                reasoning=(
-                    f"Tool {self.tool!r} was called but no dict arguments were captured. "
-                    "Argument assertions need the agent/adapter to return ToolCall(name, args) "
-                    "with args as a mapping (a JSON string is not enough — parse it first)."
-                ),
-            )
+        found = capture_tool_args(self.tool, ctx.tool_calls)
+        if found.failure is not None:
+            return found.failure
+        captured = found.args
 
         calls_text = "\n\n".join(
             f"CALL {i + 1} ARGUMENTS:\n{json.dumps(args, indent=2, default=str)}" for i, args in enumerate(captured)

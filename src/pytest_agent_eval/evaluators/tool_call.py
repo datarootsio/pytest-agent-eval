@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from pytest_agent_eval.evaluators._capture import capture_tool_args
 from pytest_agent_eval.models import EvalResult, JsonMapping, ToolCallArgsMode, TurnContext
 
 if TYPE_CHECKING:
@@ -92,25 +93,10 @@ class ToolCallArgsEvaluator:
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Evaluate the expected arguments against every call of the tool this turn."""
-        matching = [tc for tc in ctx.tool_calls if tc == self.tool]
-        if not matching:
-            return EvalResult(
-                passed=False,
-                reasoning=f"Tool {self.tool!r} was never called (tools called: {[str(tc) for tc in ctx.tool_calls]!r})",
-            )
-
-        # Walrus, not getattr-then-isinstance: the latter narrows the *expression*, so
-        # tc.args stayed JsonMapping | None and the None leaked into the comparison.
-        captured = [args for tc in matching if isinstance(args := getattr(tc, "args", None), dict)]
-        if not captured:
-            return EvalResult(
-                passed=False,
-                reasoning=(
-                    f"Tool {self.tool!r} was called but no dict arguments were captured. "
-                    "Argument assertions need the agent/adapter to return ToolCall(name, args) "
-                    "with args as a mapping (a JSON string is not enough — parse it first)."
-                ),
-            )
+        found = capture_tool_args(self.tool, ctx.tool_calls)
+        if found.failure is not None:
+            return found.failure
+        captured = found.args
 
         if any(self._matches(observed) for observed in captured):
             return EvalResult(passed=True, reasoning=f"Tool {self.tool!r} called with expected args ({self.mode})")

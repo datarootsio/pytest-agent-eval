@@ -156,3 +156,28 @@ def test_judge_evaluators_build_their_agent_once() -> None:
 
     args_judge = ToolCallArgsJudgeEvaluator(tool="t", rubric="r", model="test")
     assert args_judge._get_agent() is args_judge._get_agent()
+
+
+def test_judge_agent_is_not_a_dataclass_field() -> None:
+    """The memoised agent must not show up in fields() or repr().
+
+    It was previously a field(default=None, init=False, repr=False) — a workaround for
+    storing it at all. cached_property removes the need for the workaround.
+    """
+    import dataclasses
+
+    judge = JudgeEvaluator(rubric="r", model="test")
+    assert "_agent" not in {f.name for f in dataclasses.fields(judge)}
+    assert "_agent" not in repr(judge)
+    assert "rubric" in repr(judge)
+
+
+def test_build_judge_agent_config_path_is_explicit(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The [tool.agent_eval] fallback takes the path as a parameter, not a hidden CWD read."""
+    (tmp_path / "elsewhere.toml").write_text('[tool.agent_eval]\nmodel = "test"\n')
+    # Somewhere with no pyproject.toml at all, so only the explicit path can satisfy this.
+    monkeypatch.chdir(tmp_path)
+
+    agent = _build_judge_agent(None, "system prompt", tmp_path / "elsewhere.toml")
+
+    assert "test" in repr(agent.model).lower()
