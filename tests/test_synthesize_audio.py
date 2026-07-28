@@ -514,3 +514,41 @@ def test_main_runs_the_pipeline_and_returns_its_exit_code(
 
     assert mod.main() == 1
     assert "no paths given" in capsys.readouterr().err
+
+
+def test_iter_yaml_files_ignores_non_yaml_paths(tmp_path: Path) -> None:
+    """An explicitly-passed .txt or .md is skipped rather than treated as a transcript."""
+    (tmp_path / "notes.txt").write_text("not yaml")
+    yaml_file = tmp_path / "t.yaml"
+    yaml_file.write_text("id: t\n")
+
+    found = mod._iter_yaml_files([tmp_path / "notes.txt", yaml_file])
+
+    assert found == [yaml_file]
+
+
+def test_absolute_audio_paths_are_left_alone(tmp_path: Path) -> None:
+    """An absolute audio: path must not be re-rooted at the YAML's directory."""
+    absolute = tmp_path / "elsewhere" / "clip.wav"
+    yaml_path = tmp_path / "sub" / "t.yaml"
+    yaml_path.parent.mkdir(parents=True)
+    yaml_path.write_text(f"id: t\nturns:\n  - user: hi\n    audio: {absolute}\n")
+
+    assert mod._load_turns(yaml_path) == [("hi", absolute)]
+
+
+async def test_duplicate_audio_targets_are_synthesised_once(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], synth_spy: SynthSpy
+) -> None:
+    """Two transcripts pointing the same text at the same WAV: the second sees a fresh hash."""
+    _make_yaml(tmp_path / "a.yaml", audio_name="shared.wav", user="same text")
+    _make_yaml(tmp_path / "b.yaml", audio_name="shared.wav", user="same text")
+
+    rc = await _run_with(synth_spy, _args([str(tmp_path)]))
+
+    assert rc == 0
+    assert synth_spy.count == 1
+    out = capsys.readouterr().out
+    assert "synthesised" in out
+    assert "up-to-date" in out
+    assert "Synthesized 1 new WAVs" in out

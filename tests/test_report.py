@@ -474,3 +474,32 @@ def test_xdist_report_collects_all_workers(pytester: pytest.Pytester, tmp_path: 
     content = report_path.read_text()
     assert content.count("transcript_one") == 2
     assert content.count("transcript_two") == 2
+
+
+def test_verbose_detail_omits_evaluators_that_gave_no_reasoning():
+    """Deterministic evaluators can pass with an empty reasoning; that must not print a blank line."""
+    plugin = AgentEvalReportPlugin(_make_mock_config(verbose=2))
+    item = _FakeItem("transcript_one")
+    item._eval_result = TranscriptResult(
+        passed=True,
+        score=1.0,
+        threshold=0.5,
+        runs=[
+            RunResult(
+                run_index=0,
+                passed=True,
+                turn_results=[
+                    TurnResult(
+                        turn_index=0,
+                        passed=True,
+                        eval_results=[EvalResult(passed=True, reasoning=""), EvalResult(passed=True, reasoning="kept")],
+                    )
+                ],
+            )
+        ],
+    )
+
+    _, body = _drive_makereport(plugin, item, _FakeReport()).sections[0]
+
+    assert "kept" in body
+    assert "\n    \n" not in body

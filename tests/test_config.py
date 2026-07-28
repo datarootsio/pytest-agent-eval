@@ -75,3 +75,16 @@ def test_load_config_cli_flag_sets_live(tmp_path: Path):
 
     cfg = load_config(mock_config)
     assert cfg.live is True
+
+
+def test_unknown_agent_eval_keys_are_ignored(tmp_path: Path) -> None:
+    """Deliberate, and documented as the contrast to strict [tool.agent_eval.groups]."""
+    from pytest_agent_eval.config import load_config_from_toml
+
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[tool.agent_eval]\nmodel = "openai:gpt-4o-mini"\nnot_a_real_option = 42\n')
+
+    cfg = load_config_from_toml(pyproject)
+
+    assert cfg.model == "openai:gpt-4o-mini"
+    assert not hasattr(cfg, "not_a_real_option")

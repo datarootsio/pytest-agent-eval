@@ -79,8 +79,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 source = ["src/pytest_agent_eval"]
-# Flipped to true in its own commit once statement coverage is honestly at 100%.
-branch = false
+branch = true
 # No `omit`: omitting files is how a 100% gate gets quietly gamed. Every
 # exclusion below is line-scoped and therefore shows up in a diff.
 

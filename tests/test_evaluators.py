@@ -395,3 +395,14 @@ async def test_judge_evaluator_returns_failure_after_retries_exhausted():
     assert result.passed is False
     assert "Judge failed" in result.reasoning
     assert instance.run.call_count == 2  # retries=1 means 2 total attempts
+
+
+def test_judge_evaluators_build_their_agent_once():
+    """The agent is memoised per instance; rebuilding it per turn would re-resolve the model."""
+    from pytest_agent_eval.evaluators.judge import JudgeEvaluator, ToolCallArgsJudgeEvaluator
+
+    judge = JudgeEvaluator(rubric="r", model="test")
+    assert judge._get_agent() is judge._get_agent()
+
+    args_judge = ToolCallArgsJudgeEvaluator(tool="t", rubric="r", model="test")
+    assert args_judge._get_agent() is args_judge._get_agent()

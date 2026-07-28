@@ -510,3 +510,10 @@ def test_invalid_group_config_becomes_usage_error(pytester: pytest.Pytester):
     result = pytester.runpytest()
     assert result.ret == pytest.ExitCode.USAGE_ERROR
     result.stderr.fnmatch_lines(["*must_pas*"])
+
+
+def test_build_group_markdown_lines_omits_a_failure_note_when_all_pass():
+    group = GroupConfig(name="clean", tags=["t"])
+    lines = build_group_markdown_lines(evaluate_groups([group], [_outcome("a", "passed", tags=["t"])]))
+    assert any("| clean | 1 | 1 |" in line for line in lines)
+    assert not any("failures" in line for line in lines)

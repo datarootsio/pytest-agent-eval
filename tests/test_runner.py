@@ -361,3 +361,12 @@ async def test_eval_session_run_stores_result_on_item():
     assert result.passed is True
     assert hasattr(mock_item, "_eval_result")
     assert mock_item._eval_result is result
+
+
+@pytest.mark.asyncio
+async def test_eval_session_without_an_item_still_returns_a_result():
+    """The Python API is usable outside a pytest item; there is then nothing to stash onto."""
+    session = EvalSession(threshold=0.0, runs=1)
+    result = await session.run(_echo_agent, [Turn(user="hello")])
+    assert isinstance(result, TranscriptResult)
+    assert result.passed is True

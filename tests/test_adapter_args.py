@@ -186,3 +186,16 @@ async def test_pydantic_ai_adapter_maps_system_role_to_system_prompt_part():
     messages = _to_model_messages([{"role": "system", "content": "Be terse."}], ())
 
     assert [getattr(p, "part_kind", None) for m in messages for p in m.parts] == ["system-prompt"]
+
+
+async def test_pydantic_ai_adapter_does_not_duplicate_an_existing_system_prompt():
+    """History already opening with a system message must not gain a second copy."""
+    from pytest_agent_eval.adapters.pydantic_ai import _to_model_messages
+
+    messages = _to_model_messages(
+        [{"role": "system", "content": "From history."}, {"role": "user", "content": "hi"}],
+        ("From the agent.",),
+    )
+
+    system_parts = [p for m in messages for p in m.parts if getattr(p, "part_kind", None) == "system-prompt"]
+    assert [p.content for p in system_parts] == ["From history."]

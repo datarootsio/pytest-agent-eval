@@ -335,3 +335,39 @@ async def test_sample_rate_and_frame_ms_passed_to_wav_input(
     assert captured["sample_rate"] == 16_000
     assert captured["frame_ms"] == 40
     assert Path(captured["path"]) == wav_path
+
+
+async def test_unnamed_tool_calls_are_dropped(tmp_path: Path, patched_wav_input: None) -> None:
+    """A function_call event can arrive before the name is known; an empty name is not a tool."""
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+
+    class FakeWithUnnamedCall(FakeAgentSession):
+        async def start(self, agent: Any) -> None:
+            self.started = True
+            event = SimpleNamespace(function_calls=[_FakeFunctionCall(""), _FakeFunctionCall("real_tool")])
+            for h in self._handlers.get("function_tools_executed", []):
+                h(event)
+
+    adapter = LiveKitAdapter(lambda: (FakeWithUnnamedCall(), object()), grace_period_s=0.0, timeout_s=1.0)
+    _, tool_calls = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert tool_calls == ["real_tool"]
+
+
+async def test_assistant_items_with_no_text_are_dropped(tmp_path: Path, patched_wav_input: None) -> None:
+    """An assistant item carrying only non-text content must not append an empty chunk."""
+    wav_path = tmp_path / "turn.wav"
+    _write_dummy_wav(wav_path)
+
+    class FakeWithEmptyItem(FakeAgentSession):
+        async def start(self, agent: Any) -> None:
+            self.started = True
+            item = SimpleNamespace(role="assistant", text_content=None, content=[None, 42])
+            for h in self._handlers.get("conversation_item_added", []):
+                h(SimpleNamespace(item=item))
+
+    adapter = LiveKitAdapter(lambda: (FakeWithEmptyItem(), object()), grace_period_s=0.0, timeout_s=1.0)
+    reply, _ = await adapter([{"role": "user", "content": "hi", "audio": str(wav_path)}])
+
+    assert reply == ""
