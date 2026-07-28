@@ -418,6 +418,32 @@ def test_exit_stays_red_on_must_pass_failure(pytester: pytest.Pytester):
     result.stdout.fnmatch_lines(["*must_pass: bad_case FAILED*"])
 
 
+def test_exit_stays_red_on_a_collection_error(pytester: pytest.Pytester):
+    """A transcript that fails to collect must veto the override.
+
+    Otherwise a typo'd field in one transcript turns CI green as soon as the
+    remaining transcripts happen to satisfy the group threshold — the gate would be
+    reporting on a suite that never fully ran.
+
+    --continue-on-collection-errors is required to reach this branch at all: without
+    it pytest aborts the session and exits INTERRUPTED, which the override already
+    declines to touch. With it, the run reaches sessionfinish with TESTS_FAILED and a
+    group that *does* meet its threshold, so _had_collect_error is the only thing
+    keeping the exit code red.
+    """
+    _make_grouped_project(pytester, threshold=0.5)
+    pytester.makefile(
+        ".yaml",
+        **{"tests/evals/broken": "id: broken\ntags: [gate:booking]\nturns:\n  - user: hi\n    expct: {}\n"},
+    )
+
+    result = pytester.runpytest("--agent-eval-live", "--continue-on-collection-errors")
+
+    result.stdout.fnmatch_lines(["*booking: 1/2 passed (50%) >= 50% required -- PASSED*"])
+    assert result.ret == 1
+    assert "exit code overridden" not in result.stdout.str()
+
+
 def test_exit_stays_red_when_plain_test_fails(pytester: pytest.Pytester):
     _make_grouped_project(pytester, threshold=0.5)
     pytester.makepyfile(test_plain="def test_broken(): assert False")
