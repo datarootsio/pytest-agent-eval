@@ -52,6 +52,9 @@ dev = [
     "pre-commit>=4.0",
     "pytest-xdist>=3.0",
     "jsonschema>=4",
+    "coverage>=7.6",
+    # Pinned exactly: ty is 0.0.x and renames rules between releases.
+    "ty==0.0.64",
 ]
 docs = [
     "zensical",
@@ -78,3 +81,12 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D102", "D103", "D107"]
 "examples/*" = ["D102", "D103", "D107"]
+
+[tool.ty.src]
+include = ["src"]
+
+[tool.ty.rules]
+# Astral's documented "approximate strict" pair. missing-type-argument is what
+# catches a bare `dict` or an unparameterised `pytest.CallInfo`.
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"
