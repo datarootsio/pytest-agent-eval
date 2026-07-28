@@ -262,7 +262,7 @@ async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallba
     )
     fallback = PromptCapturingJudge(passed=True, reasoning="ok")
 
-    result = await run_transcript(transcript, args_agent, config_model=fallback.model)
+    result = await run_transcript(transcript, args_agent, JudgeSettings(config_model=fallback.model))
 
     assert result.passed is True
     # The fallback model was the one actually invoked, and it saw the rubric.
@@ -283,7 +283,7 @@ async def test_per_turn_judge_model_overrides_the_config_model() -> None:
         runs=1,
     )
 
-    await run_transcript(transcript, echo_agent, config_model=ignored.model)
+    await run_transcript(transcript, echo_agent, JudgeSettings(config_model=ignored.model))
 
     assert chosen.prompts
     assert ignored.prompts == []
@@ -301,7 +301,7 @@ async def test_run_transcript_passes_judge_retries_and_timeout_through() -> None
     )
     judge = FailingJudge(error="API down")
 
-    await run_transcript(transcript, echo_agent, config_model=judge.model, judge_retries=0, judge_timeout=5.0)
+    await run_transcript(transcript, echo_agent, JudgeSettings(config_model=judge.model, retries=0, timeout=5.0))
 
     assert judge.attempts == 1
 
@@ -331,13 +331,14 @@ def test_judge_settings_resolve_model_precedence() -> None:
     assert JudgeSettings().resolve_model() is None
 
 
-@pytest.mark.asyncio
-async def test_run_transcript_rejects_an_unknown_judge_keyword() -> None:
-    """A typo'd judge knob must still fail loudly, as a plain parameter list did."""
-    transcript = Transcript(id="typo", turns=[Turn(user="hi")], threshold=0.0, runs=1)
+def test_eval_session_will_not_silently_accept_a_positional_judge() -> None:
+    """The third positional argument used to be config_model.
 
-    with pytest.raises(TypeError, match="unexpected keyword argument 'judge_retires'"):
-        await run_transcript(transcript, echo_agent, judge_retires=0)
+    Left positional, a leftover call would bind a model string into the settings slot
+    and only misbehave later, at judge time. Keyword-only turns that into a TypeError.
+    """
+    with pytest.raises(TypeError):
+        EvalSession(0.0, 1, "openai:gpt-4o")  # type: ignore[misc]
 
 
 @pytest.mark.asyncio

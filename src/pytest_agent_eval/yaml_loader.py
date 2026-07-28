@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from pytest_agent_eval._errors import SCHEMA_URL, TranscriptError, as_transcript_error
 from pytest_agent_eval.config import load_config
 from pytest_agent_eval.models import Transcript
-from pytest_agent_eval.runner import run_transcript
+from pytest_agent_eval.runner import JudgeSettings, run_transcript
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -188,10 +188,12 @@ class AgentEvalItem(pytest.Item):
             run_transcript(
                 self.transcript,
                 agent,
-                config_model=cfg.model,
-                judge_model=cfg.judge_model,
-                judge_retries=cfg.retries,
-                judge_timeout=cfg.timeout,
+                JudgeSettings(
+                    config_model=cfg.model,
+                    judge_model=cfg.judge_model,
+                    retries=cfg.retries,
+                    timeout=cfg.timeout,
+                ),
             )
         )
         self._eval_result = result

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypedDict, Unpack
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pytest
@@ -204,68 +204,22 @@ class TranscriptRunner:
         )
 
 
-class JudgeOverrides(TypedDict, total=False):
-    """The judge keywords :func:`run_transcript` accepts.
-
-    Spelled as a TypedDict rather than four parameters so the wrapper keeps every
-    published keyword, and its type, without a parameter list whose order is
-    load-bearing. Callers that want to name the bundle build a JudgeSettings instead.
-    """
-
-    config_model: str | Model | None
-    judge_model: str | Model | None
-    judge_retries: int
-    judge_timeout: float
-
-
-def _judge_settings(overrides: JudgeOverrides) -> JudgeSettings:
-    """Fold run_transcript's legacy keyword names into the settings object.
-
-    Args:
-        overrides: The judge keywords the caller actually passed.
-
-    Returns:
-        JudgeSettings, defaulted for every keyword the caller omitted.
-
-    Raises:
-        TypeError: If an unknown keyword was passed — the parameter list this replaces
-            rejected those, and silently ignoring a typo'd judge knob would be worse.
-    """
-    unexpected = sorted(set(overrides) - JudgeOverrides.__optional_keys__)
-    if unexpected:
-        raise TypeError(f"run_transcript() got an unexpected keyword argument {unexpected[0]!r}")
-
-    return JudgeSettings(
-        config_model=overrides.get("config_model", _DEFAULT_JUDGE.config_model),
-        judge_model=overrides.get("judge_model", _DEFAULT_JUDGE.judge_model),
-        retries=overrides.get("judge_retries", _DEFAULT_JUDGE.retries),
-        timeout=overrides.get("judge_timeout", _DEFAULT_JUDGE.timeout),
-    )
-
-
 async def run_transcript(
     transcript: Transcript,
     agent: AgentCallable,
-    **judge_overrides: Unpack[JudgeOverrides],
+    judge: JudgeSettings = _DEFAULT_JUDGE,
 ) -> TranscriptResult:
     """Run a transcript N times and aggregate results.
-
-    Kept as the module-level entry point because it is what callers outside the plugin
-    import; it delegates straight to :class:`TranscriptRunner`.
 
     Args:
         transcript: The transcript to execute.
         agent: Async callable ``(history) -> (reply, tool_calls)``.
-        **judge_overrides: ``config_model`` (fallback model string for JudgeEvaluator,
-            from config), ``judge_model`` (dedicated judge model override; takes
-            priority over config_model), ``judge_retries`` (retry attempts for failed
-            judge calls, from config) and ``judge_timeout`` (per-judge-call timeout in
-            seconds, from config).
+        judge: Model resolution and call limits for any LLM judge in the transcript.
 
     Returns:
         TranscriptResult with score, threshold, and per-run details.
     """
-    return await TranscriptRunner(agent, _judge_settings(judge_overrides)).run(transcript)
+    return await TranscriptRunner(agent, judge).run(transcript)
 
 
 class EvalSession:
@@ -282,6 +236,7 @@ class EvalSession:
         self,
         threshold: float,
         runs: int,
+        *,
         judge: JudgeSettings = _DEFAULT_JUDGE,
         _item: pytest.Item | None = None,
     ) -> None:
