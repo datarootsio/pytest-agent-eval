@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Awaitable, Callable
 
+from pytest_agent_eval.evaluators.base import Evaluator
 from pytest_agent_eval.evaluators.contains import ContainsEvaluator
 from pytest_agent_eval.evaluators.tool_call import ToolCallEvaluator
 from pytest_agent_eval.models import (
+    AgentCallable,
     Expect,
+    History,
+    Message,
     RunResult,
     ToolCall,
     Transcript,
@@ -18,12 +21,9 @@ from pytest_agent_eval.models import (
     TurnResult,
 )
 
-AgentCallable = Callable[[list[dict[str, Any]]], Awaitable[tuple[str, list[str]]]]
-
-
-def _build_yaml_evaluators(expect: Expect) -> list[Any]:
+def _build_yaml_evaluators(expect: Expect) -> list[Evaluator]:
     """Convert YAML shorthand fields in Expect to evaluator instances."""
-    evaluators = []
+    evaluators: list[Evaluator] = []
     if expect.tool_calls_include or expect.tool_calls_exclude:
         evaluators.append(
             ToolCallEvaluator(
@@ -47,7 +47,7 @@ def _build_yaml_evaluators(expect: Expect) -> list[Any]:
 async def _run_turn(
     turn: Turn,
     turn_idx: int,
-    history: list[dict[str, Any]],
+    history: History,
     agent: AgentCallable,
     config_model: str | None = None,
     judge_model: str | None = None,
@@ -55,13 +55,10 @@ async def _run_turn(
     judge_timeout: float = 30.0,
 ) -> tuple[TurnResult, str, list[ToolCall]]:
     """Execute one turn and evaluate results."""
-    msg: dict[str, Any] = {"role": "user", "content": turn.user}
-    if turn.audio is not None:
-        msg["audio"] = str(turn.audio)
-    history.append(msg)
+    history.append(Message(role="user", content=turn.user, audio=None if turn.audio is None else str(turn.audio)))
     reply, raw_tool_calls = await agent(history)
     tool_calls = [tc if isinstance(tc, ToolCall) else ToolCall(tc) for tc in raw_tool_calls]
-    history.append({"role": "assistant", "content": reply})
+    history.append(Message(role="assistant", content=reply))
 
     ctx = TurnContext(
         user=turn.user,
@@ -119,7 +116,7 @@ async def _run_once(
     judge_timeout: float = 30.0,
 ) -> RunResult:
     """Execute all turns once and return a RunResult."""
-    history: list[dict[str, Any]] = []
+    history: History = []
     turn_results: list[TurnResult] = []
 
     for turn_idx, turn in enumerate(transcript.turns):
@@ -193,7 +190,7 @@ class EvalSession:
         judge_model: str | None = None,
         judge_retries: int = 2,
         judge_timeout: float = 30.0,
-        _item: Any = None,
+        _item: pytest.Item | None = None,
     ) -> None:
         """Initialise an EvalSession with thresholds, run count, and model fallbacks."""
         self.threshold = threshold

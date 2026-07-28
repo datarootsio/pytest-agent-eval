@@ -39,7 +39,9 @@ class LangChainAdapter:
 
     async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
         """Run the runnable and normalise output to (reply, tool_calls)."""
-        result = await self._runnable.ainvoke({"messages": history})
+        # Plain dicts, not Messages: langchain_core.convert_to_messages() raises
+        # NotImplementedError on a Mapping that is not a dict.
+        result = await self._runnable.ainvoke({"messages": [m.to_dict() for m in history]})
 
         if hasattr(result, "content"):
             reply = str(result.content)

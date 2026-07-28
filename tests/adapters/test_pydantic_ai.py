@@ -1,3 +1,4 @@
+from pytest_agent_eval.models import Message
 """Tests for the pydantic-ai adapter."""
 
 from unittest.mock import AsyncMock, MagicMock
@@ -21,7 +22,7 @@ async def test_pydantic_ai_adapter_extracts_tool_calls_from_message_parts():
     agent = MagicMock()
     agent.run = AsyncMock(return_value=mock_result)
 
-    reply, tool_calls = await PydanticAIAdapter(agent)([{"role": "user", "content": "book me"}])
+    reply, tool_calls = await PydanticAIAdapter(agent)([Message(role="user", content="book me")])
 
     assert reply == "Booked!"
     assert tool_calls == ["book_slot"]
@@ -32,7 +33,7 @@ async def test_pydantic_ai_adapter_maps_system_role_to_system_prompt_part():
     """A system entry in history must become a SystemPromptPart, not a user prompt."""
     from pytest_agent_eval.adapters.pydantic_ai import _to_model_messages
 
-    messages = _to_model_messages([{"role": "system", "content": "Be terse."}], ())
+    messages = _to_model_messages([Message(role="system", content="Be terse.")], ())
 
     assert [getattr(p, "part_kind", None) for m in messages for p in m.parts] == ["system-prompt"]
 
@@ -42,7 +43,7 @@ async def test_pydantic_ai_adapter_does_not_duplicate_an_existing_system_prompt(
     from pytest_agent_eval.adapters.pydantic_ai import _to_model_messages
 
     messages = _to_model_messages(
-        [{"role": "system", "content": "From history."}, {"role": "user", "content": "hi"}],
+        [Message(role="system", content="From history."), Message(role="user", content="hi")],
         ("From the agent.",),
     )
 

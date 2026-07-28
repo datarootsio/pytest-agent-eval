@@ -8,7 +8,7 @@ real retry loop and structured-output plumbing are exercised instead of mocked o
 import pytest
 
 from pytest_agent_eval.evaluators.judge import JudgeEvaluator, ToolCallArgsJudgeEvaluator, _build_judge_agent
-from pytest_agent_eval.models import ToolCall
+from pytest_agent_eval.models import Message, ToolCall
 from tests.helpers.contexts import turn_context
 from tests.helpers.judge import FailingJudge, PromptCapturingJudge, verdict_model
 
@@ -38,7 +38,7 @@ async def test_judge_prompt_carries_the_rubric_reply_and_history():
         turn_context(
             user="book me",
             reply="Confirmed for 10am.",
-            history=[{"role": "user", "content": "earlier turn"}],
+            history=[Message(role="user", content="earlier turn")],
         )
     )
 

@@ -6,7 +6,7 @@ change to the agent contract is a one-line edit rather than a sweep.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NamedTuple, TypeAlias
@@ -42,6 +42,73 @@ OutcomeName: TypeAlias = Literal["passed", "failed", "skipped"]
 
 PhaseName: TypeAlias = Literal["setup", "call", "teardown"]
 """A pytest runtest phase."""
+
+
+@dataclass(frozen=True, slots=True, eq=False)
+class Message(Mapping[str, str]):
+    """One conversation message in OpenAI format.
+
+    A dataclass, so our own code reads ``msg.content`` rather than indexing a dict by
+    string key. Also a ``Mapping``, because the ``history`` handed to user-written
+    agents and evaluators has always been subscriptable and must stay so:
+    ``history[-1]["content"]`` is what every example in the docs does.
+
+    ``eq=False`` lets ``Mapping.__eq__`` take over, so a Message compares equal to the
+    plain dict it replaces — which is what makes the swap invisible to callers.
+
+    Args:
+        role: Who produced the message.
+        content: The message text.
+        audio: WAV path a voice adapter should stream. Plugin-internal — never sent to
+            a text API, which is why ``to_dict`` drops it by default.
+    """
+
+    role: Role
+    content: str
+    audio: str | None = None
+
+    def __getitem__(self, key: str) -> str:
+        """Return a field by name, raising KeyError when it is unset."""
+        if key not in _MESSAGE_FIELDS:
+            raise KeyError(key)
+        value = getattr(self, key)
+        if value is None:
+            raise KeyError(key)
+        return str(value)
+
+    def __iter__(self) -> Iterator[str]:
+        """Yield the keys that are actually set, skipping an absent audio path."""
+        yield "role"
+        yield "content"
+        if self.audio is not None:
+            yield "audio"
+
+    def __len__(self) -> int:
+        """Count the keys that are actually set."""
+        return 3 if self.audio is not None else 2
+
+    def to_dict(self, *, include_audio: bool = False) -> dict[str, str]:
+        """Plain dict for an SDK boundary; drops the plugin-internal audio key by default.
+
+        Every serialisation boundary has to say this out loud, because ``json.dumps`` on
+        a Message raises. That is deliberate: it is what stops the internal shape from
+        leaking into a provider request.
+        """
+        return {key: self[key] for key in self if include_audio or key != "audio"}
+
+
+_MESSAGE_FIELDS = frozenset({"role", "content", "audio"})
+
+History: TypeAlias = list[Message]
+"""Accumulated conversation, oldest first."""
+
+AgentCallable: TypeAlias = Callable[[History], Awaitable["tuple[str, ToolCalls]"]]
+"""What the plugin calls to get one turn out of an agent.
+
+Declared as the plain tuple rather than :class:`AgentReply`: return covariance means an
+adapter returning ``AgentReply`` satisfies this, while a hand-written agent returning a
+plain tuple also does. One alias, no union.
+"""
 
 
 class AgentReply(NamedTuple):
@@ -114,14 +181,15 @@ class TurnContext:
         reply: The agent's reply.
         tool_calls: Tools called during the turn. Each entry is a ToolCall
             (str-compatible); ``.args`` holds captured arguments or None.
-        history: Full conversation history in OpenAI message format, up to but not including
-            the assistant reply for this turn.
+        history: Full conversation history, up to but not including the assistant
+            reply for this turn. Each entry is a :class:`Message` — attribute access
+            (``m.content``) and subscripting (``m["content"]``) both work.
     """
 
     user: str
     reply: str
     tool_calls: list[ToolCall]
-    history: list[dict[str, Any]]
+    history: History
 
 
 @dataclass

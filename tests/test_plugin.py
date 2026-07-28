@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from pytest_agent_eval.models import Message
 from tests.helpers.pytester_project import EvalProject
 
 
@@ -160,7 +161,7 @@ def test_pydantic_ai_adapter_normalises_output():
 
     import asyncio
 
-    reply, tool_calls = asyncio.run(adapter([{"role": "user", "content": "hi"}]))
+    reply, tool_calls = asyncio.run(adapter([Message(role="user", content="hi")]))
     assert reply == "Hello!"
     assert tool_calls == []
 
@@ -183,6 +184,6 @@ def test_openai_adapter_normalises_output():
 
     import asyncio
 
-    reply, tool_calls = asyncio.run(adapter([{"role": "user", "content": "hi"}]))
+    reply, tool_calls = asyncio.run(adapter([Message(role="user", content="hi")]))
     assert reply == "Hello from OpenAI!"
     assert tool_calls == []

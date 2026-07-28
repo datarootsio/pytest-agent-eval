@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from pytest_agent_eval.models import (
+    Message,
     EvalResult,
     Expect,
     JudgeConfig,
@@ -43,7 +44,7 @@ def test_turn_context_fields():
         user="hello",
         reply="world",
         tool_calls=["tool_a"],
-        history=[{"role": "user", "content": "hello"}],
+        history=[Message(role="user", content="hello")],
     )
     assert ctx.user == "hello"
     assert ctx.tool_calls == ["tool_a"]

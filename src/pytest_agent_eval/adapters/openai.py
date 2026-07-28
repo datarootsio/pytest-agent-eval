@@ -47,10 +47,12 @@ class OpenAIAdapter:
 
     async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
         """Run a chat completion and normalise to (reply, tool_calls)."""
-        messages: list[dict[str, Any]] = []
+        messages: list[dict[str, str]] = []
         if self._system_prompt:
             messages.append({"role": "system", "content": self._system_prompt})
-        messages.extend(history)
+        # to_dict() drops the plugin-internal audio key: the API rejects unknown
+        # message keys, and runner.py sets one on every voice turn.
+        messages.extend(m.to_dict() for m in history)
 
         response = await self._client.chat.completions.create(
             model=self._model,

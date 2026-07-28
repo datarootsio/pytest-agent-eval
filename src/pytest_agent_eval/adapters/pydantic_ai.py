@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pytest_agent_eval.models import AgentReply, ToolCall
+from pytest_agent_eval.models import AgentReply, History, ToolCall
 
 # Message parts that represent a tool call. pydantic-ai exposes provider-native
 # (server-side) tool calls under a distinct part_kind; both carry args_as_dict().
@@ -32,7 +32,7 @@ def _static_system_prompts(agent: Any) -> tuple[str, ...]:
     return tuple(prompts) if isinstance(prompts, (tuple, list)) else ()
 
 
-def _to_model_messages(history: list[dict[str, Any]], system_prompts: tuple[str, ...]) -> list[Any]:
+def _to_model_messages(history: History, system_prompts: tuple[str, ...]) -> list[Any]:
     """Convert OpenAI-style message dicts into pydantic-ai ModelMessage objects.
 
     pydantic-ai's ``message_history`` takes ``ModelMessage`` instances, not raw
@@ -52,8 +52,8 @@ def _to_model_messages(history: list[dict[str, Any]], system_prompts: tuple[str,
 
     messages: list[Any] = []
     for msg in history:
-        role = msg.get("role")
-        content = msg.get("content", "")
+        role = msg.role
+        content = msg.content
         if role == "assistant":
             messages.append(ModelResponse(parts=[TextPart(content=content)]))
         elif role == "system":
@@ -97,9 +97,9 @@ class PydanticAIAdapter:
             )
         self._agent = agent
 
-    async def __call__(self, history: list[dict[str, Any]]) -> AgentReply:
+    async def __call__(self, history: History) -> AgentReply:
         """Run the agent and normalise output to (reply, tool_calls)."""
-        user_msg = history[-1]["content"] if history else ""
+        user_msg = history[-1].content if history else ""
         message_history = _to_model_messages(history[:-1], _static_system_prompts(self._agent))
         result = await self._agent.run(user_msg, message_history=message_history or None)
 

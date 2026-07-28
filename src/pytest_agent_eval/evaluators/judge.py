@@ -56,7 +56,7 @@ async def _run_judge(agent: "Agent[None, _JudgeOutput]", user_msg: str, retries:
 
 
 def _format_judge_prompt(rubric: str, ctx: TurnContext) -> str:
-    history_text = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in ctx.history)
+    history_text = "\n".join(f"{m.role.upper()}: {m.content}" for m in ctx.history)
     return (
         f"RUBRIC:\n{rubric}\n\nCONVERSATION HISTORY:\n{history_text}\n\nUSER: {ctx.user}\n\nAGENT REPLY:\n{ctx.reply}"
     )

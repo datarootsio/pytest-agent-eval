@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from pytest_agent_eval.models import Message
 import pytest
 
 from pytest_agent_eval.adapters import livekit as livekit_module
@@ -36,7 +37,7 @@ def _adapter(session: FakeAgentSession, **kwargs: Any) -> LiveKitAdapter:
 
 
 def _voice_turn(wav_path: Path, content: str = "hi") -> list[dict[str, str]]:
-    return [{"role": "user", "content": content, "audio": str(wav_path)}]
+    return [Message(role="user", content=content, audio=str(wav_path))]
 
 
 # --- capture ---
@@ -125,17 +126,17 @@ async def test_assistant_items_with_no_text_are_dropped(tmp_path: Path, wav_inpu
 
 async def test_missing_audio_raises(wav_input: FakeWavInput) -> None:
     with pytest.raises(ValueError, match="requires Turn.audio"):
-        await _adapter(FakeAgentSession())([{"role": "user", "content": "hi"}])
+        await _adapter(FakeAgentSession())([Message(role="user", content="hi")])
 
 
 async def test_missing_wav_file_raises(tmp_path: Path, wav_input: FakeWavInput) -> None:
     with pytest.raises(FileNotFoundError, match="WAV fixture missing"):
-        await _adapter(FakeAgentSession())([{"role": "user", "content": "hi", "audio": str(tmp_path / "gone.wav")}])
+        await _adapter(FakeAgentSession())([Message(role="user", content="hi", audio=str(tmp_path / "gone.wav"))])
 
 
 async def test_history_must_end_with_user_turn(wav_input: FakeWavInput) -> None:
     with pytest.raises(ValueError, match="must end with a user turn"):
-        await _adapter(FakeAgentSession())([{"role": "assistant", "content": "hello"}])
+        await _adapter(FakeAgentSession())([Message(role="assistant", content="hello")])
 
 
 # --- session lifecycle ---

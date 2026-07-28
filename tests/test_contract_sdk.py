@@ -13,7 +13,7 @@ import types
 
 import pytest
 
-from pytest_agent_eval.models import TurnContext
+from pytest_agent_eval.models import Message, TurnContext
 
 # --- pydantic-ai: real Agent + TestModel end-to-end ---
 
@@ -32,7 +32,7 @@ async def test_pydantic_ai_adapter_against_real_agent():
         return f"booked {time}"
 
     adapter = PydanticAIAdapter(agent)
-    reply, tool_calls = await adapter([{"role": "user", "content": "book me"}])
+    reply, tool_calls = await adapter([Message(role="user", content="book me")])
 
     assert isinstance(reply, str) and reply
     assert tool_calls == ["book_slot"]
@@ -53,9 +53,9 @@ async def test_pydantic_ai_adapter_against_real_agent_multi_turn():
 
     adapter = PydanticAIAdapter(Agent(TestModel()))
     history = [
-        {"role": "user", "content": "first turn"},
-        {"role": "assistant", "content": "acknowledged"},
-        {"role": "user", "content": "second turn"},
+        Message(role="user", content="first turn"),
+        Message(role="assistant", content="acknowledged"),
+        Message(role="user", content="second turn"),
     ]
     reply, tool_calls = await adapter(history)
 
@@ -88,9 +88,9 @@ async def test_pydantic_ai_adapter_preserves_system_prompt_across_turns():
     adapter = PydanticAIAdapter(Agent(FunctionModel(model_fn), system_prompt="You are a pirate."))
     await adapter(
         [
-            {"role": "user", "content": "turn 1"},
-            {"role": "assistant", "content": "prev reply"},
-            {"role": "user", "content": "turn 2"},
+            Message(role="user", content="turn 1"),
+            Message(role="assistant", content="prev reply"),
+            Message(role="user", content="turn 2"),
         ]
     )
     assert saw_system == [True]
@@ -198,7 +198,7 @@ async def test_openai_adapter_against_real_response_objects():
                 async def create(**kwargs):
                     return completion
 
-    reply, tool_calls = await OpenAIAdapter(FakeClient(), model="gpt-4o")([{"role": "user", "content": "book"}])
+    reply, tool_calls = await OpenAIAdapter(FakeClient(), model="gpt-4o")([Message(role="user", content="book")])
 
     assert reply == "Booking it now."
     assert tool_calls == ["book_slot"]
@@ -226,7 +226,7 @@ async def test_langchain_adapter_against_real_aimessage():
 
     direct.ainvoke = ainvoke_direct
 
-    reply, tool_calls = await LangChainAdapter(direct)([{"role": "user", "content": "book"}])
+    reply, tool_calls = await LangChainAdapter(direct)([Message(role="user", content="book")])
     assert reply == "Booked!"
     assert tool_calls == ["book_slot"]
     assert tool_calls[0].args == {"time": "10am"}
@@ -238,7 +238,7 @@ async def test_langchain_adapter_against_real_aimessage():
 
     graph.ainvoke = ainvoke_graph
 
-    reply, tool_calls = await LangChainAdapter(graph)([{"role": "user", "content": "book"}])
+    reply, tool_calls = await LangChainAdapter(graph)([Message(role="user", content="book")])
     assert reply == "Booked!"
     assert tool_calls[0].args == {"time": "10am"}
 
@@ -269,8 +269,37 @@ async def test_smolagents_adapter_against_real_memory_objects():
 
     fake_agent.run = run
 
-    reply, tool_calls = await SmolagentsAdapter(fake_agent)([{"role": "user", "content": "book"}])
+    reply, tool_calls = await SmolagentsAdapter(fake_agent)([Message(role="user", content="book")])
 
     assert reply == "Booked!"
     assert tool_calls == ["book_slot"]
     assert tool_calls[0].args == {"time": "10am"}
+
+
+async def test_langchain_adapter_history_survives_real_message_coercion():
+    """The adapter forwards history into the runnable, where LangChain coerces it.
+
+    langchain_core.convert_to_messages() raises NotImplementedError on a Mapping that is
+    not a dict, so Message must be converted at this boundary. A fake runnable cannot
+    catch that — it never coerces anything.
+    """
+    pytest.importorskip("langchain_core")
+    from langchain_core.messages import AIMessage, convert_to_messages
+
+    from pytest_agent_eval.adapters.langchain import LangChainAdapter
+
+    coerced: list[object] = []
+
+    class CoercingRunnable:
+        async def ainvoke(self, payload: dict) -> object:
+            coerced.extend(convert_to_messages(payload["messages"]))
+            return AIMessage(content="Booked!", tool_calls=[])
+
+    reply, _ = await LangChainAdapter(CoercingRunnable())(
+        [Message(role="user", content="book me", audio="turn1.wav")]
+    )
+
+    assert reply == "Booked!"
+    assert [type(m).__name__ for m in coerced] == ["HumanMessage"]
+    # The plugin-internal audio key must not reach the framework either.
+    assert not any("turn1.wav" in str(m) for m in coerced)
