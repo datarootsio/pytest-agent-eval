@@ -72,11 +72,6 @@ class SynthesizeArgs:
     model: str = _DEFAULT_MODEL
 
 
-def _transcript_hash(transcript: str) -> str:
-    """Return the digest a WAV's ``.hash`` sidecar stores for ``transcript``."""
-    return hashlib.sha256(transcript.encode("utf-8")).hexdigest()
-
-
 def _read_stored_hash(hash_path: Path) -> str | None:
     """Return the digest recorded in ``hash_path``, or None if it is absent or blank."""
     if not hash_path.exists():
@@ -158,7 +153,7 @@ class AudioFixture:
     @property
     def expected_hash(self) -> str:
         """The digest the sidecar must hold for the WAV on disk to count as current."""
-        return _transcript_hash(self.transcript)
+        return hashlib.sha256(self.transcript.encode("utf-8")).hexdigest()
 
     def is_up_to_date(self, *, force: bool) -> bool:
         """Whether the WAV on disk was already synthesised from this exact transcript.

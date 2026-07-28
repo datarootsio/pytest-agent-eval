@@ -62,11 +62,6 @@ class TranscriptError(ValueError):
     """A YAML transcript failed validation, with a didactic location-aware message."""
 
 
-def fail(location: str, message: str) -> TranscriptError:
-    """Build a TranscriptError with a location prefix and a schema reference."""
-    return TranscriptError(f"{location}: {message}\nSchema reference: {SCHEMA_URL}")
-
-
 def as_transcript_error(exc: ValidationError, source: str, model: type[BaseModel]) -> TranscriptError:
     """Render the most informative pydantic error as a didactic TranscriptError.
 
@@ -81,7 +76,8 @@ def as_transcript_error(exc: ValidationError, source: str, model: type[BaseModel
     """
     error = _most_informative(exc.errors())
     loc = _strip_union_tag(tuple(error["loc"]))
-    return fail(_location(loc, source, error["type"]), _message(error, loc, model))
+    location = _location(loc, source, error["type"])
+    return TranscriptError(f"{location}: {_message(error, loc, model)}\nSchema reference: {SCHEMA_URL}")
 
 
 def _most_informative(errors: Sequence[ErrorDetails]) -> ErrorDetails:
@@ -150,29 +146,29 @@ def _message(error: ErrorDetails, loc: Loc, model: type[BaseModel]) -> str:
     if kind == "list_type":
         contents = _LIST_CONTENTS.get(field)
         if contents:
-            return f"must be {contents}, got {_type_name(value)}"
-        return _LIST_OF_STR.format(type=_type_name(value), value=value, field=field)
+            return f"must be {contents}, got {type(value).__name__}"
+        return _LIST_OF_STR.format(type=type(value).__name__, value=value, field=field)
     if kind == "string_type" and isinstance(loc[-1], int):
-        return _LIST_OF_STR.format(type=_type_name(value), value=value, field=parent)
+        return _LIST_OF_STR.format(type=type(value).__name__, value=value, field=parent)
     if kind in {"model_type", "model_attributes_type", "dict_type"}:
         contents = _MAPPING_CONTENTS.get(field) or _MAPPING_CONTENTS.get(parent)
         if not loc:
-            return f"must be a YAML mapping with 'id' and 'turns' keys, got {_type_name(value)}"
+            return f"must be a YAML mapping with 'id' and 'turns' keys, got {type(value).__name__}"
         if field == "args":
-            return f"must be {contents}, got {_type_name(value)}"
-        return f"must be {contents or 'a mapping'}, got {_type_name(value)} ({value!r})"
+            return f"must be {contents}, got {type(value).__name__}"
+        return f"must be {contents or 'a mapping'}, got {type(value).__name__} ({value!r})"
     if kind in {"bool_parsing", "bool_type"}:
         return f"must be true or false, got {value!r}"
     if kind == "literal_error" and field == "mode":
         return f"must be 'subset' or 'exact', got {value!r}"
     if kind == "string_type":
         if field == "model":
-            return f"must be a string like 'openai:gpt-4o', got {_type_name(value)}"
+            return f"must be a string like 'openai:gpt-4o', got {type(value).__name__}"
         if field == "audio":
-            return f"must be a WAV path string, got {_type_name(value)}"
-        return f"must be a string, got {_type_name(value)}"
+            return f"must be a WAV path string, got {type(value).__name__}"
+        return f"must be a string, got {type(value).__name__}"
     if kind == "is_instance_of":
-        return f"must be an evaluator with an async 'evaluate(ctx)' method, got {_type_name(value)}"
+        return f"must be an evaluator with an async 'evaluate(ctx)' method, got {type(value).__name__}"
     return f"is invalid ({kind.replace('_', ' ')}), got {value!r}"
 
 
@@ -213,8 +209,3 @@ def _model_of(annotation: object) -> type[BaseModel] | None:
         if found is not None:
             return found
     return None
-
-
-def _type_name(value: object) -> str:
-    """The YAML-facing name of a value's type."""
-    return type(value).__name__

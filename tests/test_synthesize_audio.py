@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import sys
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
@@ -421,7 +422,7 @@ async def test_process_reports_up_to_date_without_synthesising(tmp_path: Path) -
     """The cache check lives in AudioSynthesizer.process too, so a direct caller cannot skip it."""
     audio = tmp_path / "t.wav"
     audio.write_bytes(b"existing")
-    (tmp_path / "t.wav.hash").write_text(mod._transcript_hash("Hello") + "\n")
+    (tmp_path / "t.wav.hash").write_text(mod.AudioFixture(transcript="Hello", audio_path=audio).expected_hash + "\n")
     spy = SynthSpy()
     fixture = mod.AudioFixture(transcript="Hello", audio_path=audio)
 
@@ -448,7 +449,7 @@ def test_audio_fixture_derives_its_sidecar_path_and_digest(tmp_path: Path) -> No
     fixture = mod.AudioFixture(transcript="Hello", audio_path=tmp_path / "clip.wav")
 
     assert fixture.hash_path == tmp_path / "clip.wav.hash"
-    assert fixture.expected_hash == mod._transcript_hash("Hello")
+    assert fixture.expected_hash == hashlib.sha256(b"Hello").hexdigest()
     assert not fixture.is_up_to_date(force=False)
 
 

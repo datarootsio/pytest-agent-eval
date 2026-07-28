@@ -94,6 +94,28 @@ rule has a non-obvious reason, the reason is stated — follow the reason, not t
 
 - Guard clauses; nesting deeper than three is a smell. Enforced: complexity ≤ 8,
   ≤ 12 branches, ≤ 50 statements, ≤ 5 args.
+
+- **No trivial indirection** — the rule is about what a function *adds*, not how short it
+  is. A one-liner that only renames an expression earns nothing: `_type_name(x)` was
+  `type(x).__name__` at ten call sites, and `_get_agent()` was a pure alias for the
+  `_agent` cached_property beside it. Inline or delete those. If inlining would duplicate
+  a decision, bind it once instead — `ContainsEvaluator.evaluate` binds `fold` rather than
+  spelling the case-sensitivity ternary four times.
+
+  **Exempt, because the name is buying something:**
+  - `@property` / `@cached_property` — a property *is* the interface.
+  - anything memoised or expensive. A one-liner that hides real cost is worth its name, and
+    inlining it hides the cost instead: `report._group_results` re-aggregates every outcome
+    and is called three times a session; `AudioSynthesizer.synthesize` is a network
+    round-trip; `_make_wav_file_audio_input_class` is `functools.cache` around a deferred
+    livekit import.
+  - a DI or monkeypatch seam a test substitutes (`synthesize`, `WavFileAudioInput`).
+  - `...` Protocol stubs, dunder and protocol methods, and pytest hooks.
+  - a one-liner whose *rule* needs stating: `groups._matches_identity` is one line, but the
+    parametrisation-aware `entry + "["` prefix is exactly the kind of thing that gets
+    "simplified" to `startswith(entry)` and starts matching `test_books_and_cancels`.
+
+  Where a one-liner is kept, the docstring says which of these it is.
 - When three or more of the same parameters thread through a chain of functions, bundle
   them into a frozen settings dataclass or make the chain a class.
 - **Docstring on every function, including private ones.**

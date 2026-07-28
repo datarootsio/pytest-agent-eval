@@ -54,21 +54,23 @@ class ContainsEvaluator:
         except re.error as exc:
             raise ValueError(f"Invalid regex pattern {exc.pattern!r}: {exc}") from exc
 
-    def _norm(self, s: str) -> str:
-        return s if self.case_sensitive else s.lower()
-
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Evaluate substring and regex checks against the reply."""
-        reply = self._norm(ctx.reply)
+        # Bound once instead of through a one-line _norm() method: the substring checks
+        # compare a folded needle against a folded reply, and this is the only place that
+        # decision is made. The regex checks below use re.IGNORECASE on the raw reply
+        # instead, so a pattern's own anchors and character classes still mean what they say.
+        fold = str if self.case_sensitive else str.lower
+        reply = fold(ctx.reply)
         matches_any_compiled, matches_all_compiled = self._compile()
 
-        if self.any_of and not any(self._norm(s) in reply for s in self.any_of):
+        if self.any_of and not any(fold(s) in reply for s in self.any_of):
             return EvalResult(
                 passed=False,
                 reasoning=f"Reply did not contain any of {self.any_of!r}",
             )
 
-        missing = [s for s in self.all_of if self._norm(s) not in reply]
+        missing = [s for s in self.all_of if fold(s) not in reply]
         if missing:
             return EvalResult(
                 passed=False,

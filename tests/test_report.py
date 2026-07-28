@@ -294,13 +294,13 @@ def test_no_detail_section_without_verbosity() -> None:
 def test_is_xdist_worker_when_workerinput_present() -> None:
     cfg = _make_mock_config(has_workerinput=True, dist="load")
     plugin = AgentEvalReportPlugin(cfg)
-    assert plugin._is_xdist_worker() is True
+    assert plugin._is_worker is True
 
 
 def test_is_not_xdist_worker_normally() -> None:
     cfg = _make_mock_config()
     plugin = AgentEvalReportPlugin(cfg)
-    assert plugin._is_xdist_worker() is False
+    assert plugin._is_worker is False
 
 
 def test_is_xdist_controller_when_dist_active_and_not_worker() -> None:

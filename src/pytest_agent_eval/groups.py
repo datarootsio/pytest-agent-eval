@@ -104,10 +104,22 @@ class GroupResult:
 
 
 def _matches_group(group: GroupConfig, outcome: EvalOutcome) -> bool:
+    """Whether an outcome belongs to a group: any shared tag OR any shared marker.
+
+    OR, not AND, and deliberately: a group is a union of selectors, so adding a marker to
+    one widens it rather than narrowing it to the intersection.
+    """
     return bool(set(group.tags) & set(outcome.tags)) or bool(set(group.pytest_markers) & set(outcome.markers))
 
 
 def _matches_identity(entry: str, identity: str) -> bool:
+    """Whether a ``must_pass`` entry names this test, parametrisation included.
+
+    The ``entry + "["`` prefix is what makes ``must_pass = ["test_books"]`` cover every
+    ``test_books[case]`` without the author listing each case — pytest appends the
+    parameter id in brackets. A bare ``startswith(entry)`` would be wrong: it would also
+    swallow ``test_books_and_cancels``.
+    """
     return identity == entry or identity.startswith(entry + "[")
 
 

@@ -109,10 +109,6 @@ class _JudgeEvaluatorBase:
         """
         return _build_judge_agent(self.model, self._system_prompt)
 
-    def _get_agent(self) -> Agent[None, _JudgeOutput]:
-        """Return the memoised judge agent."""
-        return self._agent
-
 
 @dataclass(kw_only=True)
 class JudgeEvaluator(_JudgeEvaluatorBase):
@@ -143,7 +139,7 @@ class JudgeEvaluator(_JudgeEvaluatorBase):
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Run the LLM judge against the turn and return its verdict."""
         user_msg = _format_judge_prompt(self.rubric, ctx)
-        return await _run_judge(self._get_agent(), user_msg, self.retries, self.timeout)
+        return await _run_judge(self._agent, user_msg, self.retries, self.timeout)
 
 
 @dataclass(kw_only=True)
@@ -189,4 +185,4 @@ class ToolCallArgsJudgeEvaluator(_JudgeEvaluatorBase):
             f"CALL {i + 1} ARGUMENTS:\n{json.dumps(args, indent=2, default=str)}" for i, args in enumerate(captured)
         )
         user_msg = f"RUBRIC:\n{self.rubric}\n\nTOOL: {self.tool}\n\n{calls_text}"
-        return await _run_judge(self._get_agent(), user_msg, self.retries, self.timeout)
+        return await _run_judge(self._agent, user_msg, self.retries, self.timeout)

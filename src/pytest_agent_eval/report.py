@@ -193,11 +193,13 @@ class AgentEvalReportPlugin:
         )
         self._outcomes[nodeid] = _advance_outcome(entry, when, outcome)
 
-    def add_result(self, name: str, result: TranscriptResult) -> None:
-        """Append a transcript result to the in-memory report buffer."""
-        self._results.append((name, result))
+    @property
+    def _is_worker(self) -> bool:
+        """True on an xdist worker, which forwards results instead of buffering them.
 
-    def _is_xdist_worker(self) -> bool:
+        A property, not a method: it reads one attribute and is asked at five call sites,
+        so the parentheses were the only thing it added.
+        """
         return hasattr(self._config, "workerinput")
 
     def _xdist_active(self) -> bool:
@@ -207,7 +209,7 @@ class AgentEvalReportPlugin:
             return False
 
     def _is_xdist_controller(self) -> bool:
-        return self._xdist_active() and not self._is_xdist_worker()
+        return self._xdist_active() and not self._is_worker
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(
@@ -218,7 +220,7 @@ class AgentEvalReportPlugin:
         report = outcome.get_result()
 
         meta = self._item_meta(item)
-        if self._is_xdist_worker():
+        if self._is_worker:
             # user_properties is shared across phases, so the setup-phase append rides
             # every report; gate on groups so junitxml isn't polluted for non-users.
             if self._cfg.groups and not any(k == _XDIST_META_KEY for k, _ in report.user_properties):
@@ -231,11 +233,11 @@ class AgentEvalReportPlugin:
         if call.when == "call":
             result: TranscriptResult | None = getattr(item, "_eval_result", None)
             if result is not None:
-                if self._is_xdist_worker():
+                if self._is_worker:
                     report.user_properties.append((_XDIST_NAME_KEY, item.name))
                     report.user_properties.append((_XDIST_RESULT_KEY, _serialize_result(result)))
                 else:
-                    self.add_result(item.name, result)
+                    self._results.append((item.name, result))
                 section = _detail_section(result, self._config.getoption("verbose", default=0))
                 if section is not None:
                     report.sections.append(("LLM Eval", section))
@@ -257,7 +259,7 @@ class AgentEvalReportPlugin:
         if result_data is None:
             return
         name = next((v for k, v in report.user_properties if k == _XDIST_NAME_KEY), report.nodeid)
-        self.add_result(name, _deserialize_result(result_data))
+        self._results.append((name, _deserialize_result(result_data)))
 
     def pytest_collectreport(self, report: pytest.CollectReport) -> None:
         """Remember collection errors — they veto any exit-code override."""
@@ -269,6 +271,18 @@ class AgentEvalReportPlugin:
         self._deselected_count += len(items)
 
     def _group_results(self) -> list[GroupResult]:
+        """Aggregate the session's outcomes into per-group results.
+
+        A one-liner that stays a method, because it is not free: it re-runs
+        evaluate_groups over every recorded outcome, and three call sites reach it per
+        session. Inlining would triple that work at the call sites and hide the cost there.
+
+        Deliberately not memoised. All three callers run at session end, after every
+        runtest hook has recorded its outcome, so a cache would in fact be correct today —
+        but nothing in the type or the name would stop a future caller being added mid-run,
+        and that one would silently receive a stale outcome set. The recompute is bounded
+        by the number of tests in the session and buys that immunity.
+        """
         return evaluate_groups(self._cfg.groups, list(self._outcomes.values()))
 
     def pytest_terminal_summary(self, terminalreporter: pytest.TerminalReporter) -> None:

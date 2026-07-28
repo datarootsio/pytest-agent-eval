@@ -152,10 +152,10 @@ async def test_judge_evaluator_recovers_on_a_later_attempt() -> None:
 def test_judge_evaluators_build_their_agent_once() -> None:
     """The agent is memoised per instance; rebuilding it per turn would re-resolve the model."""
     judge = JudgeEvaluator(rubric="r", model="test")
-    assert judge._get_agent() is judge._get_agent()
+    assert judge._agent is judge._agent
 
     args_judge = ToolCallArgsJudgeEvaluator(tool="t", rubric="r", model="test")
-    assert args_judge._get_agent() is args_judge._get_agent()
+    assert args_judge._agent is args_judge._agent
 
 
 def test_judge_agent_is_not_a_dataclass_field() -> None:
