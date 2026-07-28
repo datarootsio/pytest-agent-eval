@@ -6,18 +6,49 @@ import asyncio
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Protocol
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.adapters._wav_input import WavFileAudioInput
 from pytest_agent_eval.models import AgentReply, History, ToolCall
 
 if TYPE_CHECKING:
-    from livekit.agents.voice import Agent, AgentSession
+    from livekit.agents.voice import Agent
 
 logger = logging.getLogger(__name__)
 
-SessionFactory = Callable[[], "tuple[AgentSession[Any], Agent]"]
+
+class _SessionInput(Protocol):
+    """A session's input pipes; the adapter swaps the audio one for a WAV replay."""
+
+    audio: object
+
+
+class VoiceSession(Protocol):
+    """The slice of livekit's ``AgentSession`` the adapter drives.
+
+    A Protocol rather than ``AgentSession`` itself: the real class is generic over the
+    session userdata, which this adapter never touches, so naming it would either pin a
+    throwaway type argument or leak an irrelevant type parameter into every user's
+    ``session_factory`` annotation.
+    """
+
+    input: _SessionInput
+
+    def on(self, event: str, callback: Callable[[object], None]) -> object:
+        """Register a handler for one of the session's events."""
+        ...
+
+    async def start(self, agent: Agent) -> object:
+        """Start the session against an agent."""
+        ...
+
+    async def aclose(self) -> None:
+        """Close the session and release its resources."""
+        ...
+
+
+SessionFactory = Callable[[], "tuple[VoiceSession, Agent]"]
 
 
 def _quiet_livekit_loggers() -> None:
@@ -102,13 +133,17 @@ class LiveKitAdapter:
         tool_calls: list[ToolCall] = []
         reply_chunks: list[str] = []
 
-        def _on_function_tools_executed(event: Any) -> None:
+        # `object`, not a Protocol: every read below is a getattr with a default, and
+        # those defaults are the point — livekit's event shapes vary by version and by
+        # which model fired them. A Protocol would assert a shape we deliberately
+        # do not require.
+        def _on_function_tools_executed(event: object) -> None:
             for fc in getattr(event, "function_calls", []) or []:
                 name = getattr(fc, "name", "") or ""
                 if name:
                     tool_calls.append(ToolCall(name, coerce_args(getattr(fc, "arguments", None))))
 
-        def _on_conversation_item_added(event: Any) -> None:
+        def _on_conversation_item_added(event: object) -> None:
             item = getattr(event, "item", None)
             if item is None:
                 return

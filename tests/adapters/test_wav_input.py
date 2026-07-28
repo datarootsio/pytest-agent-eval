@@ -31,13 +31,13 @@ _SAMPLES_PER_FRAME = _SAMPLE_RATE * _FRAME_MS // 1000
 def _reset_class_cache() -> Any:
     """Clear the memoised class between tests.
 
-    ``_class_cache`` is a module global populated on first use and never reset, so
-    the first test to seed it with a fake would otherwise hand that fake to every
-    later test — including ones that mean to build the real class.
+    The class factory is ``functools.cache``d and never reset, so the first test to
+    seed it with a fake would otherwise hand that fake to every later test —
+    including ones that mean to build the real class.
     """
-    _wav_input._class_cache = None
+    _wav_input._make_wav_file_audio_input_class.cache_clear()
     yield
-    _wav_input._class_cache = None
+    _wav_input._make_wav_file_audio_input_class.cache_clear()
 
 
 class _FakeAudioFrame:
@@ -130,6 +130,14 @@ def test_livekit_import_stays_lazy() -> None:
         importlib.reload(_wav_input)
 
 
+def test_import_livekit_names_the_two_types_it_returns(fake_livekit: None) -> None:
+    """A record, not a positional pair — the factory reads both fields by name."""
+    livekit = _wav_input._import_livekit()
+
+    assert livekit.audio_frame is _FakeAudioFrame
+    assert livekit.audio_input is _FakeAudioInput
+
+
 # --- the class factory ---
 
 
@@ -138,12 +146,23 @@ def test_factory_subclasses_the_livekit_audio_input(fake_livekit: None) -> None:
     assert issubclass(cls, _FakeAudioInput)
 
 
+async def test_the_streaming_logic_needs_no_livekit(tmp_path: Path) -> None:
+    """All the WAV logic lives in a plain class; only the thin subclass touches livekit."""
+    streamer = _wav_input._WavStreamer(_write_wav(tmp_path / "plain.wav"), frame_ms=_FRAME_MS)
+
+    chunk = await streamer.next_chunk()
+
+    assert chunk == b"\x01\x02" * _SAMPLES_PER_FRAME
+    assert _wav_input._make_wav_file_audio_input_class.cache_info().currsize == 0
+
+
 def test_public_callable_caches_the_class(fake_livekit: None, tmp_path: Path) -> None:
     """The class is built once; livekit is imported on first construction only."""
     first = _wav_input.WavFileAudioInput(_write_wav(tmp_path / "a.wav"))
     second = _wav_input.WavFileAudioInput(_write_wav(tmp_path / "b.wav"))
     assert type(first) is type(second)
-    assert _wav_input._class_cache is type(first)
+    assert _wav_input._make_wav_file_audio_input_class() is type(first)
+    assert _wav_input._make_wav_file_audio_input_class.cache_info().currsize == 1
 
 
 def test_label_identifies_the_wav_file(fake_livekit: None, tmp_path: Path) -> None:

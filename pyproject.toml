@@ -144,12 +144,6 @@ convention = "google"
 #   PLR0912 -> splitting _run and the makereport hook
 #   PLW0603 -> the `global _class_cache` becomes functools.cache
 "src/pytest_agent_eval/_errors.py" = ["PLR0911", "PLR0912", "PLC0415", "E501"]
-"src/pytest_agent_eval/adapters/_wav_input.py" = ["ANN401", "PLC0415", "PLW0603", "N806"]
-"src/pytest_agent_eval/adapters/langchain.py" = ["ANN401"]
-"src/pytest_agent_eval/adapters/livekit.py" = ["ANN401"]
-"src/pytest_agent_eval/adapters/openai.py" = ["ANN401"]
-"src/pytest_agent_eval/adapters/pydantic_ai.py" = ["ANN401", "PLC0415"]
-"src/pytest_agent_eval/adapters/smolagents.py" = ["ANN401"]
 "src/pytest_agent_eval/plugin.py" = ["ANN401", "PLC0415"]
 "src/pytest_agent_eval/report.py" = ["PLR0912"]
 "src/pytest_agent_eval/runner.py" = ["PLC0415"]

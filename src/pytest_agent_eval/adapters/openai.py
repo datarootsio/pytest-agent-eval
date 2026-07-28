@@ -2,10 +2,65 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Protocol
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.models import AgentReply, History, ToolCall
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+
+class _Function(Protocol):
+    """The function payload of one OpenAI tool call."""
+
+    name: str
+    arguments: str
+
+
+class _ToolCall(Protocol):
+    """One tool call on a chat-completion message."""
+
+    function: _Function
+
+
+class _CompletionMessage(Protocol):
+    """The assistant message the adapter reads off a completion choice."""
+
+    content: str | None
+    tool_calls: Sequence[_ToolCall] | None
+
+
+class _Choice(Protocol):
+    """One chat-completion choice."""
+
+    message: _CompletionMessage
+
+
+class _ChatCompletion(Protocol):
+    """A chat-completion response."""
+
+    choices: Sequence[_Choice]
+
+
+class _Completions(Protocol):
+    """The ``chat.completions`` namespace."""
+
+    async def create(self, *, model: str, messages: Sequence[dict[str, str]]) -> _ChatCompletion:
+        """Request one chat completion."""
+        ...
+
+
+class _Chat(Protocol):
+    """The ``chat`` namespace, which is also the attribute the constructor guards on."""
+
+    completions: _Completions
+
+
+class OpenAIClient(Protocol):
+    """The slice of ``AsyncOpenAI`` the adapter uses: one chat-completions call."""
+
+    chat: _Chat
 
 
 class OpenAIAdapter:
@@ -30,7 +85,7 @@ class OpenAIAdapter:
 
     def __init__(
         self,
-        client: Any,
+        client: OpenAIClient,
         model: str,
         system_prompt: str | None = None,
     ) -> None:

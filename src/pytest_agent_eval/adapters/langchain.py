@@ -2,10 +2,32 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Protocol, cast
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.models import AgentReply, History, ToolCall
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+
+class _AIMessage(Protocol):
+    """A LangChain message, as read off a runnable's result."""
+
+    content: object
+
+
+class LangChainRunnable(Protocol):
+    """The slice of a LangChain Runnable the adapter uses: one async invocation."""
+
+    async def ainvoke(self, payload: Mapping[str, object], /) -> object:
+        """Invoke the runnable on a ``{"messages": [...]}`` state."""
+        ...
+
+
+def _tool_calls(message: object) -> list[ToolCall]:
+    """Read LangChain's ``tool_calls`` off a message; absent means no tools were called."""
+    return [ToolCall(tc["name"], coerce_args(tc.get("args"))) for tc in getattr(message, "tool_calls", []) or []]
 
 
 class LangChainAdapter:
@@ -27,7 +49,7 @@ class LangChainAdapter:
         ```
     """
 
-    def __init__(self, runnable: Any) -> None:
+    def __init__(self, runnable: LangChainRunnable) -> None:
         """Store the LangChain runnable to delegate calls to."""
         if not hasattr(runnable, "ainvoke"):
             raise TypeError(
@@ -44,18 +66,8 @@ class LangChainAdapter:
         result = await self._runnable.ainvoke({"messages": [m.to_dict() for m in history]})
 
         if hasattr(result, "content"):
-            reply = str(result.content)
-            tool_calls = [
-                ToolCall(tc["name"], coerce_args(tc.get("args"))) for tc in getattr(result, "tool_calls", []) or []
-            ]
-        elif isinstance(result, dict) and "messages" in result:
-            last = result["messages"][-1]
-            reply = str(last.content)
-            tool_calls = [
-                ToolCall(tc["name"], coerce_args(tc.get("args"))) for tc in getattr(last, "tool_calls", []) or []
-            ]
-        else:
-            reply = str(result)
-            tool_calls = []
-
-        return AgentReply(reply, tool_calls)
+            return AgentReply(str(result.content), _tool_calls(result))
+        if isinstance(result, dict) and "messages" in result:
+            last = cast("Mapping[str, Sequence[_AIMessage]]", result)["messages"][-1]
+            return AgentReply(str(last.content), _tool_calls(last))
+        return AgentReply(str(result), [])

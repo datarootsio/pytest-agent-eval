@@ -3,12 +3,35 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Protocol
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.models import AgentReply, History, ToolCall
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 _INTERNAL_TOOLS = frozenset({"python_interpreter", "final_answer"})
+
+
+class _AgentMemory(Protocol):
+    """A smolagents agent's memory: the list of steps it has taken."""
+
+    steps: Sequence[object]
+
+
+class SmolagentsAgent(Protocol):
+    """The slice of a smolagents agent the adapter uses: ``run`` plus ``memory.steps``.
+
+    Steps are ``object``: only some of them carry ``tool_calls`` (a planning step does
+    not), and the adapter's ``getattr`` default is what distinguishes the two.
+    """
+
+    memory: _AgentMemory
+
+    def run(self, task: str, *, reset: bool) -> object:
+        """Run one task, clearing the agent's memory first when ``reset``."""
+        ...
 
 
 class SmolagentsAdapter:
@@ -38,7 +61,7 @@ class SmolagentsAdapter:
         ```
     """
 
-    def __init__(self, agent: Any, *, include_internal_tools: bool = False) -> None:
+    def __init__(self, agent: SmolagentsAgent, *, include_internal_tools: bool = False) -> None:
         """Store the smolagents agent and the internal-tool filter setting."""
         if not hasattr(agent, "run") or not hasattr(agent, "memory"):
             raise TypeError(
