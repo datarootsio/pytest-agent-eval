@@ -107,7 +107,6 @@ def _public_callables(obj: object) -> list[tuple[str, object]]:
 # `# type: ignore` could silence.
 ANY_ALLOWLIST = {
     "yaml_loader.py": "pytest passthrough: **kwargs to pytest.Item, and self.funcargs",
-    "report.py": "pytest passthrough: user_properties values and hookwrapper returns",
     "plugin.py": "pytest passthrough: terminalreporter",
     "synthesize_audio.py": "duck-typed OpenAI Realtime client",
     "adapters/livekit.py": "duck-typed livekit session and event objects",

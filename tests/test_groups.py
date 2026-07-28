@@ -520,7 +520,7 @@ def test_build_group_markdown_lines_omits_a_failure_note_when_all_pass() -> None
     assert not any("failures" in line for line in lines)
 
 
-def test_build_group_markdown_lines_stays_silent_about_passing_must_pass_entries():
+def test_build_group_markdown_lines_stays_silent_about_passing_must_pass_entries() -> None:
     """The terminal summary lists every must_pass entry; the markdown notes only problems.
 
     A passing entry must therefore produce no note at all — otherwise the report grows a
