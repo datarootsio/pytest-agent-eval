@@ -3,8 +3,14 @@ from pathlib import Path
 import pytest
 
 from pytest_agent_eval.yaml_loader import TranscriptError, load_transcript, validate_transcript_dict
+from tests.helpers.pytester_project import EvalProject, raising_agent, static_agent
 
 SAMPLE = Path(__file__).parent / "fixtures" / "sample_transcript.yaml"
+
+_CONFIRMED_TRANSCRIPT = (
+    "id: {id}\nthreshold: 1.0\nruns: 1\nturns:\n"
+    "  - user: book me\n    expect:\n      reply_contains_any:\n        - confirmed\n"
+)
 
 
 def _load(tmp_path: Path, content: str):
@@ -322,22 +328,10 @@ def test_load_transcript_honours_config_defaults(tmp_path: Path):
 
 
 def test_yaml_syntax_error_shows_clean_collect_error(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{"tests/evals/broken_syntax": ("id: broken\nturns:\n  - user: hi\n   expect:\n      judge: x\n")},
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "ok", []
-            return agent
-        """
-    )
+    EvalProject(
+        conftest=static_agent(),
+        transcripts={"tests/evals/broken_syntax": "id: broken\nturns:\n  - user: hi\n   expect:\n      judge: x\n"},
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live")
     assert result.ret != 0
     result.stdout.fnmatch_lines(["*invalid YAML at line*"])
@@ -352,26 +346,14 @@ def test_yaml_transcript_defaults_come_from_config(pytester: pytest.Pytester):
         threshold = 0.0
         """
     )
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{
+    EvalProject(
+        conftest=static_agent("nope"),
+        transcripts={
             "tests/evals/no_threshold": (
                 "id: config_default\nturns:\n  - user: hi\n    expect:\n      reply_contains_any: [impossible]\n"
             )
         },
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "nope", []
-            return agent
-        """
-    )
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*config_default*PASSED*"])
     assert result.ret == 0
@@ -383,22 +365,10 @@ def test_validate_transcript_dict_rejects_non_mapping():
 
 
 def test_invalid_yaml_shows_clean_collect_error(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{"tests/evals/broken": ("id: broken\nturns:\n  - user: hi\n    expect:\n      reply_contain_any: [x]\n")},
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "ok", []
-            return agent
-        """
-    )
+    EvalProject(
+        conftest=static_agent(),
+        transcripts={"tests/evals/broken": "id: broken\nturns:\n  - user: hi\n    expect:\n      reply_contain_any: [x]\n"},
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live")
     assert result.ret != 0
     result.stdout.fnmatch_lines(["*Did you mean 'reply_contains_any'?*"])
@@ -507,54 +477,19 @@ def test_audio_field_keeps_absolute_path(tmp_path: Path):
 
 
 def test_yaml_discovery_and_collection(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{"tests/evals/hello": ("id: hello_test\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n")},
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "confirmed", []
-            return agent
-        """
-    )
+    EvalProject(
+        conftest=static_agent("confirmed"),
+        transcripts={"tests/evals/hello": "id: hello_test\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n"},
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live", "--collect-only", "-q")
     result.stdout.fnmatch_lines(["*hello_test*"])
 
 
 def test_yaml_item_passes_with_matching_agent(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{
-            "tests/evals/booking": (
-                "id: booking_ok\n"
-                "threshold: 1.0\n"
-                "runs: 1\n"
-                "turns:\n"
-                "  - user: book me\n"
-                "    expect:\n"
-                "      reply_contains_any:\n"
-                "        - confirmed\n"
-            )
-        },
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "booking confirmed!", []
-            return agent
-        """
-    )
+    EvalProject(
+        conftest=static_agent("booking confirmed!"),
+        transcripts={"tests/evals/booking": _CONFIRMED_TRANSCRIPT.format(id="booking_ok")},
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*booking_ok*PASSED*"])
     assert result.ret == 0
@@ -562,8 +497,7 @@ def test_yaml_item_passes_with_matching_agent(pytester: pytest.Pytester):
 
 def test_yaml_item_skips_with_didactic_hint_when_agent_fixture_missing(pytester: pytest.Pytester):
     """A collected transcript with no llm_eval_agent fixture must teach the fix, not error."""
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(".yaml", **{"tests/evals/no_fixture": "id: needs_agent\nturns:\n  - user: hi\n"})
+    EvalProject(transcripts={"tests/evals/no_fixture": "id: needs_agent\nturns:\n  - user: hi\n"}).write(pytester)
     # -rs, not -v: the short summary prints the whole skip reason, which -v truncates.
     result = pytester.runpytest("--agent-eval-live", "-rs")
     assert result.ret == 0
@@ -574,52 +508,20 @@ def test_yaml_item_skips_with_didactic_hint_when_agent_fixture_missing(pytester:
 
 def test_non_assertion_failure_defers_to_pytest_traceback(pytester: pytest.Pytester):
     """repr_failure renders threshold assertions plainly but must not swallow real errors."""
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(".yaml", **{"tests/evals/boom": "id: exploding\nturns:\n  - user: hi\n"})
-    pytester.makeconftest(
-        """
-        import pytest
-
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                raise RuntimeError("agent exploded")
-            return agent
-        """
-    )
+    EvalProject(
+        conftest=raising_agent("agent exploded"),
+        transcripts={"tests/evals/boom": "id: exploding\nturns:\n  - user: hi\n"},
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live")
     assert result.ret != 0
     result.stdout.fnmatch_lines(["*RuntimeError*agent exploded*"])
 
 
 def test_yaml_item_fails_with_non_matching_agent(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{
-            "tests/evals/fail_test": (
-                "id: fail_case\n"
-                "threshold: 1.0\n"
-                "runs: 1\n"
-                "turns:\n"
-                "  - user: book me\n"
-                "    expect:\n"
-                "      reply_contains_any:\n"
-                "        - confirmed\n"
-            )
-        },
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "error", []
-            return agent
-        """
-    )
+    EvalProject(
+        conftest=static_agent("error"),
+        transcripts={"tests/evals/fail_test": _CONFIRMED_TRANSCRIPT.format(id="fail_case")},
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*fail_case*FAILED*"])
     assert result.ret != 0

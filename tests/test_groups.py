@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from tests.helpers.pytester_project import EvalProject, keyword_agent, static_agent
+
 from pytest_agent_eval.groups import (
     EvalOutcome,
     GroupConfig,
@@ -283,29 +285,17 @@ def test_load_config_parses_groups_section(tmp_path):
 
 
 def test_yaml_item_marker_carries_transcript_tags(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{"tests/evals/tagged": ("id: tagged_test\ntags: [gate:booking]\nturns:\n  - user: hi\n")},
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "ok", []
-            return agent
-
-
+    EvalProject(
+        conftest=static_agent()
+        + """
         def pytest_collection_modifyitems(items):
             for item in items:
                 marker = item.get_closest_marker("agent_eval")
                 if marker is not None:
                     print(f"TAGS={marker.kwargs.get('tags')}")
-        """
-    )
+        """,
+        transcripts={"tests/evals/tagged": "id: tagged_test\ntags: [gate:booking]\nturns:\n  - user: hi\n"},
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live", "-s", "--collect-only")
     result.stdout.fnmatch_lines(["TAGS=*gate:booking*"])
 
@@ -330,18 +320,6 @@ def test_group_pytest_markers_are_auto_registered(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
-_GROUPS_CONFTEST = """
-import pytest
-
-@pytest.fixture
-def llm_eval_agent():
-    async def agent(history):
-        reply = "confirmed" if "good" in history[-1]["content"] else "nope"
-        return reply, []
-    return agent
-"""
-
-
 def _make_grouped_project(pytester: pytest.Pytester, threshold: float = 0.5, extra_toml: str = "") -> None:
     pytester.makepyprojecttoml(
         f"""
@@ -354,11 +332,9 @@ def _make_grouped_project(pytester: pytest.Pytester, threshold: float = 0.5, ext
         {extra_toml}
         """
     )
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makeconftest(_GROUPS_CONFTEST)
-    pytester.makefile(
-        ".yaml",
-        **{
+    EvalProject(
+        conftest=keyword_agent({"good": "confirmed"}, default="nope"),
+        transcripts={
             "tests/evals/good": (
                 "id: good_case\nthreshold: 1.0\ntags: [gate:booking]\nturns:\n"
                 "  - user: good\n    expect:\n      reply_contains_any: [confirmed]\n"
@@ -368,7 +344,7 @@ def _make_grouped_project(pytester: pytest.Pytester, threshold: float = 0.5, ext
                 "  - user: bad\n    expect:\n      reply_contains_any: [confirmed]\n"
             ),
         },
-    )
+    ).write(pytester)
 
 
 def test_terminal_group_summary_shows_rates_and_failures(pytester: pytest.Pytester):

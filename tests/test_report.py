@@ -6,6 +6,8 @@ from typing import Any
 import pytest
 
 from pytest_agent_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
+from tests.helpers.pytester_project import EvalProject, static_agent
+
 from pytest_agent_eval.report import (
     AgentEvalReportPlugin,
     _deserialize_result,
@@ -99,21 +101,10 @@ def test_build_markdown_report_shows_score():
 
 
 def test_report_written_to_file_with_flag(pytester: pytest.Pytester, tmp_path: Path):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{"tests/evals/simple": ("id: simple_test\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n")},
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "ok", []
-            return agent
-        """
-    )
+    EvalProject(
+        conftest=static_agent(),
+        transcripts={"tests/evals/simple": "id: simple_test\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n"},
+    ).write(pytester)
     report_path = tmp_path / "report.md"
     pytester.runpytest("--agent-eval-live", f"--agent-eval-report={report_path}")
     assert report_path.exists()
@@ -122,21 +113,10 @@ def test_report_written_to_file_with_flag(pytester: pytest.Pytester, tmp_path: P
 
 
 def test_verbose_output_shows_run_details(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{"tests/evals/verbose_test": ("id: verbose_case\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n")},
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "ok", []
-            return agent
-        """
-    )
+    EvalProject(
+        conftest=static_agent(),
+        transcripts={"tests/evals/verbose_test": "id: verbose_case\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n"},
+    ).write(pytester)
     result = pytester.runpytest("--agent-eval-live", "-v")
     result.stdout.fnmatch_lines(["*verbose_case*"])
 
@@ -449,24 +429,13 @@ def test_collect_error_flag_set():
 def test_xdist_report_collects_all_workers(pytester: pytest.Pytester, tmp_path: Path):
     """With -n2, results from both workers appear in the report."""
     pytest.importorskip("xdist")
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
-    pytester.makefile(
-        ".yaml",
-        **{
+    EvalProject(
+        conftest=static_agent(),
+        transcripts={
             "tests/evals/t1": "id: transcript_one\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hi\n",
             "tests/evals/t2": "id: transcript_two\nthreshold: 0.0\nruns: 1\nturns:\n  - user: hello\n",
         },
-    )
-    pytester.makeconftest(
-        """
-        import pytest
-        @pytest.fixture
-        def llm_eval_agent():
-            async def agent(history):
-                return "ok", []
-            return agent
-        """
-    )
+    ).write(pytester)
     report_path = tmp_path / "xdist_report.md"
     result = pytester.runpytest("--agent-eval-live", f"--agent-eval-report={report_path}", "-n2")
     result.assert_outcomes(passed=2)

@@ -4,6 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tests.helpers.pytester_project import EvalProject
+
 
 def test_plugin_registers_marker(pytester: pytest.Pytester):
     result = pytester.runpytest("--markers")
@@ -46,7 +48,7 @@ def test_no_skip_hint_when_nothing_skipped(pytester: pytest.Pytester):
 
 
 def test_llm_eval_tests_run_with_live_flag(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    EvalProject().write(pytester)
     pytester.makepyfile(
         """
         import pytest
@@ -68,7 +70,7 @@ def test_llm_eval_tests_run_with_live_flag(pytester: pytest.Pytester):
 
 def test_llm_eval_runs_with_eval_live_env(pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("EVAL_LIVE", "1")
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    EvalProject().write(pytester)
     pytester.makepyfile(
         """
         import pytest
@@ -88,7 +90,7 @@ def test_llm_eval_runs_with_eval_live_env(pytester: pytest.Pytester, monkeypatch
 
 
 def test_marker_threshold_overrides_config(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    EvalProject().write(pytester)
     pytester.makepyfile(
         """
         import pytest
@@ -118,7 +120,7 @@ def test_cli_options_exist(pytester: pytest.Pytester):
 
 def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
     """threshold=0.0 must not fall back to config default (falsy trap)."""
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    EvalProject().write(pytester)
     pytester.makepyfile(
         """
         import pytest
