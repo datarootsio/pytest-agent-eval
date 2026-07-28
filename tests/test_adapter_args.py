@@ -146,3 +146,43 @@ async def test_langchain_adapter_handles_missing_args_key():
 
     assert tool_calls[0] == "book_slot"
     assert tool_calls[0].args is None
+
+
+async def test_langchain_adapter_stringifies_unrecognised_result():
+    """A chain ending in a plain str/StrOutputParser has neither .content nor 'messages'."""
+    from pytest_agent_eval.adapters.langchain import LangChainAdapter
+
+    runnable = MagicMock()
+    runnable.ainvoke = AsyncMock(return_value="just a string")
+
+    reply, tool_calls = await LangChainAdapter(runnable)([{"role": "user", "content": "hi"}])
+
+    assert reply == "just a string"
+    assert tool_calls == []
+
+
+# --- system prompts ---
+
+
+async def test_openai_adapter_prepends_system_prompt():
+    from pytest_agent_eval.adapters.openai import OpenAIAdapter
+
+    message = SimpleNamespace(content="done", tool_calls=None)
+    response = SimpleNamespace(choices=[SimpleNamespace(message=message)])
+    client = MagicMock()
+    client.chat.completions.create = AsyncMock(return_value=response)
+
+    await OpenAIAdapter(client, model="gpt-4o", system_prompt="Be terse.")([{"role": "user", "content": "hi"}])
+
+    sent = client.chat.completions.create.await_args.kwargs["messages"]
+    assert sent[0] == {"role": "system", "content": "Be terse."}
+    assert sent[1]["content"] == "hi"
+
+
+async def test_pydantic_ai_adapter_maps_system_role_to_system_prompt_part():
+    """A system entry in history must become a SystemPromptPart, not a user prompt."""
+    from pytest_agent_eval.adapters.pydantic_ai import _to_model_messages
+
+    messages = _to_model_messages([{"role": "system", "content": "Be terse."}], ())
+
+    assert [getattr(p, "part_kind", None) for m in messages for p in m.parts] == ["system-prompt"]

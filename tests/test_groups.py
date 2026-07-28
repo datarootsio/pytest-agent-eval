@@ -44,6 +44,12 @@ def test_parse_groups_rejects_unknown_key():
         parse_groups({"g": {"must_pas": ["typo"]}})
 
 
+def test_parse_groups_rejects_non_table():
+    """A scalar under [tool.agent_eval.groups] would otherwise silently disable every gate."""
+    with pytest.raises(ValueError, match=r"\[tool\.agent_eval\.groups\] must be a table of group tables, got str"):
+        parse_groups("not a table")
+
+
 def test_parse_groups_rejects_threshold_out_of_range():
     with pytest.raises(ValueError, match="threshold"):
         parse_groups({"g": {"threshold": 1.5}})
@@ -233,6 +239,26 @@ def test_build_group_markdown_lines_contains_table_and_notes():
     assert any("| g | 1 | 2 |" in line for line in lines)
     assert any("failures: b" in line for line in lines)
     assert any("did not run: absent" in line for line in lines)
+
+
+def test_build_group_markdown_lines_flags_a_group_that_matched_nothing():
+    """A gate whose selectors match no tests is a config error, not a pass."""
+    lines = build_group_markdown_lines(evaluate_groups([GroupConfig(name="ghost", tags=["t"])], []))
+    assert any("| ghost | - | 0 | - | 1.00 | ⚠️ NO MATCH |" in line for line in lines)
+
+
+def test_build_group_markdown_lines_reports_must_pass_failure_without_membership():
+    """must_pass is an assertion over every outcome, so it must show even with no members."""
+    group = GroupConfig(name="gate", tags=["nomatch"], must_pass=["critical"])
+    lines = build_group_markdown_lines(evaluate_groups([group], [_outcome("critical", "failed")]))
+    assert any("❌ must_pass FAILED" in line for line in lines)
+    assert any("`gate` must_pass FAILED: critical" in line for line in lines)
+
+
+def test_build_group_markdown_lines_skipped_row():
+    group = GroupConfig(name="g", tags=["t"])
+    lines = build_group_markdown_lines(evaluate_groups([group], [_outcome("s", "skipped", tags=["t"])]))
+    assert any("| g | - | 0 | - | 1.00 | ⏭ SKIPPED |" in line for line in lines)
 
 
 # --- config wiring ---

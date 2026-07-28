@@ -1,3 +1,4 @@
+import json
 import types
 from pathlib import Path
 from typing import Any
@@ -140,12 +141,175 @@ def test_verbose_output_shows_run_details(pytester: pytest.Pytester):
     result.stdout.fnmatch_lines(["*verbose_case*"])
 
 
-def _make_mock_config(*, has_workerinput: bool = False, dist: str = "no") -> Any:
+def _make_mock_config(*, has_workerinput: bool = False, dist: str = "no", verbose: int = 0) -> Any:
     cfg = types.SimpleNamespace()
     cfg.option = types.SimpleNamespace(dist=dist)
+    cfg.getoption = lambda name, default=None: verbose if name == "verbose" else default
     if has_workerinput:
         cfg.workerinput = {}
     return cfg
+
+
+# --- the xdist worker path, driven in-process ---
+#
+# These branches only ever execute inside an xdist *worker subprocess*, which the
+# coverage run cannot see: the three -n2 tests pass while these very lines record as
+# never executed. They are the riskiest lines in the module and so must be exercised
+# directly, not vicariously through a subprocess that coverage is blind to.
+
+
+class _FakeItem:
+    """Minimal stand-in for a pytest.Item as the report plugin consumes one."""
+
+    def __init__(self, name: str, *, tags: list[str] | None = None, markers: list[str] | None = None) -> None:
+        self.name = name
+        self.nodeid = f"tests/evals/{name}.yaml::{name}"
+        self._tags = tags or []
+        self._markers = markers or []
+
+    def get_closest_marker(self, name: str) -> Any:
+        if name == "agent_eval":
+            return types.SimpleNamespace(kwargs={"tags": self._tags})
+        return None
+
+    def iter_markers(self) -> list[Any]:
+        return [types.SimpleNamespace(name=m) for m in self._markers]
+
+
+class _FakeReport:
+    """Minimal stand-in for a pytest.TestReport with the mutable buffers the plugin writes."""
+
+    def __init__(self, when: str = "call", outcome: str = "passed") -> None:
+        self.when = when
+        self.outcome = outcome
+        self.failed = outcome == "failed"
+        self.user_properties: list[tuple[str, Any]] = []
+        self.sections: list[tuple[str, str]] = []
+
+
+def _drive_makereport(plugin: AgentEvalReportPlugin, item: Any, report: _FakeReport, when: str = "call") -> _FakeReport:
+    """Run the makereport hookwrapper to completion in-process."""
+    gen = plugin.pytest_runtest_makereport(item=item, call=types.SimpleNamespace(when=when))
+    next(gen)
+    try:
+        gen.send(types.SimpleNamespace(get_result=lambda: report))
+    except StopIteration:
+        pass
+    return report
+
+
+def _worker_plugin(*, groups: list[Any] | None = None, verbose: int = 0) -> AgentEvalReportPlugin:
+    from pytest_agent_eval.config import AgentEvalConfig
+
+    plugin = AgentEvalReportPlugin(_make_mock_config(has_workerinput=True, dist="load", verbose=verbose))
+    # Seed the memo directly: load_config() would need a real pytest Config with a rootdir.
+    plugin._cfg = AgentEvalConfig(groups=groups or [])
+    return plugin
+
+
+def test_worker_forwards_name_and_result_through_user_properties():
+    """The worker cannot reach the controller's buffers, so results ride user_properties."""
+    plugin = _worker_plugin()
+    item = _FakeItem("transcript_one")
+    item._eval_result = _make_full_result()
+
+    report = _drive_makereport(plugin, item, _FakeReport())
+
+    forwarded = dict(report.user_properties)
+    assert forwarded["llm_eval_name"] == "transcript_one"
+    assert _deserialize_result(forwarded["llm_eval_result"]) == _make_full_result()
+    # A worker must not also collect locally, or the controller would double-count.
+    assert plugin._results == []
+
+
+def test_worker_forwards_group_meta_once_across_phases():
+    """user_properties is shared across phases, so the append must be idempotent."""
+    from pytest_agent_eval.groups import GroupConfig
+
+    plugin = _worker_plugin(groups=[GroupConfig(name="g", tags=["gate:x"])])
+    item = _FakeItem("transcript_one", tags=["gate:x"], markers=["agent_eval"])
+    report = _FakeReport()
+
+    for when in ("setup", "call", "teardown"):
+        report.when = when
+        _drive_makereport(plugin, item, report, when=when)
+
+    metas = [v for k, v in report.user_properties if k == "llm_eval_meta"]
+    assert len(metas) == 1
+    assert metas[0] == {"identity": "transcript_one", "tags": ["gate:x"], "markers": ["agent_eval"]}
+
+
+def test_worker_omits_group_meta_when_no_groups_configured():
+    """Gated on groups so junitxml is not polluted for the majority who do not use them."""
+    plugin = _worker_plugin(groups=[])
+    report = _drive_makereport(plugin, _FakeItem("t", tags=["gate:x"]), _FakeReport())
+    assert [k for k, _ in report.user_properties if k == "llm_eval_meta"] == []
+
+
+def test_xdist_wire_payloads_are_json_serialisable():
+    """xdist ships user_properties through JSON; a non-JSON value breaks worker runs."""
+    plugin = _worker_plugin()
+    item = _FakeItem("transcript_one", tags=["gate:x"], markers=["agent_eval"])
+    item._eval_result = _make_full_result()
+
+    json.dumps(AgentEvalReportPlugin._item_meta(item))
+    json.dumps(_serialize_result(_make_full_result()))
+    json.dumps(dict(_drive_makereport(plugin, item, _FakeReport()).user_properties))
+
+
+def test_controller_collects_locally_instead_of_forwarding():
+    plugin = AgentEvalReportPlugin(_make_mock_config())
+    item = _FakeItem("transcript_one")
+    item._eval_result = _make_full_result()
+
+    report = _drive_makereport(plugin, item, _FakeReport())
+
+    assert report.user_properties == []
+    assert plugin._results == [("transcript_one", _make_full_result())]
+
+
+def test_makereport_records_failures_and_skips_non_call_phases():
+    plugin = AgentEvalReportPlugin(_make_mock_config())
+    item = _FakeItem("transcript_one")
+
+    _drive_makereport(plugin, item, _FakeReport(when="setup", outcome="failed"), when="setup")
+
+    assert item.nodeid in plugin._failed_nodeids
+    assert plugin._results == []
+
+
+def test_verbose_detail_section_lists_runs_and_reasoning():
+    """-v lists each run; -vv adds every evaluator's reasoning under it."""
+    plugin = AgentEvalReportPlugin(_make_mock_config(verbose=2))
+    item = _FakeItem("transcript_one")
+    item._eval_result = _make_full_result()
+
+    report = _drive_makereport(plugin, item, _FakeReport())
+
+    title, body = report.sections[0]
+    assert title == "LLM Eval"
+    assert "Run 1 ✅" in body
+    assert "Run 2 ❌" in body
+    assert "looks good" in body
+    assert "missing keyword" in body
+
+
+def test_verbose_level_one_omits_per_turn_reasoning():
+    plugin = AgentEvalReportPlugin(_make_mock_config(verbose=1))
+    item = _FakeItem("transcript_one")
+    item._eval_result = _make_full_result()
+
+    _, body = _drive_makereport(plugin, item, _FakeReport()).sections[0]
+
+    assert "Run 1 ✅" in body
+    assert "looks good" not in body
+
+
+def test_no_detail_section_without_verbosity():
+    plugin = AgentEvalReportPlugin(_make_mock_config(verbose=0))
+    item = _FakeItem("transcript_one")
+    item._eval_result = _make_full_result()
+    assert _drive_makereport(plugin, item, _FakeReport()).sections == []
 
 
 def test_is_xdist_worker_when_workerinput_present():

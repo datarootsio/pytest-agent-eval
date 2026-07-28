@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from pytest_agent_eval.evaluators.contains import ContainsEvaluator
@@ -19,6 +21,37 @@ async def _echo_agent(history: list[dict]) -> tuple[str, list[str]]:
 async def _booking_agent(history: list[dict]) -> tuple[str, list[str]]:
     """Agent that returns a booking confirmation."""
     return "Your slot is confirmed for tomorrow at 10am.", ["book_slot"]
+
+
+@pytest.mark.asyncio
+async def test_turn_audio_is_forwarded_to_the_agent_as_a_message_key():
+    """Voice adapters read the WAV path off the user message; it must be a str, not a Path."""
+    seen: list[dict] = []
+
+    async def recording_agent(history: list[dict]) -> tuple[str, list[str]]:
+        seen.append(dict(history[-1]))
+        return "ok", []
+
+    transcript = Transcript(id="voice", turns=[Turn(user="book me", audio=Path("turn1.wav"))], threshold=0.0)
+    await run_transcript(transcript, recording_agent)
+
+    assert seen[0]["audio"] == "turn1.wav"
+    assert isinstance(seen[0]["audio"], str)
+    assert seen[0]["content"] == "book me"
+
+
+@pytest.mark.asyncio
+async def test_turn_without_audio_omits_the_key_entirely():
+    """An absent audio key is what tells a text adapter this is not a voice turn."""
+    seen: list[dict] = []
+
+    async def recording_agent(history: list[dict]) -> tuple[str, list[str]]:
+        seen.append(dict(history[-1]))
+        return "ok", []
+
+    await run_transcript(Transcript(id="text", turns=[Turn(user="hi")], threshold=0.0), recording_agent)
+
+    assert "audio" not in seen[0]
 
 
 @pytest.mark.asyncio

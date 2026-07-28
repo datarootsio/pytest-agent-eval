@@ -369,6 +369,19 @@ async def test_tool_call_args_judge_short_circuits_when_args_not_captured():
     MockAgent.assert_not_called()
 
 
+def test_build_judge_agent_falls_back_to_pyproject_model(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    """model=None resolves [tool.agent_eval] model — read from the *current working directory*."""
+    from pytest_agent_eval.evaluators.judge import _build_judge_agent
+
+    (tmp_path / "pyproject.toml").write_text('[tool.agent_eval]\nmodel = "test"\n')
+    monkeypatch.chdir(tmp_path)
+
+    agent = _build_judge_agent(None, "system prompt")
+
+    assert agent.model is not None
+    assert "test" in repr(agent.model).lower()
+
+
 @pytest.mark.asyncio
 async def test_judge_evaluator_returns_failure_after_retries_exhausted():
     with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:

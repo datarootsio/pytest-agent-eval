@@ -8,6 +8,7 @@ from pytest_agent_eval.models import (
     JudgeConfig,
     RunResult,
     ToolCall,
+    ToolCallArgsConfig,
     Transcript,
     TranscriptResult,
     Turn,
@@ -100,3 +101,21 @@ def test_expect_defaults():
 def test_judge_config():
     j = JudgeConfig(rubric="pass if helpful")
     assert j.model is None
+
+
+def test_tool_call_args_config_defaults():
+    cfg = ToolCallArgsConfig(tool="book_slot", args={"time": "10am"})
+    assert cfg.mode == "subset"
+    assert cfg.judge is None
+
+
+def test_tool_call_args_config_accepts_judge_without_args():
+    cfg = ToolCallArgsConfig(tool="book_slot", judge=JudgeConfig(rubric="business hours"))
+    assert cfg.args is None
+    assert cfg.judge is not None
+
+
+def test_tool_call_args_config_requires_args_or_judge():
+    """An entry with neither is a silently vacuous assertion, so it must fail loudly."""
+    with pytest.raises(ValueError, match=r"needs 'args'.*or 'judge'.*got neither"):
+        ToolCallArgsConfig(tool="book_slot")
