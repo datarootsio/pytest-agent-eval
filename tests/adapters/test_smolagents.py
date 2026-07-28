@@ -4,23 +4,11 @@ import types
 from typing import Any
 
 from pytest_agent_eval.adapters.smolagents import SmolagentsAdapter
+from tests.helpers.smolagents_fakes import FakeSmolagent, FakeStep, FakeToolCall, RunCall
 
 
-def _make_fake_agent(reply: Any = "ok", new_steps: list[Any] | None = None) -> types.SimpleNamespace:
-    """Build a duck-typed fake smolagents agent that records `run` calls."""
-    fake = types.SimpleNamespace()
-    fake.memory = types.SimpleNamespace(steps=[])
-    fake.calls: list[tuple[str, bool]] = []
-
-    def run(task: str, reset: bool = True) -> Any:
-        fake.calls.append((task, reset))
-        if reset:
-            fake.memory.steps = []
-        fake.memory.steps.extend(new_steps or [])
-        return reply
-
-    fake.run = run
-    return fake
+def _make_fake_agent(reply: Any = "ok", new_steps: list[Any] | None = None) -> FakeSmolagent:
+    return FakeSmolagent(reply=reply, new_steps=new_steps)
 
 
 async def test_first_turn_passes_reset_true():
@@ -30,7 +18,7 @@ async def test_first_turn_passes_reset_true():
 
     await adapter(history)
 
-    assert fake.calls == [("hello", True)]
+    assert fake.calls == [RunCall(task="hello", reset=True)]
 
 
 async def test_subsequent_turn_passes_reset_false():
@@ -44,7 +32,7 @@ async def test_subsequent_turn_passes_reset_false():
 
     await adapter(history)
 
-    assert fake.calls == [("follow up", False)]
+    assert fake.calls == [RunCall(task="follow up", reset=False)]
 
 
 async def test_returns_reply_string():
@@ -56,13 +44,13 @@ async def test_returns_reply_string():
     assert reply == "42"
 
 
-def _step(*tool_call_names: str) -> Any:
-    """Build a fake step with a `.tool_calls` list of objects exposing `.name`."""
-    return types.SimpleNamespace(tool_calls=[types.SimpleNamespace(name=n) for n in tool_call_names])
+def _step(*tool_call_names: str) -> FakeStep:
+    return FakeStep(tool_calls=[FakeToolCall(name=n) for n in tool_call_names])
 
 
-def _step_no_tool_calls() -> Any:
-    """Build a fake step that has no `tool_calls` attribute (e.g. a planning step)."""
+def _planning_step() -> Any:
+    # SimpleNamespace on purpose: the tool_calls attribute must be *absent*, which is
+    # what exercises the adapter's getattr(step, "tool_calls", None) default.
     return types.SimpleNamespace()
 
 
@@ -82,7 +70,7 @@ async def test_extracts_new_tool_calls_only():
 
 
 async def test_handles_steps_without_tool_calls():
-    fake = _make_fake_agent(new_steps=[_step_no_tool_calls(), _step("create_booking"), _step_no_tool_calls()])
+    fake = _make_fake_agent(new_steps=[_planning_step(), _step("create_booking"), _planning_step()])
     adapter = SmolagentsAdapter(fake)
 
     _, tool_calls = await adapter([{"role": "user", "content": "hi"}])
@@ -106,7 +94,7 @@ async def test_filters_python_interpreter_and_final_answer_by_default():
 
 
 async def test_captures_tool_call_arguments():
-    step = types.SimpleNamespace(tool_calls=[types.SimpleNamespace(name="create_booking", arguments={"time": "10am"})])
+    step = FakeStep(tool_calls=[FakeToolCall(name="create_booking", arguments={"time": "10am"})])
     fake = _make_fake_agent(new_steps=[step])
     adapter = SmolagentsAdapter(fake)
 

@@ -11,48 +11,33 @@ from pytest_agent_eval.models import (
     Turn,
 )
 from pytest_agent_eval.runner import EvalSession, run_transcript
+from tests.helpers.agents import RecordingAgent, ScriptedAgent, booking_agent, echo_agent
 from tests.helpers.judge import FailingJudge, PromptCapturingJudge
 
 
-async def _echo_agent(history: list[dict]) -> tuple[str, list[str]]:
-    """Agent that echoes the last user message."""
-    return history[-1]["content"], []
-
-
-async def _booking_agent(history: list[dict]) -> tuple[str, list[str]]:
-    """Agent that returns a booking confirmation."""
-    return "Your slot is confirmed for tomorrow at 10am.", ["book_slot"]
 
 
 @pytest.mark.asyncio
 async def test_turn_audio_is_forwarded_to_the_agent_as_a_message_key():
     """Voice adapters read the WAV path off the user message; it must be a str, not a Path."""
-    seen: list[dict] = []
-
-    async def recording_agent(history: list[dict]) -> tuple[str, list[str]]:
-        seen.append(dict(history[-1]))
-        return "ok", []
+    agent = RecordingAgent()
 
     transcript = Transcript(id="voice", turns=[Turn(user="book me", audio=Path("turn1.wav"))], threshold=0.0)
-    await run_transcript(transcript, recording_agent)
+    await run_transcript(transcript, agent)
 
-    assert seen[0]["audio"] == "turn1.wav"
-    assert isinstance(seen[0]["audio"], str)
-    assert seen[0]["content"] == "book me"
+    assert agent.last_message["audio"] == "turn1.wav"
+    assert isinstance(agent.last_message["audio"], str)
+    assert agent.last_message["content"] == "book me"
 
 
 @pytest.mark.asyncio
 async def test_turn_without_audio_omits_the_key_entirely():
     """An absent audio key is what tells a text adapter this is not a voice turn."""
-    seen: list[dict] = []
+    agent = RecordingAgent()
 
-    async def recording_agent(history: list[dict]) -> tuple[str, list[str]]:
-        seen.append(dict(history[-1]))
-        return "ok", []
+    await run_transcript(Transcript(id="text", turns=[Turn(user="hi")], threshold=0.0), agent)
 
-    await run_transcript(Transcript(id="text", turns=[Turn(user="hi")], threshold=0.0), recording_agent)
-
-    assert "audio" not in seen[0]
+    assert "audio" not in agent.last_message
 
 
 @pytest.mark.asyncio
@@ -63,7 +48,7 @@ async def test_run_transcript_single_turn_passes():
         threshold=0.8,
         runs=1,
     )
-    result = await run_transcript(transcript, _echo_agent)
+    result = await run_transcript(transcript, echo_agent)
     assert isinstance(result, TranscriptResult)
     assert result.passed is True
     assert result.score == 1.0
@@ -83,7 +68,7 @@ async def test_run_transcript_with_contains_evaluator():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(transcript, _booking_agent)
+    result = await run_transcript(transcript, booking_agent)
     assert result.passed is True
     assert result.runs[0].turn_results[0].passed is True
 
@@ -101,7 +86,7 @@ async def test_run_transcript_with_tool_call_evaluator():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(transcript, _booking_agent)
+    result = await run_transcript(transcript, booking_agent)
     assert result.passed is True
 
 
@@ -118,7 +103,7 @@ async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(transcript, _booking_agent)
+    result = await run_transcript(transcript, booking_agent)
     assert result.passed is True
 
     failing = Transcript(
@@ -127,7 +112,7 @@ async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(failing, _booking_agent)
+    result = await run_transcript(failing, booking_agent)
     assert result.passed is False
 
 
@@ -168,22 +153,13 @@ async def test_run_transcript_fails_when_evaluator_fails():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(transcript, _booking_agent)
+    result = await run_transcript(transcript, booking_agent)
     assert result.passed is False
     assert result.score == 0.0
 
 
 @pytest.mark.asyncio
 async def test_run_transcript_multiple_runs_score():
-    call_count = 0
-
-    async def flaky_agent(history: list[dict]) -> tuple[str, list[str]]:
-        nonlocal call_count
-        call_count += 1
-        if call_count % 2 == 0:
-            return "confirmed booking", []
-        return "error occurred", []
-
     transcript = Transcript(
         id="flaky",
         turns=[
@@ -195,7 +171,8 @@ async def test_run_transcript_multiple_runs_score():
         threshold=0.5,
         runs=4,
     )
-    result = await run_transcript(transcript, flaky_agent)
+    flaky = ScriptedAgent(replies=["error occurred", "confirmed booking", "error occurred", "confirmed booking"])
+    result = await run_transcript(transcript, flaky)
     assert result.score == 0.5
     assert result.passed is True  # 0.5 >= 0.5
 
@@ -308,7 +285,7 @@ async def test_per_turn_judge_model_overrides_the_config_model():
         runs=1,
     )
 
-    await run_transcript(transcript, _echo_agent, config_model=ignored.model)
+    await run_transcript(transcript, echo_agent, config_model=ignored.model)
 
     assert chosen.prompts
     assert ignored.prompts == []
@@ -326,28 +303,24 @@ async def test_run_transcript_passes_judge_retries_and_timeout_through():
     )
     judge = FailingJudge(error="API down")
 
-    await run_transcript(transcript, _echo_agent, config_model=judge.model, judge_retries=0, judge_timeout=5.0)
+    await run_transcript(transcript, echo_agent, config_model=judge.model, judge_retries=0, judge_timeout=5.0)
 
     assert judge.attempts == 1
 
 
 @pytest.mark.asyncio
 async def test_history_is_accumulated_across_turns():
-    captured_histories: list[list[dict]] = []
-
-    async def capture_agent(history: list[dict]) -> tuple[str, list[str]]:
-        captured_histories.append(list(history))
-        return "ok", []
+    agent = RecordingAgent()
 
     transcript = Transcript(
         id="multi",
         turns=[Turn(user="first"), Turn(user="second")],
         runs=1,
     )
-    await run_transcript(transcript, capture_agent)
-    assert len(captured_histories[0]) == 1
-    assert len(captured_histories[1]) == 3
-    assert captured_histories[1][-1]["content"] == "second"
+    await run_transcript(transcript, agent)
+    assert len(agent.seen[0]) == 1
+    assert len(agent.seen[1]) == 3
+    assert agent.seen[1][-1]["content"] == "second"
 
 
 @pytest.mark.asyncio
@@ -371,6 +344,6 @@ async def test_eval_session_run_stores_result_on_item():
 async def test_eval_session_without_an_item_still_returns_a_result():
     """The Python API is usable outside a pytest item; there is then nothing to stash onto."""
     session = EvalSession(threshold=0.0, runs=1)
-    result = await session.run(_echo_agent, [Turn(user="hello")])
+    result = await session.run(echo_agent, [Turn(user="hello")])
     assert isinstance(result, TranscriptResult)
     assert result.passed is True
