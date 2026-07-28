@@ -77,6 +77,27 @@ filterwarnings = [
     'ignore:The configuration option "asyncio_default_fixture_loop_scope" is unset:pytest.PytestDeprecationWarning',
 ]
 
+[tool.coverage.run]
+source = ["src/pytest_agent_eval"]
+# Flipped to true in its own commit once statement coverage is honestly at 100%.
+branch = false
+# No `omit`: omitting files is how a 100% gate gets quietly gamed. Every
+# exclusion below is line-scoped and therefore shows up in a diff.
+
+[tool.coverage.report]
+# exclude_also ADDS to coverage's defaults (which include `pragma: no cover`).
+# exclude_lines would REPLACE them.
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "^\\s*\\.\\.\\.$",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+show_missing = true
+skip_covered = true
+fail_under = 88
+precision = 1
+
 [tool.ruff]
 line-length = 120
 
