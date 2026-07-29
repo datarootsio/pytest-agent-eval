@@ -16,7 +16,7 @@ from pytest_agent_eval.models import AgentReply, History, ToolCall
 
 if TYPE_CHECKING:
     from pydantic_ai.agent import AbstractAgent
-    from pydantic_ai.messages import ModelMessage
+    from pydantic_ai.messages import ModelMessage, ModelRequestPart, ModelResponsePart
 
     AnyAgent: TypeAlias = AbstractAgent[Never, object]
     """Every concrete pydantic-ai ``Agent``, spelled as one type.
@@ -32,8 +32,15 @@ if TYPE_CHECKING:
 _TOOL_CALL_PART_KINDS = frozenset({"tool-call", "builtin-tool-call"})
 
 
-def _is_tool_call_part(part: object) -> bool:
-    if getattr(part, "part_kind", None) not in _TOOL_CALL_PART_KINDS:
+def _is_tool_call_part(part: ModelRequestPart | ModelResponsePart) -> bool:
+    """True for the parts that represent an outbound tool invocation.
+
+    Both real unions, not ``object``: ``all_messages()`` interleaves requests and
+    responses, so both halves reach here, and every member of both declares
+    ``part_kind`` — which is what lets this read the attribute directly instead of
+    through a ``getattr`` default that would quietly accept anything.
+    """
+    if part.part_kind not in _TOOL_CALL_PART_KINDS:
         return False
     # Native tool-*search* parts share the 'builtin-tool-call' kind but represent
     # the model searching its own tool catalogue, not an external invocation.

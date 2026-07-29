@@ -10,10 +10,17 @@ session to construct.
 from __future__ import annotations
 
 import types
+from typing import TYPE_CHECKING
 
 import pytest
 
 from pytest_agent_eval.models import Message, TurnContext
+
+if TYPE_CHECKING:
+    # The real SDK types, so the helpers below say what they build. Every runtime import
+    # stays inside the test that needs it: this module must import without the extras.
+    from langchain_core.messages import BaseMessage
+    from openai.types.chat import ChatCompletion
 
 # --- pydantic-ai: real Agent + TestModel end-to-end ---
 
@@ -149,7 +156,13 @@ async def test_tool_call_args_judge_against_real_agent() -> None:
 # --- openai: real response pydantic objects through a fake client ---
 
 
-def _real_chat_completion() -> object:
+def _real_chat_completion() -> ChatCompletion:
+    """Build the SDK's own response object, so the adapter is read against the real shape.
+
+    The return type is the real class under ``TYPE_CHECKING`` while the runtime import
+    stays inside the body: this module must import without the openai extra, which the
+    ``test-no-extras`` job enforces.
+    """
     from openai.types.chat import ChatCompletion, ChatCompletionMessage
     from openai.types.chat.chat_completion import Choice
 
@@ -288,7 +301,7 @@ async def test_langchain_adapter_history_survives_real_message_coercion() -> Non
 
     from pytest_agent_eval.adapters.langchain import LangChainAdapter
 
-    coerced: list[object] = []
+    coerced: list[BaseMessage] = []
 
     class CoercingRunnable:
         async def ainvoke(self, payload: dict) -> object:

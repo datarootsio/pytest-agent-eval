@@ -40,6 +40,23 @@ def _voice_turn(wav_path: Path, content: str = "hi") -> list[dict[str, str]]:
     return [Message(role="user", content=content, audio=str(wav_path))]
 
 
+def test_constructing_the_adapter_quiets_the_livekit_loggers() -> None:
+    """Livekit logs a wall of INFO per session, which buries the pytest output.
+
+    The loop that does this was a one-line private function with no docstring; inlining it
+    into ``__init__`` left the behaviour with nothing asserting it.
+    """
+    import logging
+
+    names = ("livekit.agents", "livekit", "livekit.plugins.openai")
+    for name in names:
+        logging.getLogger(name).setLevel(logging.NOTSET)
+
+    _adapter(FakeAgentSession(events=[]))
+
+    assert [logging.getLogger(n).level for n in names] == [logging.WARNING] * len(names)
+
+
 # --- capture ---
 
 

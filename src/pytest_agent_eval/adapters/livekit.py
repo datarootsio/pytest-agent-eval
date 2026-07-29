@@ -13,9 +13,16 @@ from pytest_agent_eval.adapters._wav_input import WavFileAudioInput
 from pytest_agent_eval.models import AgentReply, History, ToolCall
 
 if TYPE_CHECKING:
-    from livekit.agents.voice import Agent, AgentSession
+    from livekit.agents.voice import (
+        Agent,
+        AgentSession,
+        ConversationItemAddedEvent,
+        FunctionToolsExecutedEvent,
+    )
 
 logger = logging.getLogger(__name__)
+
+_QUIET_LOGGERS = ("livekit.agents", "livekit", "livekit.plugins.openai")
 
 
 # The real livekit type, and no hand-rolled Protocol beside it. There were two here,
@@ -24,11 +31,6 @@ logger = logging.getLogger(__name__)
 # which no real session would satisfy. A user factory returns a genuine AgentSession, and
 # the `Any` is livekit's own userdata parameter, which this adapter never touches.
 SessionFactory = Callable[[], "tuple[AgentSession[Any], Agent]"]
-
-
-def _quiet_livekit_loggers() -> None:
-    for name in ("livekit.agents", "livekit", "livekit.plugins.openai"):
-        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 class LiveKitAdapter:
@@ -83,7 +85,8 @@ class LiveKitAdapter:
         self._frame_ms = frame_ms
         self._grace_period_s = grace_period_s
         self._timeout_s = timeout_s
-        _quiet_livekit_loggers()
+        for name in _QUIET_LOGGERS:
+            logging.getLogger(name).setLevel(logging.WARNING)
 
     async def __call__(self, history: History) -> AgentReply:
         """Stream the WAV on the last user turn and return ``(reply, tool_calls)``."""
@@ -108,17 +111,21 @@ class LiveKitAdapter:
         tool_calls: list[ToolCall] = []
         reply_chunks: list[str] = []
 
-        # `object`, not a Protocol: every read below is a getattr with a default, and
-        # those defaults are the point — livekit's event shapes vary by version and by
-        # which model fired them. A Protocol would assert a shape we deliberately
-        # do not require.
-        def _on_function_tools_executed(event: object) -> None:
+        # livekit ships py.typed, so the events are named for real — which is also what
+        # makes `session.on` type-check, since it takes a Literal of event names paired
+        # with the handler each one carries. The reads stay `getattr` with a default on
+        # purpose: livekit's event payloads vary by version and by which model fired
+        # them, and `event.item` is itself a union whose members differ. The defaults are
+        # what keeps the adapter working across that drift.
+        def _on_function_tools_executed(event: FunctionToolsExecutedEvent) -> None:
+            """Record every tool call livekit reports as executed on this turn."""
             for fc in getattr(event, "function_calls", []) or []:
                 name = getattr(fc, "name", "") or ""
                 if name:
                     tool_calls.append(ToolCall(name, coerce_args(getattr(fc, "arguments", None))))
 
-        def _on_conversation_item_added(event: object) -> None:
+        def _on_conversation_item_added(event: ConversationItemAddedEvent) -> None:
+            """Accumulate the assistant's transcript as livekit appends conversation items."""
             item = getattr(event, "item", None)
             if item is None:
                 return

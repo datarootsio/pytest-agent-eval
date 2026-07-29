@@ -2,35 +2,48 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, TypeAlias
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.models import AgentReply, History, ToolCall
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
-class LangChainRunnable(Protocol):
-    """The slice of a LangChain Runnable the adapter uses: one async invocation.
+    from langchain_core.messages import ToolCall as LangChainToolCall
+    from langchain_core.runnables import Runnable
 
-    ``payload`` is a ``dict``, not a ``Mapping``: a real ``Runnable[dict[str, object], ...]``
-    accepts only a dict, so a Protocol promising to accept any Mapping is one the real class
-    cannot satisfy. It is also what the adapter actually passes, for the reason in
-    ``__call__``.
+    LangChainRunnable: TypeAlias = Runnable[dict[str, object], object]
+    """Every real LangChain Runnable, spelled as one type.
+
+    langchain-core ships ``py.typed``, so the real class is nameable and the hand-rolled
+    Protocol that used to stand here is gone. Both type arguments are langchain's, not
+    ours: ``Runnable`` is invariant in Input and Output, so narrowing either —
+    ``dict[str, JsonValue]`` in the Input slot, ``str`` in the Output slot — rejects a real
+    ``RunnableLambda`` and a real ``RunnableSequence``. ``tests/adapters/_sdk_probe.py``
+    holds both of those assignments, so the claim is machine-checked rather than asserted.
     """
 
-    async def ainvoke(self, payload: dict[str, object], /) -> object:
-        """Invoke the runnable on a ``{"messages": [...]}`` state."""
-        ...
 
+def _tool_calls(raw: Sequence[LangChainToolCall]) -> list[ToolCall]:
+    """Normalise LangChain's own ``tool_calls`` list into ours.
 
-def _tool_calls(message: object) -> list[ToolCall]:
-    """Read LangChain's ``tool_calls`` off a message; absent means no tools were called."""
-    return [ToolCall(tc["name"], coerce_args(tc.get("args"))) for tc in getattr(message, "tool_calls", []) or []]
+    The parameter is langchain's ``ToolCall`` TypedDict — the thing a real
+    ``AIMessage.tool_calls`` holds — so the subscripts below are checked rather than
+    hoped for. Reading the attribute off a message stays a ``getattr`` at the two call
+    sites, because that is the one genuinely untyped hop: ``ainvoke`` returns ``object``.
+
+    A one-liner that keeps its name because inlining it would duplicate a decision: how a
+    LangChain tool call maps onto ours, at both branches of ``__call__``.
+    """
+    return [ToolCall(tc["name"], coerce_args(tc.get("args"))) for tc in raw]
 
 
 def _last_message(result: object) -> object | None:
     """The final message of a graph-shaped ``{"messages": [...]}`` result, if it is one.
 
-    Every hop is checked, because each can fail independently: the result may not be a
+    ``object`` in and out because ``Runnable.ainvoke`` is declared to return ``object``;
+    every hop is checked, because each can fail independently: the result may not be a
     mapping, may not carry ``messages``, and that value may not be a non-empty list. The
     cast this replaced asserted all three while checking only the first.
     """
@@ -63,9 +76,9 @@ class LangChainAdapter:
 
     def __init__(self, runnable: LangChainRunnable) -> None:
         """Store the LangChain runnable to delegate calls to."""
-        # The Protocol is on the parameter, so a type checker rejects a wrong object at the
-        # call site. The guard is for callers without one: it names the extra to install,
-        # which an assignability error does not.
+        # The real Runnable type is on the parameter, so a type checker rejects a wrong
+        # object at the call site. The guard is for callers without one: it names the extra
+        # to install, which an assignability error does not.
         if not hasattr(runnable, "ainvoke"):
             raise TypeError(
                 f"LangChainAdapter expects a LangChain Runnable with an .ainvoke() method, "
@@ -80,9 +93,13 @@ class LangChainAdapter:
         # NotImplementedError on a Mapping that is not a dict.
         result = await self._runnable.ainvoke({"messages": [m.to_dict() for m in history]})
 
+        # The `getattr` is here rather than inside `_tool_calls` because this is the one
+        # genuinely untyped hop: `ainvoke` is declared to return `object`. Absent *and*
+        # None both mean "no tools were called" — LangChain produces either.
         if hasattr(result, "content"):
-            return AgentReply(str(result.content), _tool_calls(result))
+            return AgentReply(str(result.content), _tool_calls(getattr(result, "tool_calls", []) or []))
         last = _last_message(result)
         if last is not None:
-            return AgentReply(str(getattr(last, "content", "")), _tool_calls(last))
+            content = str(getattr(last, "content", ""))
+            return AgentReply(content, _tool_calls(getattr(last, "tool_calls", []) or []))
         return AgentReply(str(result), [])

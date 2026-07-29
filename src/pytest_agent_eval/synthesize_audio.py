@@ -32,6 +32,7 @@ import yaml
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from types import TracebackType
 
     from openai import AsyncOpenAI
 
@@ -301,7 +302,12 @@ class AudioSynthesizer:
         """Return self; the client was already built by the caller's factory."""
         return self
 
-    async def __aexit__(self, *_exc: object) -> None:
+    async def __aexit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc: BaseException | None,
+        _tb: TracebackType | None,
+    ) -> None:
         """Close the Realtime client, so a failed turn cannot leak the connection."""
         await self._client.close()
 
