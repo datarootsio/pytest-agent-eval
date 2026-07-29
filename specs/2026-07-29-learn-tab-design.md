@@ -85,7 +85,8 @@ Checked against zensical 0.0.51 rather than extrapolated from mkdocs-material:
 - Relative `.md` links are rewritten **even inside raw HTML blocks**, so a link in a raw
   `<figcaption>` resolves like any other.
 - `md_in_html` and `pymdownx.superfences` compose: a fenced block inside a
-  `<div markdown="1">` highlights normally. This was the one build-time unknown.
+  `<div markdown="1">` highlights normally. This was the one build-time unknown. Nothing relies on
+  it now that the cast wrapper is gone, but it is the mechanism a future player wrapper would use.
 - There is **no `not_in_nav` equivalent.**
 
 ## Page anatomy
@@ -223,34 +224,16 @@ gate over forty evals aggregates hundreds of runs.
 
 ## API surface to write against
 
-**Superseded during implementation.** This section planned to write against the PR #38 surface
-(`refac/type-safety-pydantic`). That PR is not merged, so `AgentReply`, `History`, `Message`, and
-`ToolCalls` do not exist in the tree the docs are built from — and a published page cannot describe
-types that do not ship. Beat 8 was written against the shipped contract instead:
+**Resolved: PR #38 (`refac/type-safety-pydantic`) merged, and the pages are written against it.**
 
-```python
-async def agent(messages: list[dict]) -> tuple[str, list[str]]
-```
+Beat 8 was drafted twice. The first version went against the pre-#38 contract
+(`async def agent(messages: list[dict]) -> tuple[str, list[str]]`) because a published page cannot
+describe types that do not ship, and at the time `AgentReply`, `History`, `Message` and `ToolCalls`
+did not exist in the tree. Once #38 landed the branch was rebased and the page rewritten to the
+merged surface below. Verified in the rebased tree: `AgentReply` is exported from
+`pytest_agent_eval`; `Message`, `History`, `ToolCalls`, `AgentCallable` live in `models.py`.
 
-which is what `docs/adapters.md:236-241` already documents. `ToolCall(str)` with `.args` *does*
-ship and is exported, so beats 6 and 8 keep the "a tool call is a string" argument unchanged.
-
-Beat 8's point survives the substitution intact — arguably better grounded. Instead of "naming the
-types did not narrow what the plugin accepts", it now argues that this is the loosest contract that
-still supports every assertion in the narrative: bare names get the name checks, `ToolCall(name,
-args)` lights up the argument checks on the same suite, because a `ToolCall` *is* a `str`. **Richer
-assertions never demanded a richer contract.**
-
-**When PR #38 merges, rewrite `docs/why/one-contract.md` first** — it is the only page coupled to
-the refactor.
-
-Two other claims drafted in the mock for beat 9 were dropped for the same reason: strict
-`[tool.agent_eval]` validation (`config.py` does not validate) and `py.typed` (absent). The claims
-that survive are all verified against the tree: the JSON Schema with `additionalProperties: false`,
-the `Did you mean ...?` unknown-field hint (`yaml_loader.py:56-61`), and the didactic
-missing-fixture message (`yaml_loader.py:326-333`).
-
-### The PR #38 contract, for when it lands
+### The agent contract (beat 8's slide)
 
 ```python
 async def agent(history: History) -> AgentReply
@@ -268,8 +251,8 @@ async def agent(history: History) -> AgentReply
 - `AgentCallable = Callable[[History], Awaitable[tuple[str, ToolCalls]]]` — the plain tuple, so
   both adapters and hand-written agents satisfy one alias.
 
-Beat 8's argument would make the point that **naming the types did not narrow what the plugin
-accepts** — every old form still works.
+Beat 8's argument makes the point that **naming the types did not narrow what the plugin
+accepts** — every old form still works. That is the page's whole reason to exist.
 
 ### Unchanged, safe to write against now
 
@@ -278,16 +261,21 @@ accepts** — every old form still works.
 YAML transcript fields, CLI flags, `pytest` terminal output, and the group-summary format are
 all unchanged.
 
-### New evidence for beat 9, when PR #38 lands
+### New evidence for beat 9
 
-Three PR #38 outcomes strengthen the didactic-errors argument and should be added there on merge.
-None of the three is true in the tree today, so none is claimed on the page yet:
+Three PR #38 outcomes strengthen the didactic-errors argument. All three verified in the rebased
+tree and cited on the page:
 
-1. `[tool.agent_eval]` is now **strictly validated** — `threshold = "high"` is rejected at
-   load rather than failing later inside a score comparison.
+1. `[tool.agent_eval]` is now **strictly validated** — `threshold = "high"` raises a pydantic
+   `ValidationError` at load rather than failing later inside a score comparison. Checked by
+   loading such a config.
 2. The `INTERNALERROR` crash on a missing `llm_eval_agent` fixture is fixed, so the plugin's
-   own didactic skip message finally appears in the situation it was written for.
+   own didactic skip message finally appears in the situation it was written for
+   (`yaml_loader.py:180-187`).
 3. `py.typed` now ships, so the types reach users' checkers.
+
+The rest of beat 9's claims predate #38 and are verified too: the JSON Schema with
+`additionalProperties: false`, and the `Did you mean ...?` unknown-field hint.
 
 ## Assets
 
@@ -365,7 +353,8 @@ first instead, complete enough to stand on its own.
 8. Remaining casts, replacing the placeholder fences.
 9. **Give the talk.**
 
-**Rewrite beat 8 when PR #38 merges** — it is the only page the refactor can invalidate.
+**Beat 8 is already rebased onto the merged PR #38 surface** — see
+[API surface to write against](#api-surface-to-write-against).
 
 ## Risks and open items
 
@@ -389,7 +378,8 @@ automatically.
 - **Do asciinema-player key bindings collide with the theme shortcuts?** `9c1627d` was a fix for
   widget keystrokes triggering theme shortcuts. The player binds space and arrows, and the
   collision would fire when pressing space to play a cast in front of the room. Check first.
-- Does `async def agent(history: History) -> AgentReply` survive to PR #38 merge unchanged?
+- ~~Does `async def agent(history: History) -> AgentReply` survive to PR #38 merge unchanged?~~
+  **Answered: yes.** #38 merged with that signature intact; this branch is rebased onto it.
 
 ### Known constraints
 

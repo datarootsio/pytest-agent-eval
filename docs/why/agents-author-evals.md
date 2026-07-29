@@ -33,9 +33,17 @@ $ pytest --agent-eval-live -q
 
 :   **didactic by design** — `unknown field 'tool_call_include'. Did you mean 'tool_calls_include'?`, with the schema URL attached
 
+`config`
+
+:   **`[tool.agent_eval]` is strictly validated** — `threshold = "high"` is rejected at load, not deep inside a score comparison
+
 `fixtures`
 
 :   **the missing-fixture case is a message, not a crash** — it tells you which fixture and where to put it
+
+`types`
+
+:   **`py.typed` ships**, so the named contract reaches the agent's type checker too
 
 `context`
 
