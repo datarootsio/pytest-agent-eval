@@ -4,13 +4,16 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from pytest_agent_eval.models import Message
+from tests.helpers.pytester_project import EvalProject
 
-def test_plugin_registers_marker(pytester: pytest.Pytester):
+
+def test_plugin_registers_marker(pytester: pytest.Pytester) -> None:
     result = pytester.runpytest("--markers")
     result.stdout.fnmatch_lines(["*agent_eval*"])
 
 
-def test_llm_eval_tests_skipped_by_default(pytester: pytest.Pytester):
+def test_llm_eval_tests_skipped_by_default(pytester: pytest.Pytester) -> None:
     pytester.makepyfile(
         """
         import pytest
@@ -25,7 +28,7 @@ def test_llm_eval_tests_skipped_by_default(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
-def test_skip_hint_printed_when_live_mode_off(pytester: pytest.Pytester):
+def test_skip_hint_printed_when_live_mode_off(pytester: pytest.Pytester) -> None:
     pytester.makepyfile(
         """
         import pytest
@@ -39,14 +42,14 @@ def test_skip_hint_printed_when_live_mode_off(pytester: pytest.Pytester):
     result.stdout.fnmatch_lines(["*1 eval test(s) skipped*live mode is off*--agent-eval-live*EVAL_LIVE=1*"])
 
 
-def test_no_skip_hint_when_nothing_skipped(pytester: pytest.Pytester):
+def test_no_skip_hint_when_nothing_skipped(pytester: pytest.Pytester) -> None:
     pytester.makepyfile("def test_plain(): pass")
     result = pytester.runpytest()
     assert "live mode is off" not in result.stdout.str()
 
 
-def test_llm_eval_tests_run_with_live_flag(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+def test_llm_eval_tests_run_with_live_flag(pytester: pytest.Pytester) -> None:
+    EvalProject().write(pytester)
     pytester.makepyfile(
         """
         import pytest
@@ -66,9 +69,9 @@ def test_llm_eval_tests_run_with_live_flag(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
-def test_llm_eval_runs_with_eval_live_env(pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch):
+def test_llm_eval_runs_with_eval_live_env(pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EVAL_LIVE", "1")
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    EvalProject().write(pytester)
     pytester.makepyfile(
         """
         import pytest
@@ -87,8 +90,8 @@ def test_llm_eval_runs_with_eval_live_env(pytester: pytest.Pytester, monkeypatch
     result.stdout.fnmatch_lines(["*test_env*PASSED*"])
 
 
-def test_marker_threshold_overrides_config(pytester: pytest.Pytester):
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+def test_marker_threshold_overrides_config(pytester: pytest.Pytester) -> None:
+    EvalProject().write(pytester)
     pytester.makepyfile(
         """
         import pytest
@@ -110,15 +113,15 @@ def test_marker_threshold_overrides_config(pytester: pytest.Pytester):
     assert result.ret == 0
 
 
-def test_cli_options_exist(pytester: pytest.Pytester):
+def test_cli_options_exist(pytester: pytest.Pytester) -> None:
     result = pytester.runpytest("--help")
     result.stdout.fnmatch_lines(["*--agent-eval-live*"])
     result.stdout.fnmatch_lines(["*--agent-eval-report*"])
 
 
-def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
+def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester) -> None:
     """threshold=0.0 must not fall back to config default (falsy trap)."""
-    pytester.makeini("[pytest]\nasyncio_mode = auto\n")
+    EvalProject().write(pytester)
     pytester.makepyfile(
         """
         import pytest
@@ -145,7 +148,7 @@ def test_marker_threshold_zero_is_honoured(pytester: pytest.Pytester):
 # --- Adapter tests ---
 
 
-def test_pydantic_ai_adapter_normalises_output():
+def test_pydantic_ai_adapter_normalises_output() -> None:
     from pytest_agent_eval.adapters.pydantic_ai import PydanticAIAdapter
 
     mock_agent = MagicMock()
@@ -158,12 +161,12 @@ def test_pydantic_ai_adapter_normalises_output():
 
     import asyncio
 
-    reply, tool_calls = asyncio.run(adapter([{"role": "user", "content": "hi"}]))
+    reply, tool_calls = asyncio.run(adapter([Message(role="user", content="hi")]))
     assert reply == "Hello!"
     assert tool_calls == []
 
 
-def test_openai_adapter_normalises_output():
+def test_openai_adapter_normalises_output() -> None:
     from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
     mock_client = MagicMock()
@@ -181,6 +184,6 @@ def test_openai_adapter_normalises_output():
 
     import asyncio
 
-    reply, tool_calls = asyncio.run(adapter([{"role": "user", "content": "hi"}]))
+    reply, tool_calls = asyncio.run(adapter([Message(role="user", content="hi")]))
     assert reply == "Hello from OpenAI!"
     assert tool_calls == []

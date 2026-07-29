@@ -11,25 +11,34 @@ from pytest_agent_eval.evaluators import (
     ToolCallArgsJudgeEvaluator,
     ToolCallEvaluator,
 )
-from pytest_agent_eval.models import Expect, JudgeConfig, ToolCall, ToolCallArgsConfig, Transcript, Turn
+from pytest_agent_eval.models import (
+    AgentReply,
+    Expect,
+    JudgeConfig,
+    ToolCall,
+    ToolCallArgsConfig,
+    Transcript,
+    Turn,
+)
 from pytest_agent_eval.yaml_loader import TranscriptError
 
 __version__ = _pkg_version("pytest-agent-eval")
 
 __all__ = [
-    "Turn",
+    "AgentReply",
+    "ContainsEvaluator",
+    "EvalResult",
+    "Evaluator",
     "Expect",
-    "Transcript",
     "JudgeConfig",
+    "JudgeEvaluator",
     "ToolCall",
     "ToolCallArgsConfig",
-    "Evaluator",
-    "EvalResult",
-    "ContainsEvaluator",
-    "ToolCallEvaluator",
     "ToolCallArgsEvaluator",
     "ToolCallArgsJudgeEvaluator",
-    "JudgeEvaluator",
+    "ToolCallEvaluator",
+    "Transcript",
     "TranscriptError",
+    "Turn",
     "__version__",
 ]

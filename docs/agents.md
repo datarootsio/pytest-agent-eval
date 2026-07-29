@@ -56,8 +56,20 @@ Gotchas:
 - Eval tests are SKIPPED unless run with `--agent-eval-live` or `EVAL_LIVE=1`.
   "N eval test(s) skipped — live mode is off" in the output means they did not run.
 - A conftest.py fixture named `llm_eval_agent` must return the agent under test:
-  an async callable `(messages) -> (reply, tool_calls)`. Framework adapters exist
+  an async callable `(history) -> AgentReply`. Framework adapters exist
   for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
+
+!!! note "`AgentReply` and `Message`"
+    The built-in adapters return `AgentReply(reply, tool_calls)`, a `NamedTuple`.
+    It *is* a tuple, so `reply, tool_calls = await agent(history)` and returning a
+    plain `(reply, tool_calls)` from your own agent both keep working — you never
+    have to import it.
+
+    The `history` your agent receives is a list of `Message` objects. `Message`
+    implements `Mapping`, so `history[-1]["content"]` works exactly as before, and
+    `history[-1].content` now works too. If you forward `history` to an SDK, convert
+    it first with `[m.to_dict() for m in history]` — `to_dict()` also drops the
+    plugin-internal `audio` key that voice turns carry.
 
 Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
 https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (schema),

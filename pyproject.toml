@@ -52,6 +52,9 @@ dev = [
     "pre-commit>=4.0",
     "pytest-xdist>=3.0",
     "jsonschema>=4",
+    "coverage>=7.6",
+    # Pinned exactly: ty is 0.0.x and renames rules between releases.
+    "ty==0.0.64",
 ]
 docs = [
     "zensical",
@@ -63,18 +66,147 @@ packages = ["src/pytest_agent_eval"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pytester_example_dir = "examples"
+filterwarnings = [
+    "error",
+    # Inner pytester runs get their own ini, so the setting above cannot reach
+    # them. Deleted once the shared pytester bootstrap ini and the
+    # examples/*/pyproject.toml files set the loop scope themselves.
+    'ignore:The configuration option "asyncio_default_fixture_loop_scope" is unset:pytest.PytestDeprecationWarning',
+]
+
+[tool.coverage.run]
+source = ["src/pytest_agent_eval"]
+branch = true
+# No `omit`: omitting files is how a 100% gate gets quietly gamed. Every
+# exclusion below is line-scoped and therefore shows up in a diff.
+
+[tool.coverage.report]
+# exclude_also ADDS to coverage's defaults (which include `pragma: no cover`).
+# exclude_lines would REPLACE them.
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "^\\s*\\.\\.\\.$",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+show_missing = true
+skip_covered = true
+# A ratchet: this only ever goes up. fail_under = 95 would make that 5% permanent
+# and unauditable, so exclusions are line-scoped and enumerated instead.
+fail_under = 100
+precision = 1
 
 [tool.ruff]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "D102", "D103", "D107"]
+select = [
+    "E", "F", "I", "W",          # the originals
+    "D",                         # full pydocstyle: docstrings on private functions too
+    "ANN",                       # annotate everything, including return types
+    "UP", "B", "C4", "PERF", "SIM", "RET", "PTH", "TC", "PL", "RUF",
+    "N", "ARG", "S", "FBT", "ISC", "PIE", "RSE", "TID", "LOG", "DTZ",
+]
+# Deliberately excluded:
+#   EM and TRY003 — this plugin's long, multi-line didactic error messages are a
+#   feature. Hoisting each into a local or a bespoke exception class would make the
+#   messages harder to read, which is the opposite of the point.
+ignore = ["TRY003"]
+
+[tool.ruff.lint.flake8-type-checking]
+# Pydantic resolves annotations at runtime, so an import moved into a TYPE_CHECKING
+# block breaks model construction. Without these, TC's fixes are actively wrong here.
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = ["dataclasses.dataclass", "pydantic.dataclasses.dataclass"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 8
+
+[tool.ruff.lint.pylint]
+max-args = 5
 
 [tool.ruff.lint.pydocstyle]
+# Google, not reStructuredText: zensical.toml sets docstring_style = "google" for
+# mkdocstrings, so changing it would break the published API reference.
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D102", "D103", "D107"]
-"examples/*" = ["D102", "D103", "D107"]
+# --- ratchet: families still being worked through in src/ ---
+# Listed per file rather than globally, so a NEW file is held to the full bar and this
+# list can only shrink. Each entry names the refactor that closes it.
+#
+#   ANN401  -> pytest passthrough only, now that every adapter and the realtime client
+#              take a real type: **kwargs to pytest.Item, self.funcargs, terminalreporter.
+#              Enumerated in tests/test_public_surface.py::ANY_ALLOWLIST.
+#   PLC0415 -> deferred imports need a `# noqa: PLC0415` and a one-line why
+#   PLR0911 -> _message's didactic phrasing table, which is a lookup written as returns
+#   PLR0912 -> splitting _errors._message
+#
+# Closed and therefore deleted, rather than left here reading as outstanding debt:
+#   PLR0913 -> JudgeSettings now bundles config_model/judge_model/retries/timeout
+#   PLW0603 -> the `global _class_cache` became functools.cache
+#   PLR0912 on report.py -> the makereport hook was split
+"src/pytest_agent_eval/_errors.py" = ["PLR0911", "PLR0912", "PLC0415", "E501"]
+"src/pytest_agent_eval/plugin.py" = ["ANN401", "PLC0415"]
+"src/pytest_agent_eval/runner.py" = ["PLC0415"]
+# stdout is the product of a CLI entry point.
+"src/pytest_agent_eval/synthesize_audio.py" = ["T201"]
+"src/pytest_agent_eval/yaml_loader.py" = ["ANN401", "PLC0415"]
+
+# Tests are held to the annotation bar but not the docstring bar. The rest are
+# deliberate test idioms, not debt:
+#   PLC0415 - optional-SDK imports must stay inside the test that needs them, so a
+#             missing extra skips rather than breaks collection
+#   ANN401  - fakes stand in for duck-typed third-party objects
+#   ARG     - every finding is a legitimate side-effect fixture
+#   SLF001  - white-box assertions on the plugin's own buffers
+"tests/**" = [
+    "D1", "ARG", "S101", "PLR2004", "SLF001", "PLR0913", "FBT001", "FBT002", "FBT003",
+    "PLC0415", "ANN401", "N801", "RUF043", "E402", "ANN001", "ANN202", "ANN003", "ANN205",
+    "SIM105", "E501",
+]
+# ...except tests/helpers, whose docstrings are the shared vocabulary the suite reads.
+"tests/helpers/**" = [
+    "ARG", "S101", "PLR2004", "SLF001", "PLR0913", "FBT001", "FBT002", "FBT003",
+    "PLC0415", "ANN401",
+]
+# User-facing snippets stay minimal, and two idioms there are load-bearing:
+#   ARG001  - the agent signature takes `history` whether or not a demo reads it
+#   PLC0415 - the livekit example imports inside its factory on purpose, so the file
+#             can be collected without the extra installed
+"examples/**" = ["D", "ANN", "S101", "T201", "ARG001", "PLC0415", "INP001"]
+"scripts/**" = ["T201", "PLC0415"]
+
+[tool.ty.src]
+include = ["src"]
+
+[tool.ty.rules]
+# Astral's documented "approximate strict" pair. missing-type-argument is what
+# catches a bare `dict` or an unparameterised `pytest.CallInfo`.
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"
+
+# --- ratchet: 21 findings remaining, down from 33 ---
+# Demoted to warnings so the gate is enforcing for every other rule rather than
+# switched off entirely. Each is closed by a refactor that is not done yet:
+#
+#   invalid-argument-type  -> 15. Typing the xdist user_properties boundary (values arrive
+#                             as `object` and need an explicit narrowing helper), and
+#                             parse_groups' selector-list accumulation.
+#   unresolved-attribute   -> 2. pytest.StashKey[T] instead of stashing _eval_result and
+#                             _agent_eval_live_skipped as attributes on foreign objects.
+#   invalid-method-override -> 1. AgentEvalItem.repr_failure returns str where pytest
+#                             declares str | TerminalRepr.
+#   call-non-callable, invalid-assignment, invalid-return-type -> one site each
+#
+# Counted, not estimated: `uv run ty check src/ --output-format concise`. Every rule below
+# still has at least one finding, so none can be promoted back to `error` yet.
+unresolved-attribute = "warn"
+invalid-argument-type = "warn"
+invalid-method-override = "warn"
+invalid-assignment = "warn"
+call-non-callable = "warn"
+invalid-return-type = "warn"

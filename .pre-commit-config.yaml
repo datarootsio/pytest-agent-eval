@@ -16,3 +16,25 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty (type check src/)
+        # --exit-zero-on-warning: the ratcheted rules in pyproject are demoted to
+        # warnings, so they stay visible without blocking; a real error still fails.
+        entry: uv run ty check src/ --exit-zero-on-warning
+        language: system
+        pass_filenames: false
+        types: [python]
+
+      # ty has no rule for `Any` and ruff's ANN401 only sees it in argument position,
+      # missing dict[str, Any] and the like. A grep cannot be silenced by a
+      # `# type: ignore`; suppressing it means editing the allowlist, which shows in
+      # the diff. tests/test_public_surface.py holds the allowlist.
+      - id: no-new-any
+        name: no new typing.Any in src/ outside the allowlist
+        entry: uv run pytest tests/test_public_surface.py -q
+        language: system
+        pass_filenames: false
+        types: [python]

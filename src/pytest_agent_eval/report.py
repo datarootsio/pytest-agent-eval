@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import dataclasses
-from datetime import date
+from datetime import UTC, datetime
+from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pytest
+from pydantic import TypeAdapter
 
 from pytest_agent_eval.groups import (
     EvalOutcome,
@@ -16,35 +18,38 @@ from pytest_agent_eval.groups import (
     evaluate_groups,
     format_group_summary_lines,
 )
-from pytest_agent_eval.models import EvalResult, RunResult, TranscriptResult, TurnResult
+from pytest_agent_eval.models import JsonMapping, RunResult, TranscriptResult
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Sequence
+
+    from pluggy import Result
+
+    from pytest_agent_eval.config import AgentEvalConfig
 
 
-def _serialize_result(result: TranscriptResult) -> dict[str, Any]:
-    return dataclasses.asdict(result)
+# One adapter for the whole tree. TypeAdapter works on dataclasses, so the result types
+# stay plain frozen records rather than becoming pydantic models just to cross a process.
+_RESULT_WIRE: TypeAdapter[TranscriptResult] = TypeAdapter(TranscriptResult)
 
 
-def _deserialize_run(r: dict[str, Any]) -> RunResult:
-    return RunResult(
-        run_index=r["run_index"],
-        passed=r["passed"],
-        turn_results=[
-            TurnResult(
-                turn_index=t["turn_index"],
-                passed=t["passed"],
-                eval_results=[EvalResult(passed=e["passed"], reasoning=e["reasoning"]) for e in t["eval_results"]],
-            )
-            for t in r["turn_results"]
-        ],
-    )
+def _serialize_result(result: TranscriptResult) -> JsonMapping:
+    """Flatten a result for the xdist user_properties channel.
+
+    mode="json" because xdist ships user_properties through JSON; anything that is not
+    JSON-native here fails inside a worker with a confusing traceback.
+    """
+    return _RESULT_WIRE.dump_python(result, mode="json")
 
 
-def _deserialize_result(data: dict[str, Any]) -> TranscriptResult:
-    return TranscriptResult(
-        passed=data["passed"],
-        score=data["score"],
-        threshold=data["threshold"],
-        runs=[_deserialize_run(r) for r in data["runs"]],
-    )
+def _deserialize_result(data: JsonMapping) -> TranscriptResult:
+    """Rebuild a result the controller received from a worker.
+
+    Validated rather than hand-unpacked: the previous three-function walk had to be kept
+    in step with the record definitions by hand, and could not be type-checked because
+    every level indexed into a JsonValue.
+    """
+    return _RESULT_WIRE.validate_python(data)
 
 
 def build_markdown_report(
@@ -62,15 +67,16 @@ def build_markdown_report(
     Returns:
         Formatted markdown string.
     """
-    today = run_date or date.today().isoformat()
+    # UTC, not local: a report's date must not depend on the runner's timezone.
+    today = run_date or datetime.now(tz=UTC).date().isoformat()
     lines = [f"# LLM Eval Report — {today}", "", "## Summary", ""]
     lines.append("| Transcript | Runs | Passed | Score | Threshold | Status |")
     lines.append("|---|---|---|---|---|---|")
 
     for name, result in results:
         status = "✅ PASS" if result.passed else "❌ FAIL"
-        n, p = len(result.runs), result.passed_run_count
-        lines.append(f"| {name} | {n} | {p} | {result.score:.2f} | {result.threshold:.2f} | {status} |")
+        passed, total = result.passed_run_count, len(result.runs)
+        lines.append(f"| {name} | {total} | {passed} | {result.score:.2f} | {result.threshold:.2f} | {status} |")
 
     if group_results:
         lines.append("")
@@ -89,7 +95,8 @@ def build_markdown_report(
     return "\n".join(lines)
 
 
-def _format_run_lines(run: Any) -> list[str]:
+def _format_run_lines(run: RunResult) -> list[str]:
+    """One run of the markdown report's Details section: a heading, then its turns."""
     lines = [f"**Run {run.run_index + 1}** {'✅' if run.passed else '❌'}"]
     for turn in run.turn_results:
         lines.append(f"- Turn {turn.turn_index + 1}: {'PASS' if turn.passed else 'FAIL'}")
@@ -97,11 +104,49 @@ def _format_run_lines(run: Any) -> list[str]:
     return lines
 
 
-def _score_line(result: TranscriptResult) -> str:
-    symbol = ">=" if result.passed else "<"
-    p, n = result.passed_run_count, len(result.runs)
-    return f"[{p}/{n} runs, score={result.score:.2f} {symbol} {result.threshold:.2f}]"
+def _detail_section(result: TranscriptResult, verbosity: int) -> str | None:
+    """Build the per-test detail block, or None when the run is not verbose enough.
 
+    -v lists each run; -vv adds every evaluator's reasoning underneath it.
+    """
+    if verbosity < 1:
+        return None
+    lines: list[str] = []
+    for run in result.runs:
+        lines.append(f"  Run {run.run_index + 1} {'✅' if run.passed else '❌'}")
+        if verbosity >= _VERBOSITY_WITH_REASONING:
+            lines.extend(f"    {er.reasoning}" for turn in run.turn_results for er in turn.eval_results if er.reasoning)
+    return f"{_score_line(result)}\n" + "\n".join(lines)
+
+
+def _score_line(result: TranscriptResult) -> str:
+    """The verdict line above the per-run detail: runs passed, score, threshold.
+
+    The symbol comes from ``passed``, not from comparing the numbers again, so the line
+    cannot disagree with the verdict it sits under.
+    """
+    symbol = ">=" if result.passed else "<"
+    passed, total = result.passed_run_count, len(result.runs)
+    return f"[{passed}/{total} runs, score={result.score:.2f} {symbol} {result.threshold:.2f}]"
+
+
+def _advance_outcome(entry: EvalOutcome, when: str, outcome: str) -> EvalOutcome:
+    """Fold one phase report into the item's recorded outcome.
+
+    setup only downgrades (a skip or error there decides the item); call is
+    authoritative; teardown can only turn a pass into a failure.
+    """
+    if when == "setup" and outcome in ("skipped", "failed"):
+        return dataclasses.replace(entry, outcome=outcome)
+    if when == "call":
+        return dataclasses.replace(entry, outcome=outcome)
+    if when == "teardown" and outcome == "failed" and entry.outcome == "passed":
+        return dataclasses.replace(entry, outcome="failed")
+    return entry
+
+
+# -vv, not -v: reasoning is per evaluator and floods the output at -v.
+_VERBOSITY_WITH_REASONING = 2
 
 _XDIST_RESULT_KEY = "llm_eval_result"
 _XDIST_NAME_KEY = "llm_eval_name"
@@ -120,67 +165,59 @@ class AgentEvalReportPlugin:
         self._had_collect_error = False
         self._deselected_count = 0
         self._exit_overridden = False
-        self._cfg: Any = None
 
-    def _get_cfg(self) -> Any:
-        if self._cfg is None:
-            from pytest_agent_eval.config import load_config
+    @cached_property
+    def _cfg(self) -> AgentEvalConfig:
+        """Resolved [tool.agent_eval] config, loaded once per session.
 
-            self._cfg = load_config(self._config)
-        return self._cfg
+        cached_property rather than a None sentinel: the sentinel also forced the attribute
+        to be untyped, which silently switched off checking at all five call sites.
+        """
+        # Deferred: config imports groups, which would make this circular at module scope.
+        from pytest_agent_eval.config import load_config  # noqa: PLC0415
+
+        return load_config(self._config)
 
     @staticmethod
-    def _item_meta(item: pytest.Item) -> dict[str, Any]:
+    def _item_meta(item: pytest.Item) -> JsonMapping:
+        """What group aggregation needs about an item, as a dict because it crosses the wire."""
         marker = item.get_closest_marker("agent_eval")
         tags = list((marker.kwargs.get("tags") if marker else None) or [])
         return {"identity": item.name, "tags": tags, "markers": [m.name for m in item.iter_markers()]}
 
-    def _record_outcome(self, nodeid: str, meta: dict[str, Any], when: str, outcome: str) -> None:
-        entry = self._outcomes.get(nodeid)
-        if entry is None:
-            entry = EvalOutcome(
-                identity=meta["identity"],
-                nodeid=nodeid,
-                outcome="passed",
-                tags=list(meta["tags"]),
-                markers=list(meta["markers"]),
-            )
-            self._outcomes[nodeid] = entry
-        if when == "setup":
-            if outcome in ("skipped", "failed"):
-                entry.outcome = outcome
-        elif when == "call":
-            entry.outcome = outcome
-        elif when == "teardown" and outcome == "failed" and entry.outcome == "passed":
-            entry.outcome = "failed"
+    def _record_outcome(self, nodeid: str, meta: JsonMapping, when: str, outcome: str) -> None:
+        """Fold one phase report into this item's recorded outcome, creating it if new."""
+        entry = self._outcomes.get(nodeid) or EvalOutcome(
+            identity=meta["identity"],
+            nodeid=nodeid,
+            outcome="passed",
+            tags=list(meta["tags"]),
+            markers=list(meta["markers"]),
+        )
+        self._outcomes[nodeid] = _advance_outcome(entry, when, outcome)
 
-    def add_result(self, name: str, result: TranscriptResult) -> None:
-        """Append a transcript result to the in-memory report buffer."""
-        self._results.append((name, result))
+    @property
+    def _is_worker(self) -> bool:
+        """True on an xdist worker, which forwards results instead of buffering them.
 
-    def _is_xdist_worker(self) -> bool:
+        A property, not a method: it reads one attribute at three call sites, so the
+        parentheses were the only thing it added.
+        """
         return hasattr(self._config, "workerinput")
 
-    def _xdist_active(self) -> bool:
-        try:
-            return self._config.option.dist != "no"
-        except AttributeError:
-            return False
-
-    def _is_xdist_controller(self) -> bool:
-        return self._xdist_active() and not self._is_xdist_worker()
-
     @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_makereport(self, item: pytest.Item, call: pytest.CallInfo) -> Any:
+    def pytest_runtest_makereport(
+        self, item: pytest.Item, call: pytest.CallInfo[None]
+    ) -> Generator[None, Result[pytest.TestReport], None]:
         """Capture per-test eval results and outcomes, forwarding across xdist workers."""
         outcome = yield
         report = outcome.get_result()
 
         meta = self._item_meta(item)
-        if self._is_xdist_worker():
+        if self._is_worker:
             # user_properties is shared across phases, so the setup-phase append rides
             # every report; gate on groups so junitxml isn't polluted for non-users.
-            if self._get_cfg().groups and not any(k == _XDIST_META_KEY for k, _ in report.user_properties):
+            if self._cfg.groups and not any(k == _XDIST_META_KEY for k, _ in report.user_properties):
                 report.user_properties.append((_XDIST_META_KEY, meta))
         else:
             self._record_outcome(item.nodeid, meta, report.when, report.outcome)
@@ -190,28 +227,20 @@ class AgentEvalReportPlugin:
         if call.when == "call":
             result: TranscriptResult | None = getattr(item, "_eval_result", None)
             if result is not None:
-                if self._is_xdist_worker():
+                if self._is_worker:
                     report.user_properties.append((_XDIST_NAME_KEY, item.name))
                     report.user_properties.append((_XDIST_RESULT_KEY, _serialize_result(result)))
                 else:
-                    self.add_result(item.name, result)
-                score_info = _score_line(result)
-                verbosity = self._config.getoption("verbose", default=0)
-                if verbosity >= 1:
-                    details = []
-                    for run in result.runs:
-                        run_status = "✅" if run.passed else "❌"
-                        details.append(f"  Run {run.run_index + 1} {run_status}")
-                        if verbosity >= 2:
-                            for turn in run.turn_results:
-                                for er in turn.eval_results:
-                                    if er.reasoning:
-                                        details.append(f"    {er.reasoning}")
-                    report.sections.append(("LLM Eval", f"{score_info}\n" + "\n".join(details)))
+                    self._results.append((item.name, result))
+                section = _detail_section(result, self._config.getoption("verbose", default=0))
+                if section is not None:
+                    report.sections.append(("LLM Eval", section))
 
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         """On the xdist controller, replay outcomes and deserialise forwarded eval results."""
-        if not self._is_xdist_controller():
+        # `option.dist` is added by pytest-xdist, so its absence means no controller to be;
+        # a worker forwards rather than replays, so it falls straight through too.
+        if getattr(self._config.option, "dist", "no") == "no" or self._is_worker:
             return
 
         if report.failed:
@@ -226,23 +255,35 @@ class AgentEvalReportPlugin:
         if result_data is None:
             return
         name = next((v for k, v in report.user_properties if k == _XDIST_NAME_KEY), report.nodeid)
-        self.add_result(name, _deserialize_result(result_data))
+        self._results.append((name, _deserialize_result(result_data)))
 
     def pytest_collectreport(self, report: pytest.CollectReport) -> None:
         """Remember collection errors — they veto any exit-code override."""
         if report.failed:
             self._had_collect_error = True
 
-    def pytest_deselected(self, items: Any) -> None:
+    def pytest_deselected(self, items: Sequence[pytest.Item]) -> None:
         """Track deselection so the group summary can flag partial selections."""
         self._deselected_count += len(items)
 
     def _group_results(self) -> list[GroupResult]:
-        return evaluate_groups(self._get_cfg().groups, list(self._outcomes.values()))
+        """Aggregate the session's outcomes into per-group results.
 
-    def pytest_terminal_summary(self, terminalreporter: Any) -> None:
+        A one-liner that stays a method, because it is not free: it re-runs
+        evaluate_groups over every recorded outcome, and three call sites reach it per
+        session. Inlining would triple that work at the call sites and hide the cost there.
+
+        Deliberately not memoised. All three callers run at session end, after every
+        runtest hook has recorded its outcome, so a cache would in fact be correct today —
+        but nothing in the type or the name would stop a future caller being added mid-run,
+        and that one would silently receive a stale outcome set. The recompute is bounded
+        by the number of tests in the session and buys that immunity.
+        """
+        return evaluate_groups(self._cfg.groups, list(self._outcomes.values()))
+
+    def pytest_terminal_summary(self, terminalreporter: pytest.TerminalReporter) -> None:
         """Render the group summary section after the run."""
-        cfg = self._get_cfg()
+        cfg = self._cfg
         if not cfg.groups or not self._outcomes:
             return
         terminalreporter.section("group summary")
@@ -257,7 +298,7 @@ class AgentEvalReportPlugin:
 
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         """Write the markdown report and apply the group exit-code override."""
-        cfg = self._get_cfg()
+        cfg = self._cfg
         if cfg.report_path and self._results:
             group_results = self._group_results() if cfg.groups else None
             report_text = build_markdown_report(self._results, group_results=group_results)
@@ -265,10 +306,11 @@ class AgentEvalReportPlugin:
         self._maybe_override_exit_code(session, exitstatus)
 
     def _maybe_override_exit_code(self, session: pytest.Session, exitstatus: int) -> None:
+        """Downgrade a red session to green when every failure is covered by a passing gate."""
         # Only downgrade TESTS_FAILED to OK, and only when every failure is absorbed
         # by a passing gated group — a failing plain unit test, an ungrouped
         # transcript, or a collection error must keep the red exit code.
-        if not self._get_cfg().groups or exitstatus != pytest.ExitCode.TESTS_FAILED or self._had_collect_error:
+        if not self._cfg.groups or exitstatus != pytest.ExitCode.TESTS_FAILED or self._had_collect_error:
             return
         results = self._group_results()
         # A failed must_pass assertion vetoes the override even when the group's

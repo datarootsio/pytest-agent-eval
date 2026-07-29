@@ -4,24 +4,33 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.adapters._wav_input import WavFileAudioInput
-from pytest_agent_eval.models import ToolCall
+from pytest_agent_eval.models import AgentReply, History, ToolCall
 
 if TYPE_CHECKING:
-    from livekit.agents.voice import Agent, AgentSession
+    from livekit.agents.voice import (
+        Agent,
+        AgentSession,
+        ConversationItemAddedEvent,
+        FunctionToolsExecutedEvent,
+    )
 
 logger = logging.getLogger(__name__)
 
-SessionFactory = Callable[[], "tuple[AgentSession, Agent]"]
+_QUIET_LOGGERS = ("livekit.agents", "livekit", "livekit.plugins.openai")
 
 
-def _quiet_livekit_loggers() -> None:
-    for name in ("livekit.agents", "livekit", "livekit.plugins.openai"):
-        logging.getLogger(name).setLevel(logging.WARNING)
+# The real livekit type, and no hand-rolled Protocol beside it. There were two here,
+# named by no annotation and so never checked against anything; they could not have been
+# used anyway, since `AgentSession.on` takes a Literal of event names rather than `str`,
+# which no real session would satisfy. A user factory returns a genuine AgentSession, and
+# the `Any` is livekit's own userdata parameter, which this adapter never touches.
+SessionFactory = Callable[[], "tuple[AgentSession[Any], Agent]"]
 
 
 class LiveKitAdapter:
@@ -76,13 +85,14 @@ class LiveKitAdapter:
         self._frame_ms = frame_ms
         self._grace_period_s = grace_period_s
         self._timeout_s = timeout_s
-        _quiet_livekit_loggers()
+        for name in _QUIET_LOGGERS:
+            logging.getLogger(name).setLevel(logging.WARNING)
 
-    async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    async def __call__(self, history: History) -> AgentReply:
         """Stream the WAV on the last user turn and return ``(reply, tool_calls)``."""
-        if not history or history[-1].get("role") != "user":
+        if not history or history[-1].role != "user":
             raise ValueError("LiveKitAdapter: history must end with a user turn")
-        audio_path_raw = history[-1].get("audio")
+        audio_path_raw = history[-1].audio
         if not audio_path_raw:
             raise ValueError(
                 "LiveKitAdapter requires Turn.audio — the last user turn has no audio path. "
@@ -101,13 +111,18 @@ class LiveKitAdapter:
         tool_calls: list[ToolCall] = []
         reply_chunks: list[str] = []
 
-        def _on_function_tools_executed(event: Any) -> None:
+        # The reads stay `getattr` with a default even though the events are typed:
+        # livekit's payloads vary by version and by which model fired them, and
+        # `event.item` is itself a union whose members differ.
+        def _on_function_tools_executed(event: FunctionToolsExecutedEvent) -> None:
+            """Record every tool call livekit reports as executed on this turn."""
             for fc in getattr(event, "function_calls", []) or []:
                 name = getattr(fc, "name", "") or ""
                 if name:
                     tool_calls.append(ToolCall(name, coerce_args(getattr(fc, "arguments", None))))
 
-        def _on_conversation_item_added(event: Any) -> None:
+        def _on_conversation_item_added(event: ConversationItemAddedEvent) -> None:
+            """Accumulate the assistant's transcript as livekit appends conversation items."""
             item = getattr(event, "item", None)
             if item is None:
                 return
@@ -134,7 +149,7 @@ class LiveKitAdapter:
             await session.start(agent)
             try:
                 await asyncio.wait_for(wav_input.wait_for_exhaustion(), timeout=self._timeout_s)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("LiveKitAdapter: timed out waiting for WAV exhaustion")
             await asyncio.sleep(self._grace_period_s)
         finally:
@@ -147,4 +162,4 @@ class LiveKitAdapter:
             except Exception:
                 logger.debug("LiveKitAdapter: session.aclose raised", exc_info=True)
 
-        return "".join(reply_chunks), tool_calls
+        return AgentReply("".join(reply_chunks), tool_calls)

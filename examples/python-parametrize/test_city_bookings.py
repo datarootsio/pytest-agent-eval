@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pytest_agent_eval import Expect, Turn
+from pytest_agent_eval import AgentReply, Expect, Turn
 
 if TYPE_CHECKING:
     from pytest_agent_eval.runner import EvalSession
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 async def test_booking_mentions_city(agent_eval: EvalSession, city: str) -> None:
     # Deterministic mock agent; replace with your real agent or an adapter.
     async def agent(history):
-        return f"Booked a table in {city}! Reference BK-1234.", ["create_booking"]
+        return AgentReply(f"Booked a table in {city}! Reference BK-1234.", ["create_booking"])
 
     result = await agent_eval.run(
         agent=agent,

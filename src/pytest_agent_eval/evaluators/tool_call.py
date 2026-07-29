@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING
 
-from pytest_agent_eval.models import EvalResult, TurnContext
+from pytest_agent_eval.evaluators._capture import capture_tool_args
+from pytest_agent_eval.models import EvalResult, JsonMapping, ToolArgs, ToolCallArgsMode, TurnContext
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
-def _is_ordered_subsequence(needle: list[str], haystack: list[str]) -> bool:
+def _is_ordered_subsequence(needle: Sequence[str], haystack: Sequence[str]) -> bool:
+    """Whether every name in ``needle`` appears in ``haystack``, in that relative order.
+
+    The shared iterator is what enforces the order: ``n in it`` consumes ``haystack`` up
+    to the match, so the next name can only be found after it. Rebuild it per name and the
+    evaluator starts accepting any permutation.
+    """
     it = iter(haystack)
     return all(n in it for n in needle)
 
@@ -36,19 +46,15 @@ class ToolCallEvaluator:
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Evaluate tool call presence and ordering."""
         failures: list[str] = []
-
         if not self.ordered:
-            for tool in self.must_include:
-                if tool not in ctx.tool_calls:
-                    failures.append(f"Expected tool {tool!r} not in {ctx.tool_calls!r}")
-
-        for tool in self.must_exclude:
-            if tool in ctx.tool_calls:
-                failures.append(f"Forbidden tool {tool!r} was called")
-
-        if self.ordered and self.must_include:
-            if not _is_ordered_subsequence(self.must_include, ctx.tool_calls):
-                failures.append(f"Tools {self.must_include!r} not called in order in {ctx.tool_calls!r}")
+            failures += [
+                f"Expected tool {tool!r} not in {ctx.tool_calls!r}"
+                for tool in self.must_include
+                if tool not in ctx.tool_calls
+            ]
+        failures += [f"Forbidden tool {tool!r} was called" for tool in self.must_exclude if tool in ctx.tool_calls]
+        if self.ordered and self.must_include and not _is_ordered_subsequence(self.must_include, ctx.tool_calls):
+            failures.append(f"Tools {self.must_include!r} not called in order in {ctx.tool_calls!r}")
 
         if failures:
             return EvalResult(passed=False, reasoning="\n".join(failures))
@@ -78,37 +84,31 @@ class ToolCallArgsEvaluator:
     """
 
     tool: str
-    args: dict[str, Any]
-    mode: str = "subset"
+    args: JsonMapping
+    mode: ToolCallArgsMode = "subset"
 
     def __post_init__(self) -> None:
+        """Reject an unknown comparison mode at construction time."""
         if self.mode not in ("subset", "exact"):
             raise ValueError(f"ToolCallArgsEvaluator mode must be 'subset' or 'exact', got {self.mode!r}")
 
-    def _matches(self, observed: dict[str, Any]) -> bool:
+    def _matches(self, observed: ToolArgs) -> bool:
+        """Compare one call's captured arguments against the expected ones.
+
+        ``observed`` is ``ToolArgs`` while ``self.args`` stays ``JsonMapping``: the
+        expected side is written by hand in a transcript and really is JSON, whereas the
+        observed side is whatever an SDK captured.
+        """
         if self.mode == "exact":
             return observed == self.args
         return all(k in observed and observed[k] == v for k, v in self.args.items())
 
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Evaluate the expected arguments against every call of the tool this turn."""
-        matching = [tc for tc in ctx.tool_calls if tc == self.tool]
-        if not matching:
-            return EvalResult(
-                passed=False,
-                reasoning=f"Tool {self.tool!r} was never called (tools called: {[str(tc) for tc in ctx.tool_calls]!r})",
-            )
-
-        captured = [tc.args for tc in matching if isinstance(getattr(tc, "args", None), dict)]
-        if not captured:
-            return EvalResult(
-                passed=False,
-                reasoning=(
-                    f"Tool {self.tool!r} was called but no dict arguments were captured. "
-                    "Argument assertions need the agent/adapter to return ToolCall(name, args) "
-                    "with args as a mapping (a JSON string is not enough — parse it first)."
-                ),
-            )
+        found = capture_tool_args(self.tool, ctx.tool_calls)
+        if found.failure is not None:
+            return found.failure
+        captured = found.args
 
         if any(self._matches(observed) for observed in captured):
             return EvalResult(passed=True, reasoning=f"Tool {self.tool!r} called with expected args ({self.mode})")

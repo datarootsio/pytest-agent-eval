@@ -8,9 +8,9 @@ from dataclasses import dataclass, field
 from pytest_agent_eval.models import EvalResult, TurnContext
 
 
-@dataclass
+@dataclass(slots=True)
 class ContainsEvaluator:
-    """Check that the reply contains expected substrings or matches regex patterns.
+    r"""Check that the reply contains expected substrings or matches regex patterns.
 
     Args:
         any_of: Reply must contain at least one of these strings.
@@ -38,42 +38,52 @@ class ContainsEvaluator:
     case_sensitive: bool = False
 
     def __post_init__(self) -> None:
-        # Compile eagerly: a bad pattern is an authoring error and must fail at
-        # construction time, not surface as a per-turn evaluation failure.
+        """Validate every pattern at construction time."""
+        # Compile and discard: a bad pattern is an authoring error and must fail at
+        # construction time, not surface as a per-turn evaluation failure. The compiled
+        # objects are not stored, so this stays a plain dataclass with no hidden
+        # attributes; re.compile is memoised by the re module cache, so recompiling in
+        # evaluate() costs a dict lookup.
+        self._compile()
+
+    def _compile(self) -> list[list[re.Pattern[str]]]:
+        """Compile both pattern lists, raising a didactic ValueError on a bad pattern."""
         flags = 0 if self.case_sensitive else re.IGNORECASE
         try:
-            self._matches_any_compiled = [re.compile(p, flags) for p in self.matches_any]
-            self._matches_all_compiled = [re.compile(p, flags) for p in self.matches_all]
+            return [[re.compile(p, flags) for p in patterns] for patterns in (self.matches_any, self.matches_all)]
         except re.error as exc:
             raise ValueError(f"Invalid regex pattern {exc.pattern!r}: {exc}") from exc
 
-    def _norm(self, s: str) -> str:
-        return s if self.case_sensitive else s.lower()
-
     async def evaluate(self, ctx: TurnContext) -> EvalResult:
         """Evaluate substring and regex checks against the reply."""
-        reply = self._norm(ctx.reply)
+        # Bound once instead of through a one-line _norm() method: the substring checks
+        # compare a folded needle against a folded reply, and this is the only place that
+        # decision is made. The regex checks below use re.IGNORECASE on the raw reply
+        # instead, so a pattern's own anchors and character classes still mean what they say.
+        fold = str if self.case_sensitive else str.lower
+        reply = fold(ctx.reply)
+        matches_any_compiled, matches_all_compiled = self._compile()
 
-        if self.any_of and not any(self._norm(s) in reply for s in self.any_of):
+        if self.any_of and not any(fold(s) in reply for s in self.any_of):
             return EvalResult(
                 passed=False,
                 reasoning=f"Reply did not contain any of {self.any_of!r}",
             )
 
-        missing = [s for s in self.all_of if self._norm(s) not in reply]
+        missing = [s for s in self.all_of if fold(s) not in reply]
         if missing:
             return EvalResult(
                 passed=False,
                 reasoning=f"Reply missing required strings: {missing!r}",
             )
 
-        if self._matches_any_compiled and not any(p.search(ctx.reply) for p in self._matches_any_compiled):
+        if matches_any_compiled and not any(p.search(ctx.reply) for p in matches_any_compiled):
             return EvalResult(
                 passed=False,
                 reasoning=f"Reply did not match any of {self.matches_any!r}",
             )
 
-        unmatched = [p.pattern for p in self._matches_all_compiled if not p.search(ctx.reply)]
+        unmatched = [p.pattern for p in matches_all_compiled if not p.search(ctx.reply)]
         if unmatched:
             return EvalResult(
                 passed=False,

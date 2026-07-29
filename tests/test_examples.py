@@ -11,7 +11,7 @@ import pytest
 
 
 @pytest.fixture
-def stub_judge(monkeypatch: pytest.MonkeyPatch):
+def stub_judge(monkeypatch: pytest.MonkeyPatch) -> None:
     from pytest_agent_eval.evaluators.judge import JudgeEvaluator, ToolCallArgsJudgeEvaluator
     from pytest_agent_eval.models import EvalResult
 
@@ -27,31 +27,31 @@ def _run_example(pytester: pytest.Pytester, name: str, *args: str):
     return pytester.runpytest("--agent-eval-live", *args)
 
 
-def test_single_turn_example(pytester: pytest.Pytester):
+def test_single_turn_example(pytester: pytest.Pytester) -> None:
     _run_example(pytester, "single-turn").assert_outcomes(passed=1)
 
 
-def test_multi_turn_judge_example(pytester: pytest.Pytester, stub_judge: None):
+def test_multi_turn_judge_example(pytester: pytest.Pytester, stub_judge: None) -> None:
     _run_example(pytester, "multi-turn-judge").assert_outcomes(passed=1)
 
 
-def test_tool_calls_example(pytester: pytest.Pytester):
+def test_tool_calls_example(pytester: pytest.Pytester) -> None:
     _run_example(pytester, "tool-calls").assert_outcomes(passed=1)
 
 
-def test_tool_call_args_example(pytester: pytest.Pytester, stub_judge: None):
+def test_tool_call_args_example(pytester: pytest.Pytester, stub_judge: None) -> None:
     _run_example(pytester, "tool-call-args").assert_outcomes(passed=1)
 
 
-def test_regex_contains_example(pytester: pytest.Pytester):
+def test_regex_contains_example(pytester: pytest.Pytester) -> None:
     _run_example(pytester, "regex-contains").assert_outcomes(passed=1)
 
 
-def test_python_parametrize_example(pytester: pytest.Pytester):
+def test_python_parametrize_example(pytester: pytest.Pytester) -> None:
     _run_example(pytester, "python-parametrize").assert_outcomes(passed=2)
 
 
-def test_groups_example_absorbs_failure(pytester: pytest.Pytester):
+def test_groups_example_absorbs_failure(pytester: pytest.Pytester) -> None:
     result = _run_example(pytester, "groups")
     result.assert_outcomes(passed=1, failed=1)
     assert result.ret == 0
@@ -64,13 +64,13 @@ def test_groups_example_absorbs_failure(pytester: pytest.Pytester):
     )
 
 
-def test_voice_livekit_example_collects(pytester: pytest.Pytester):
+def test_voice_livekit_example_collects(pytester: pytest.Pytester) -> None:
     pytester.copy_example("voice-livekit")
     result = pytester.runpytest("--collect-only", "-q")
     result.stdout.fnmatch_lines(["*booking_voice*"])
 
 
-def test_example_skips_with_hint_without_live_flag(pytester: pytest.Pytester):
+def test_example_skips_with_hint_without_live_flag(pytester: pytest.Pytester) -> None:
     pytester.copy_example("single-turn")
     result = pytester.runpytest()
     result.assert_outcomes(skipped=1)

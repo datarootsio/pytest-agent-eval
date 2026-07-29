@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from pytest_agent_eval.evaluators.contains import ContainsEvaluator
@@ -8,28 +10,43 @@ from pytest_agent_eval.models import (
     TranscriptResult,
     Turn,
 )
-from pytest_agent_eval.runner import EvalSession, run_transcript
-
-
-async def _echo_agent(history: list[dict]) -> tuple[str, list[str]]:
-    """Agent that echoes the last user message."""
-    return history[-1]["content"], []
-
-
-async def _booking_agent(history: list[dict]) -> tuple[str, list[str]]:
-    """Agent that returns a booking confirmation."""
-    return "Your slot is confirmed for tomorrow at 10am.", ["book_slot"]
+from pytest_agent_eval.runner import EvalSession, JudgeSettings, TranscriptRunner, run_transcript
+from tests.helpers.agents import RecordingAgent, ScriptedAgent, booking_agent, echo_agent
+from tests.helpers.judge import FailingJudge, PromptCapturingJudge
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_single_turn_passes():
+async def test_turn_audio_is_forwarded_to_the_agent_as_a_message_key() -> None:
+    """Voice adapters read the WAV path off the user message; it must be a str, not a Path."""
+    agent = RecordingAgent()
+
+    transcript = Transcript(id="voice", turns=[Turn(user="book me", audio=Path("turn1.wav"))], threshold=0.0)
+    await run_transcript(transcript, agent)
+
+    assert agent.last_message.audio == "turn1.wav"
+    assert isinstance(agent.last_message.audio, str)
+    assert agent.last_message.content == "book me"
+
+
+@pytest.mark.asyncio
+async def test_turn_without_audio_omits_the_key_entirely() -> None:
+    """An absent audio key is what tells a text adapter this is not a voice turn."""
+    agent = RecordingAgent()
+
+    await run_transcript(Transcript(id="text", turns=[Turn(user="hi")], threshold=0.0), agent)
+
+    assert agent.last_message.audio is None
+
+
+@pytest.mark.asyncio
+async def test_run_transcript_single_turn_passes() -> None:
     transcript = Transcript(
         id="test",
         turns=[Turn(user="hello")],
         threshold=0.8,
         runs=1,
     )
-    result = await run_transcript(transcript, _echo_agent)
+    result = await run_transcript(transcript, echo_agent)
     assert isinstance(result, TranscriptResult)
     assert result.passed is True
     assert result.score == 1.0
@@ -37,7 +54,7 @@ async def test_run_transcript_single_turn_passes():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_with_contains_evaluator():
+async def test_run_transcript_with_contains_evaluator() -> None:
     transcript = Transcript(
         id="test",
         turns=[
@@ -49,13 +66,13 @@ async def test_run_transcript_with_contains_evaluator():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(transcript, _booking_agent)
+    result = await run_transcript(transcript, booking_agent)
     assert result.passed is True
     assert result.runs[0].turn_results[0].passed is True
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_with_tool_call_evaluator():
+async def test_run_transcript_with_tool_call_evaluator() -> None:
     transcript = Transcript(
         id="test",
         turns=[
@@ -67,12 +84,12 @@ async def test_run_transcript_with_tool_call_evaluator():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(transcript, _booking_agent)
+    result = await run_transcript(transcript, booking_agent)
     assert result.passed is True
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
+async def test_run_transcript_builds_contains_evaluator_from_regex_expect() -> None:
     transcript = Transcript(
         id="regex",
         turns=[
@@ -84,7 +101,7 @@ async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(transcript, _booking_agent)
+    result = await run_transcript(transcript, booking_agent)
     assert result.passed is True
 
     failing = Transcript(
@@ -93,12 +110,12 @@ async def test_run_transcript_builds_contains_evaluator_from_regex_expect():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(failing, _booking_agent)
+    result = await run_transcript(failing, booking_agent)
     assert result.passed is False
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_enforces_tool_calls_ordered_from_expect():
+async def test_run_transcript_enforces_tool_calls_ordered_from_expect() -> None:
     async def ordered_agent(history: list[dict]) -> tuple[str, list[str]]:
         return "done", ["fetch", "auth"]
 
@@ -122,7 +139,7 @@ async def test_run_transcript_enforces_tool_calls_ordered_from_expect():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_fails_when_evaluator_fails():
+async def test_run_transcript_fails_when_evaluator_fails() -> None:
     transcript = Transcript(
         id="test",
         turns=[
@@ -134,22 +151,13 @@ async def test_run_transcript_fails_when_evaluator_fails():
         threshold=1.0,
         runs=1,
     )
-    result = await run_transcript(transcript, _booking_agent)
+    result = await run_transcript(transcript, booking_agent)
     assert result.passed is False
     assert result.score == 0.0
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_multiple_runs_score():
-    call_count = 0
-
-    async def flaky_agent(history: list[dict]) -> tuple[str, list[str]]:
-        nonlocal call_count
-        call_count += 1
-        if call_count % 2 == 0:
-            return "confirmed booking", []
-        return "error occurred", []
-
+async def test_run_transcript_multiple_runs_score() -> None:
     transcript = Transcript(
         id="flaky",
         turns=[
@@ -161,13 +169,14 @@ async def test_run_transcript_multiple_runs_score():
         threshold=0.5,
         runs=4,
     )
-    result = await run_transcript(transcript, flaky_agent)
+    flaky = ScriptedAgent(replies=["error occurred", "confirmed booking", "error occurred", "confirmed booking"])
+    result = await run_transcript(transcript, flaky)
     assert result.score == 0.5
     assert result.passed is True  # 0.5 >= 0.5
 
 
 @pytest.mark.asyncio
-async def test_runner_normalises_plain_strings_to_tool_calls():
+async def test_runner_normalises_plain_strings_to_tool_calls() -> None:
     from pytest_agent_eval.models import EvalResult, ToolCall
 
     captured: list[list] = []
@@ -193,7 +202,7 @@ async def test_runner_normalises_plain_strings_to_tool_calls():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_dispatches_tool_calls_args_deterministic():
+async def test_run_transcript_dispatches_tool_calls_args_deterministic() -> None:
     from pytest_agent_eval.models import ToolCall, ToolCallArgsConfig
 
     async def args_agent(history: list[dict]) -> tuple[str, list]:
@@ -229,19 +238,12 @@ async def test_run_transcript_dispatches_tool_calls_args_deterministic():
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallback():
-    from unittest.mock import AsyncMock, MagicMock, patch
-
+async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallback() -> None:
+    """config_model reaches the args judge — asserted by handing it a model that records use."""
     from pytest_agent_eval.models import JudgeConfig, ToolCall, ToolCallArgsConfig
 
     async def args_agent(history: list[dict]) -> tuple[str, list]:
         return "done", [ToolCall("book_slot", {"time": "10am"})]
-
-    mock_output = MagicMock()
-    mock_output.passed = True
-    mock_output.reasoning = "ok"
-    mock_result = MagicMock()
-    mock_result.output = mock_output
 
     transcript = Transcript(
         id="args_judge",
@@ -258,25 +260,38 @@ async def test_run_transcript_dispatches_tool_calls_args_judge_with_model_fallba
         threshold=1.0,
         runs=1,
     )
+    fallback = PromptCapturingJudge(passed=True, reasoning="ok")
 
-    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
-        instance = AsyncMock()
-        instance.run = AsyncMock(return_value=mock_result)
-        MockAgent.return_value = instance
-        result = await run_transcript(transcript, args_agent, config_model="openai:fallback-model")
+    result = await run_transcript(transcript, args_agent, JudgeSettings(config_model=fallback.model))
 
     assert result.passed is True
-    assert MockAgent.call_args.args[0] == "openai:fallback-model"
+    # The fallback model was the one actually invoked, and it saw the rubric.
+    assert "Business hours only" in fallback.last_prompt
 
 
 @pytest.mark.asyncio
-async def test_run_transcript_passes_judge_retries_and_timeout_through():
-    from unittest.mock import AsyncMock, patch
-
+async def test_per_turn_judge_model_overrides_the_config_model() -> None:
+    """Precedence is turn override, then judge_model, then config_model."""
     from pytest_agent_eval.models import JudgeConfig
 
-    async def agent(history: list[dict]) -> tuple[str, list[str]]:
-        return "hello", []
+    chosen = PromptCapturingJudge(reasoning="from the turn override")
+    ignored = PromptCapturingJudge(reasoning="from config")
+    transcript = Transcript(
+        id="override",
+        turns=[Turn(user="hi", expect=Expect(judge=JudgeConfig(rubric="r", model=chosen.model)))],
+        threshold=0.0,
+        runs=1,
+    )
+
+    await run_transcript(transcript, echo_agent, JudgeSettings(config_model=ignored.model))
+
+    assert chosen.prompts
+    assert ignored.prompts == []
+
+
+@pytest.mark.asyncio
+async def test_run_transcript_passes_judge_retries_and_timeout_through() -> None:
+    from pytest_agent_eval.models import JudgeConfig
 
     transcript = Transcript(
         id="judge_knobs",
@@ -284,37 +299,61 @@ async def test_run_transcript_passes_judge_retries_and_timeout_through():
         threshold=0.0,
         runs=1,
     )
+    judge = FailingJudge(error="API down")
 
-    with patch("pytest_agent_eval.evaluators.judge.Agent") as MockAgent:
-        instance = AsyncMock()
-        instance.run = AsyncMock(side_effect=Exception("API down"))
-        MockAgent.return_value = instance
-        await run_transcript(transcript, agent, config_model="openai:x", judge_retries=0, judge_timeout=5.0)
+    await run_transcript(transcript, echo_agent, JudgeSettings(config_model=judge.model, retries=0, timeout=5.0))
 
-    assert instance.run.call_count == 1
+    assert judge.attempts == 1
 
 
 @pytest.mark.asyncio
-async def test_history_is_accumulated_across_turns():
-    captured_histories: list[list[dict]] = []
-
-    async def capture_agent(history: list[dict]) -> tuple[str, list[str]]:
-        captured_histories.append(list(history))
-        return "ok", []
+async def test_history_is_accumulated_across_turns() -> None:
+    agent = RecordingAgent()
 
     transcript = Transcript(
         id="multi",
         turns=[Turn(user="first"), Turn(user="second")],
         runs=1,
     )
-    await run_transcript(transcript, capture_agent)
-    assert len(captured_histories[0]) == 1
-    assert len(captured_histories[1]) == 3
-    assert captured_histories[1][-1]["content"] == "second"
+    await run_transcript(transcript, agent)
+    assert len(agent.seen[0]) == 1
+    assert len(agent.seen[1]) == 3
+    assert agent.seen[1][-1].content == "second"
+
+
+def test_judge_settings_resolve_model_precedence() -> None:
+    """One place now decides the judge model: turn override, then judge_model, then config_model."""
+    settings = JudgeSettings(config_model="from-config", judge_model="from-judge-model")
+
+    assert settings.resolve_model("from-the-turn") == "from-the-turn"
+    assert settings.resolve_model() == "from-judge-model"
+    assert JudgeSettings(config_model="from-config").resolve_model() == "from-config"
+    assert JudgeSettings().resolve_model() is None
+
+
+def test_eval_session_will_not_silently_accept_a_positional_judge() -> None:
+    """The third positional argument used to be config_model.
+
+    Left positional, a leftover call would bind a model string into the settings slot
+    and only misbehave later, at judge time. Keyword-only turns that into a TypeError.
+    """
+    with pytest.raises(TypeError):
+        EvalSession(0.0, 1, "openai:gpt-4o")  # type: ignore[misc]
 
 
 @pytest.mark.asyncio
-async def test_eval_session_run_stores_result_on_item():
+async def test_transcript_runner_runs_a_transcript_directly() -> None:
+    """The class is the API the wrapper delegates to; it must work on its own."""
+    runner = TranscriptRunner(echo_agent, JudgeSettings())
+
+    result = await runner.run(Transcript(id="direct", turns=[Turn(user="hello")], threshold=1.0, runs=2))
+
+    assert result.passed is True
+    assert len(result.runs) == 2
+
+
+@pytest.mark.asyncio
+async def test_eval_session_run_stores_result_on_item() -> None:
     """EvalSession.run() returns result and stores it on _item._eval_result."""
     import types
 
@@ -328,3 +367,12 @@ async def test_eval_session_run_stores_result_on_item():
     assert result.passed is True
     assert hasattr(mock_item, "_eval_result")
     assert mock_item._eval_result is result
+
+
+@pytest.mark.asyncio
+async def test_eval_session_without_an_item_still_returns_a_result() -> None:
+    """The Python API is usable outside a pytest item; there is then nothing to stash onto."""
+    session = EvalSession(threshold=0.0, runs=1)
+    result = await session.run(echo_agent, [Turn(user="hello")])
+    assert isinstance(result, TranscriptResult)
+    assert result.passed is True

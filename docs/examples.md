@@ -40,12 +40,14 @@ The minimal setup: one YAML transcript plus one `llm_eval_agent` fixture. Reach 
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         # Deterministic mock agent; replace with a framework adapter to test yours.
         async def agent(history):
-            return "Booking confirmed! Reference BK-1234.", ["create_booking"]
+            return AgentReply("Booking confirmed! Reference BK-1234.", ["create_booking"])
 
         return agent
     ```
@@ -83,15 +85,19 @@ A multi-turn conversation where the second turn is graded by an LLM-as-judge rub
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         # Deterministic mock agent that remembers nothing but answers plausibly per turn.
         async def agent(history):
-            message = history[-1]["content"].lower()
+            message = history[-1].content.lower()
             if "11am" in message:
-                return "Done — moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
-            return "Booked for tomorrow at 10am. Reference BK-1234.", ["create_booking"]
+                return AgentReply(
+                    "Done — moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
+                )
+            return AgentReply("Booked for tomorrow at 10am. Reference BK-1234.", ["create_booking"])
 
         return agent
     ```
@@ -121,11 +127,13 @@ Assertions on *which* tools the agent invoked — include, exclude, and order. R
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         async def agent(history):
-            return (
+            return AgentReply(
                 "You're booked! Reference BK-1234.",
                 ["authenticate", "fetch_availability", "create_booking"],
             )
@@ -175,7 +183,7 @@ Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent
     ```python
     import pytest
 
-    from pytest_agent_eval import ToolCall
+    from pytest_agent_eval import AgentReply, ToolCall
 
 
     @pytest.fixture
@@ -183,7 +191,7 @@ Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent
         # Return ToolCall(name, args) instead of plain strings to enable argument assertions.
         async def agent(history):
             call = ToolCall("create_booking", {"time": "10am", "date": "tomorrow", "party_size": 2})
-            return "Booked for two, tomorrow at 10am!", [call]
+            return AgentReply("Booked for two, tomorrow at 10am!", [call])
 
         return agent
     ```
@@ -216,11 +224,13 @@ Deterministic reply assertions: substring `all_of` plus regex matching. Reach fo
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         async def agent(history):
-            return "Confirmed! Your reference number: BK-1234, tomorrow at 10am.", []
+            return AgentReply("Confirmed! Your reference number: BK-1234, tomorrow at 10am.", [])
 
         return agent
     ```
@@ -240,7 +250,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pytest_agent_eval import Expect, Turn
+from pytest_agent_eval import AgentReply, Expect, Turn
 
 if TYPE_CHECKING:
     from pytest_agent_eval.runner import EvalSession
@@ -251,7 +261,7 @@ if TYPE_CHECKING:
 async def test_booking_mentions_city(agent_eval: EvalSession, city: str) -> None:
     # Deterministic mock agent; replace with your real agent or an adapter.
     async def agent(history):
-        return f"Booked a table in {city}! Reference BK-1234.", ["create_booking"]
+        return AgentReply(f"Booked a table in {city}! Reference BK-1234.", ["create_booking"])
 
     result = await agent_eval.run(
         agent=agent,
@@ -320,15 +330,17 @@ Group-level pass thresholds with a per-group exit-code override. Reach for this 
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         # Handles the happy path, "fails" on the deliberately hard edge case.
         async def agent(history):
-            message = history[-1]["content"].lower()
+            message = history[-1].content.lower()
             if "gluten-free" in message:
-                return "I'm not sure I can help with that.", []
-            return "Booking confirmed! Reference BK-1234.", ["create_booking"]
+                return AgentReply("I'm not sure I can help with that.", [])
+            return AgentReply("Booking confirmed! Reference BK-1234.", ["create_booking"])
 
         return agent
     ```

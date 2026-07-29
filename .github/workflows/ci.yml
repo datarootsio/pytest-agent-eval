@@ -16,15 +16,46 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - run: uv sync --all-extras
+      - run: uv sync --all-extras --group dev
       - run: uv run pytest tests/ -v
+      # An importorskip that becomes permanently skipped is worse than a failure:
+      # it silently stops pinning the SDK shapes it exists to pin.
+      - name: SDK contract tests must not skip when every extra is installed
+        run: uv run pytest tests/test_contract_sdk.py -v --no-header -rN | grep -qv SKIPPED
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --all-extras --group dev
+      # 'coverage run', not 'pytest --cov': the plugin loads through its pytest11
+      # entry point before pytest-cov starts tracing, which understates the total.
+      - run: uv run coverage run -m pytest tests/
+      - run: uv run coverage report
+
+  # Coverage must not depend on the optional extras. Without this job a contributor
+  # hits a fail_under failure on a file they never touched and concludes the gate is
+  # flaky; measured, the extras contribute zero unique lines.
+  test-no-extras:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --group dev
+      - run: uv run coverage run -m pytest tests/
+      - run: uv run coverage report
 
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
-      - run: uv sync --group dev
+      # --all-extras: pre-commit runs `ty check src/`, and type-checking the adapters
+      # needs their SDKs importable. Without them ty reports unresolved-import for
+      # livekit/openai/langchain/smolagents, which is a missing dependency in the lint
+      # environment rather than a defect in the code.
+      - run: uv sync --all-extras --group dev
       - run: uv run pre-commit run --all-files
 
   docs-build:

@@ -10,13 +10,21 @@ session to construct.
 from __future__ import annotations
 
 import types
+from typing import TYPE_CHECKING
 
-from pytest_agent_eval.models import TurnContext
+import pytest
+
+from pytest_agent_eval.models import Message, TurnContext
+
+if TYPE_CHECKING:
+    # Type-only, because this module must import without the extras installed.
+    from langchain_core.messages import BaseMessage
+    from openai.types.chat import ChatCompletion
 
 # --- pydantic-ai: real Agent + TestModel end-to-end ---
 
 
-async def test_pydantic_ai_adapter_against_real_agent():
+async def test_pydantic_ai_adapter_against_real_agent() -> None:
     from pydantic_ai import Agent
     from pydantic_ai.models.test import TestModel
 
@@ -30,7 +38,7 @@ async def test_pydantic_ai_adapter_against_real_agent():
         return f"booked {time}"
 
     adapter = PydanticAIAdapter(agent)
-    reply, tool_calls = await adapter([{"role": "user", "content": "book me"}])
+    reply, tool_calls = await adapter([Message(role="user", content="book me")])
 
     assert isinstance(reply, str) and reply
     assert tool_calls == ["book_slot"]
@@ -38,7 +46,7 @@ async def test_pydantic_ai_adapter_against_real_agent():
     assert "time" in tool_calls[0].args
 
 
-async def test_pydantic_ai_adapter_against_real_agent_multi_turn():
+async def test_pydantic_ai_adapter_against_real_agent_multi_turn() -> None:
     """Regression: pydantic-ai's message_history takes ModelMessage objects, not OpenAI dicts.
 
     Passing raw dicts crashes with AttributeError on pydantic-ai 1.x+; the fake-based
@@ -51,9 +59,9 @@ async def test_pydantic_ai_adapter_against_real_agent_multi_turn():
 
     adapter = PydanticAIAdapter(Agent(TestModel()))
     history = [
-        {"role": "user", "content": "first turn"},
-        {"role": "assistant", "content": "acknowledged"},
-        {"role": "user", "content": "second turn"},
+        Message(role="user", content="first turn"),
+        Message(role="assistant", content="acknowledged"),
+        Message(role="user", content="second turn"),
     ]
     reply, tool_calls = await adapter(history)
 
@@ -61,7 +69,7 @@ async def test_pydantic_ai_adapter_against_real_agent_multi_turn():
     assert isinstance(tool_calls, list)
 
 
-async def test_pydantic_ai_adapter_preserves_system_prompt_across_turns():
+async def test_pydantic_ai_adapter_preserves_system_prompt_across_turns() -> None:
     """message_history reconstruction must re-embed the agent's static system prompt.
 
     pydantic-ai only auto-applies system_prompt when message_history is empty, so a
@@ -86,15 +94,15 @@ async def test_pydantic_ai_adapter_preserves_system_prompt_across_turns():
     adapter = PydanticAIAdapter(Agent(FunctionModel(model_fn), system_prompt="You are a pirate."))
     await adapter(
         [
-            {"role": "user", "content": "turn 1"},
-            {"role": "assistant", "content": "prev reply"},
-            {"role": "user", "content": "turn 2"},
+            Message(role="user", content="turn 1"),
+            Message(role="assistant", content="prev reply"),
+            Message(role="user", content="turn 2"),
         ]
     )
     assert saw_system == [True]
 
 
-def test_pydantic_ai_adapter_excludes_native_tool_search():
+def test_pydantic_ai_adapter_excludes_native_tool_search() -> None:
     """builtin-tool-call covers native tool-search meta-ops; those must not be counted."""
     from pytest_agent_eval.adapters.pydantic_ai import _is_tool_call_part
 
@@ -116,7 +124,7 @@ def test_pydantic_ai_adapter_excludes_native_tool_search():
     assert _is_tool_call_part(_TextPart()) is False
 
 
-async def test_judge_evaluator_against_real_agent_with_structured_output():
+async def test_judge_evaluator_against_real_agent_with_structured_output() -> None:
     from pydantic_ai.models.test import TestModel
 
     from pytest_agent_eval.evaluators.judge import JudgeEvaluator
@@ -129,7 +137,7 @@ async def test_judge_evaluator_against_real_agent_with_structured_output():
     assert result.reasoning == "meets the rubric"
 
 
-async def test_tool_call_args_judge_against_real_agent():
+async def test_tool_call_args_judge_against_real_agent() -> None:
     from pydantic_ai.models.test import TestModel
 
     from pytest_agent_eval.evaluators.judge import ToolCallArgsJudgeEvaluator
@@ -147,7 +155,8 @@ async def test_tool_call_args_judge_against_real_agent():
 # --- openai: real response pydantic objects through a fake client ---
 
 
-def _real_chat_completion() -> object:
+def _real_chat_completion() -> ChatCompletion:
+    """Build the SDK's own response object, so the adapter is read against the real shape."""
     from openai.types.chat import ChatCompletion, ChatCompletionMessage
     from openai.types.chat.chat_completion import Choice
 
@@ -183,7 +192,8 @@ def _real_chat_completion() -> object:
     )
 
 
-async def test_openai_adapter_against_real_response_objects():
+async def test_openai_adapter_against_real_response_objects() -> None:
+    pytest.importorskip("openai")
     from pytest_agent_eval.adapters.openai import OpenAIAdapter
 
     completion = _real_chat_completion()
@@ -195,7 +205,7 @@ async def test_openai_adapter_against_real_response_objects():
                 async def create(**kwargs):
                     return completion
 
-    reply, tool_calls = await OpenAIAdapter(FakeClient(), model="gpt-4o")([{"role": "user", "content": "book"}])
+    reply, tool_calls = await OpenAIAdapter(FakeClient(), model="gpt-4o")([Message(role="user", content="book")])
 
     assert reply == "Booking it now."
     assert tool_calls == ["book_slot"]
@@ -205,7 +215,8 @@ async def test_openai_adapter_against_real_response_objects():
 # --- langchain-core: real AIMessage, both adapter branches ---
 
 
-async def test_langchain_adapter_against_real_aimessage():
+async def test_langchain_adapter_against_real_aimessage() -> None:
+    pytest.importorskip("langchain_core")
     from langchain_core.messages import AIMessage
 
     from pytest_agent_eval.adapters.langchain import LangChainAdapter
@@ -222,7 +233,7 @@ async def test_langchain_adapter_against_real_aimessage():
 
     direct.ainvoke = ainvoke_direct
 
-    reply, tool_calls = await LangChainAdapter(direct)([{"role": "user", "content": "book"}])
+    reply, tool_calls = await LangChainAdapter(direct)([Message(role="user", content="book")])
     assert reply == "Booked!"
     assert tool_calls == ["book_slot"]
     assert tool_calls[0].args == {"time": "10am"}
@@ -234,7 +245,7 @@ async def test_langchain_adapter_against_real_aimessage():
 
     graph.ainvoke = ainvoke_graph
 
-    reply, tool_calls = await LangChainAdapter(graph)([{"role": "user", "content": "book"}])
+    reply, tool_calls = await LangChainAdapter(graph)([Message(role="user", content="book")])
     assert reply == "Booked!"
     assert tool_calls[0].args == {"time": "10am"}
 
@@ -242,7 +253,8 @@ async def test_langchain_adapter_against_real_aimessage():
 # --- smolagents: real memory-step and ToolCall classes ---
 
 
-async def test_smolagents_adapter_against_real_memory_objects():
+async def test_smolagents_adapter_against_real_memory_objects() -> None:
+    pytest.importorskip("smolagents")
     from smolagents.memory import ActionStep
     from smolagents.memory import ToolCall as SmolToolCall
     from smolagents.monitoring import Timing
@@ -264,8 +276,35 @@ async def test_smolagents_adapter_against_real_memory_objects():
 
     fake_agent.run = run
 
-    reply, tool_calls = await SmolagentsAdapter(fake_agent)([{"role": "user", "content": "book"}])
+    reply, tool_calls = await SmolagentsAdapter(fake_agent)([Message(role="user", content="book")])
 
     assert reply == "Booked!"
     assert tool_calls == ["book_slot"]
     assert tool_calls[0].args == {"time": "10am"}
+
+
+async def test_langchain_adapter_history_survives_real_message_coercion() -> None:
+    """The adapter forwards history into the runnable, where LangChain coerces it.
+
+    langchain_core.convert_to_messages() raises NotImplementedError on a Mapping that is
+    not a dict, so Message must be converted at this boundary. A fake runnable cannot
+    catch that — it never coerces anything.
+    """
+    pytest.importorskip("langchain_core")
+    from langchain_core.messages import AIMessage, convert_to_messages
+
+    from pytest_agent_eval.adapters.langchain import LangChainAdapter
+
+    coerced: list[BaseMessage] = []
+
+    class CoercingRunnable:
+        async def ainvoke(self, payload: dict) -> object:
+            coerced.extend(convert_to_messages(payload["messages"]))
+            return AIMessage(content="Booked!", tool_calls=[])
+
+    reply, _ = await LangChainAdapter(CoercingRunnable())([Message(role="user", content="book me", audio="turn1.wav")])
+
+    assert reply == "Booked!"
+    assert [type(m).__name__ for m in coerced] == ["HumanMessage"]
+    # The plugin-internal audio key must not reach the framework either.
+    assert not any("turn1.wav" in str(m) for m in coerced)

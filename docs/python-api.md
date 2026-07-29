@@ -35,7 +35,7 @@ result = await agent_eval.run(agent=my_agent, turns=[...])
 
 | Parameter   | Type            | Description                                            |
 |-------------|-----------------|--------------------------------------------------------|
-| `agent`     | `Callable`      | Async callable: `(messages) -> (reply, tool_calls)`    |
+| `agent`     | `Callable`      | Async callable: `(history) -> AgentReply`; a plain `(reply, tool_calls)` tuple also works |
 | `turns`     | `list[Turn]`    | Ordered list of turns to execute                       |
 
 Threshold and run count come from the `@pytest.mark.agent_eval(threshold=..., runs=...)` marker, falling back to `[tool.agent_eval]` config.
@@ -162,13 +162,13 @@ result.assert_threshold()
 ```python
 import pytest
 from pytest_agent_eval import (
-    Turn, Expect,
+    AgentReply, Turn, Expect,
     ContainsEvaluator, ToolCallEvaluator, JudgeEvaluator,
 )
 
-async def booking_agent(messages):
-    # Your real agent implementation here — return (reply, tool_calls)
-    return "Booking confirmed! Reference: BK-1234 for tomorrow at 10am.", ["create_booking"]
+async def booking_agent(history):
+    # Your real agent implementation here — return an AgentReply
+    return AgentReply("Booking confirmed! Reference: BK-1234 for tomorrow at 10am.", ["create_booking"])
 
 @pytest.mark.agent_eval(threshold=0.8, runs=3)
 async def test_full_booking_flow(agent_eval):

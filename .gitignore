@@ -9,3 +9,7 @@ llm_eval_report.md
 docs/llms-full.txt
 .worktrees/
 docs/superpowers/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml

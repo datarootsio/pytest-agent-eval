@@ -55,11 +55,11 @@ Create `tests/test_my_agent.py`:
 
 ```python
 import pytest
-from pytest_agent_eval import Turn, Expect, ContainsEvaluator
+from pytest_agent_eval import AgentReply, Turn, Expect, ContainsEvaluator
 
-async def my_agent(messages):
-    """Your agent callable: receives OpenAI-style messages, returns (reply, tool_calls)."""
-    return "Your booking is confirmed for tomorrow at 10am.", []
+async def my_agent(history):
+    """Your agent callable: receives the conversation history, returns an AgentReply."""
+    return AgentReply("Your booking is confirmed for tomorrow at 10am.", [])
 
 @pytest.mark.agent_eval(threshold=0.8, runs=3)
 async def test_booking_confirmation(agent_eval):
@@ -114,10 +114,12 @@ You must also provide an `llm_eval_agent` fixture so the loader knows what to ca
 # tests/conftest.py
 import pytest
 
+from pytest_agent_eval import AgentReply
+
 @pytest.fixture
 def llm_eval_agent():
-    async def my_agent(messages):
-        return "Your booking is confirmed for tomorrow at 10am.", []
+    async def my_agent(history):
+        return AgentReply("Your booking is confirmed for tomorrow at 10am.", [])
     return my_agent
 ```
 

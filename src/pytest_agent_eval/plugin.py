@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from pytest_agent_eval.config import load_config
+
+if TYPE_CHECKING:
+    from pytest_agent_eval.runner import EvalSession
 from pytest_agent_eval.yaml_loader import pytest_collect_file  # noqa: F401
 
 
@@ -64,7 +67,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     config._agent_eval_live_skipped = skipped
 
 
-def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:
+def pytest_terminal_summary(
+    terminalreporter: Any,
+    exitstatus: int,  # noqa: ARG001 - part of the pytest hook signature
+    config: pytest.Config,
+) -> None:
     """Print a hint when eval tests were skipped because live mode is off."""
     skipped = getattr(config, "_agent_eval_live_skipped", 0)
     if skipped:
@@ -75,7 +82,7 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pyte
 
 
 @pytest.fixture
-def agent_eval(request: pytest.FixtureRequest):
+def agent_eval(request: pytest.FixtureRequest) -> EvalSession:
     """Fixture providing an EvalSession for the Python API.
 
     Returns:
@@ -90,18 +97,24 @@ def agent_eval(request: pytest.FixtureRequest):
             result.assert_threshold()
         ```
     """
-    from pytest_agent_eval.runner import EvalSession
+    from pytest_agent_eval.runner import EvalSession, JudgeSettings
 
     cfg = load_config(request.config)
     marker = request.node.get_closest_marker("agent_eval")
+    # Presence, not truthiness: `@pytest.mark.agent_eval(threshold=0.0)` is a real value.
+    # yaml_loader.load_transcript answers the same question with pydantic's
+    # model_fields_set; a marker is not a model, so this stays a hand-rolled `in` check.
+    # Keep the two in step — neither may become a truthiness check.
     threshold = marker.kwargs["threshold"] if (marker and "threshold" in marker.kwargs) else cfg.threshold
     runs = marker.kwargs["runs"] if (marker and "runs" in marker.kwargs) else cfg.runs
     return EvalSession(
         threshold=threshold,
         runs=runs,
-        config_model=cfg.model,
-        judge_model=cfg.judge_model,
-        judge_retries=cfg.retries,
-        judge_timeout=cfg.timeout,
+        judge=JudgeSettings(
+            config_model=cfg.model,
+            judge_model=cfg.judge_model,
+            retries=cfg.retries,
+            timeout=cfg.timeout,
+        ),
         _item=request.node,
     )

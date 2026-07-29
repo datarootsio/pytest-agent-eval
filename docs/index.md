@@ -226,16 +226,21 @@ For framework-specific adapters, install one of the optional extras shown in the
 
 === "Custom"
 
-    Any `async def agent(messages) -> tuple[reply: str, tool_calls: list[str]]` callable works as-is. No base class, no inheritance.
+    Any `async def agent(history) -> AgentReply` callable works as-is. No base class, no inheritance.
 
     ```python
+    from pytest_agent_eval import AgentReply
+
     @pytest.fixture
     def llm_eval_agent():
-        async def agent(messages):
-            reply = await call_my_backend(messages[-1]["content"])
-            return reply, []
+        async def agent(history):
+            reply = await call_my_backend(history[-1].content)
+            return AgentReply(reply, [])
         return agent
     ```
+
+    A plain `(reply, tool_calls)` tuple is still a valid return, and `history[-1]["content"]`
+    still reads the same value — see [writing a custom adapter](adapters.md#writing-a-custom-adapter).
 
 ## YAML auto-discovery
 

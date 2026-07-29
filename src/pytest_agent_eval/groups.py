@@ -3,29 +3,42 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+
+from pytest_agent_eval.models import OutcomeName, _reject_non_numeric
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
-@dataclass
-class GroupConfig:
+class GroupConfig(BaseModel):
     """Configuration for one quality-gate group under [tool.agent_eval.groups].
 
+    Validated strictly, unlike the rest of [tool.agent_eval] where unknown keys are
+    ignored: a typo'd key or threshold here would silently disable a CI gate.
+
     Args:
-        name: Group name (the table key).
+        name: Group name (the table key, not a key inside the table).
         threshold: Fraction of matched, non-skipped tests that must pass (0.0-1.0).
         tags: Transcript tags selecting members (OR-combined with pytest_markers).
         pytest_markers: Pytest marker names selecting members.
         must_pass: Test identities that must individually pass whenever they run.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str
-    threshold: float = 1.0
-    tags: list[str] = field(default_factory=list)
-    pytest_markers: list[str] = field(default_factory=list)
-    must_pass: list[str] = field(default_factory=list)
+    threshold: float = Field(default=1.0, ge=0.0, le=1.0)
+    tags: list[str] = Field(default_factory=list)
+    pytest_markers: list[str] = Field(default_factory=list)
+    must_pass: list[str] = Field(default_factory=list)
+
+    _reject_bad_threshold = field_validator("threshold", mode="before")(_reject_non_numeric)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class EvalOutcome:
     """Outcome of one test item, as consumed by group aggregation.
 
@@ -40,12 +53,12 @@ class EvalOutcome:
 
     identity: str
     nodeid: str
-    outcome: str
+    outcome: OutcomeName
     tags: list[str] = field(default_factory=list)
     markers: list[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class GroupResult:
     """Aggregated result of one group over a session's outcomes.
 
@@ -91,14 +104,54 @@ class GroupResult:
 
 
 def _matches_group(group: GroupConfig, outcome: EvalOutcome) -> bool:
+    """Whether an outcome belongs to a group: any shared tag OR any shared marker.
+
+    OR, not AND, and deliberately: a group is a union of selectors, so adding a marker to
+    one widens it rather than narrowing it to the intersection.
+    """
     return bool(set(group.tags) & set(outcome.tags)) or bool(set(group.pytest_markers) & set(outcome.markers))
 
 
 def _matches_identity(entry: str, identity: str) -> bool:
+    """Whether a ``must_pass`` entry names this test, parametrisation included.
+
+    The ``entry + "["`` prefix is what makes ``must_pass = ["test_books"]`` cover every
+    ``test_books[case]`` without the author listing each case — pytest appends the
+    parameter id in brackets. A bare ``startswith(entry)`` would be wrong: it would also
+    swallow ``test_books_and_cancels``.
+    """
     return identity == entry or identity.startswith(entry + "[")
 
 
-def evaluate_groups(groups: list[GroupConfig], outcomes: list[EvalOutcome]) -> list[GroupResult]:
+def _evaluate_group(group: GroupConfig, outcomes: Sequence[EvalOutcome]) -> GroupResult:
+    """Aggregate one group's membership and must_pass assertions into a result."""
+    members = [o for o in outcomes if _matches_group(group, o)]
+    ran = [o for o in members if o.outcome != "skipped"]
+    # `failing` is "not passed" while must_pass below is "== failed". Both are
+    # deliberate and not interchangeable: an unexpected outcome name counts against
+    # the pass rate but must not trip a must_pass gate.
+    failed = [o for o in ran if o.outcome != "passed"]
+
+    must_pass_ran = {entry: _ran_for(entry, outcomes) for entry in group.must_pass}
+    return GroupResult(
+        group=group,
+        total=len(ran),
+        passed_count=len(ran) - len(failed),
+        skipped_count=len(members) - len(ran),
+        failing=[o.identity for o in failed],
+        failed_nodeids=[o.nodeid for o in failed],
+        # Config order, because test output pins the exact line order.
+        must_pass_failed=[e for e, r in must_pass_ran.items() if r and any(o.outcome == "failed" for o in r)],
+        must_pass_missing=[e for e, r in must_pass_ran.items() if not r],
+    )
+
+
+def _ran_for(entry: str, outcomes: Sequence[EvalOutcome]) -> list[EvalOutcome]:
+    """Every non-skipped outcome whose identity the must_pass entry names."""
+    return [o for o in outcomes if _matches_identity(entry, o.identity) and o.outcome != "skipped"]
+
+
+def evaluate_groups(groups: Sequence[GroupConfig], outcomes: Sequence[EvalOutcome]) -> list[GroupResult]:
     """Aggregate session outcomes into per-group results.
 
     Membership is tag/marker based (OR). must_pass entries are assertions over
@@ -113,31 +166,40 @@ def evaluate_groups(groups: list[GroupConfig], outcomes: list[EvalOutcome]) -> l
     Returns:
         One GroupResult per group, in config order.
     """
-    results: list[GroupResult] = []
-    for group in groups:
-        result = GroupResult(group=group)
-        for outcome in outcomes:
-            if not _matches_group(group, outcome):
-                continue
-            if outcome.outcome == "skipped":
-                result.skipped_count += 1
-                continue
-            result.total += 1
-            if outcome.outcome == "passed":
-                result.passed_count += 1
-            else:
-                result.failing.append(outcome.identity)
-                result.failed_nodeids.append(outcome.nodeid)
+    return [_evaluate_group(group, outcomes) for group in groups]
 
-        for entry in group.must_pass:
-            ran = [o for o in outcomes if _matches_identity(entry, o.identity) and o.outcome != "skipped"]
-            if not ran:
-                result.must_pass_missing.append(entry)
-            elif any(o.outcome == "failed" for o in ran):
-                result.must_pass_failed.append(entry)
 
-        results.append(result)
-    return results
+GroupStatus = Literal["no_match", "skipped", "passed", "failed"]
+"""Which of the four states a group ended a session in."""
+
+
+def _classify(result: GroupResult) -> GroupStatus:
+    """Reduce a group result to the one status both renderers branch on.
+
+    The terminal summary and the markdown section re-derived this independently, which is
+    how their notions of "did this group pass" could have drifted apart.
+    """
+    if not result.matched:
+        return "no_match"
+    if result.skipped:
+        return "skipped"
+    return "passed" if result.passed else "failed"
+
+
+def _must_pass_lines(result: GroupResult, *, template: str, missing: str, ok: str | None) -> list[str]:
+    """Render one line per must_pass entry, in config order.
+
+    Config order matters: test output pins these lines by position.
+    """
+    lines: list[str] = []
+    for entry in result.group.must_pass:
+        if entry in result.must_pass_failed:
+            lines.append(template.format(entry=entry))
+        elif entry in result.must_pass_missing:
+            lines.append(missing.format(entry=entry))
+        elif ok is not None:
+            lines.append(ok.format(entry=entry))
+    return lines
 
 
 def format_group_summary_lines(results: list[GroupResult]) -> list[str]:
@@ -155,27 +217,28 @@ def format_group_summary_lines(results: list[GroupResult]) -> list[str]:
     lines: list[str] = []
     for result in results:
         group = result.group
-        if not result.matched:
+        status = _classify(result)
+        if status == "no_match":
             lines.append(f"WARNING: group '{group.name}' matched no tests")
-        elif result.skipped:
+        elif status == "skipped":
             lines.append(f"{group.name}: SKIPPED ({result.skipped_count} matched, all skipped)")
         else:
-            status = "PASSED" if result.passed else "FAILED"
             lines.append(
                 f"{group.name}: {result.passed_count}/{result.total} passed "
-                f"({result.pass_rate:.0%}) >= {group.threshold:.0%} required -- {status}"
+                f"({result.pass_rate:.0%}) >= {group.threshold:.0%} required -- {status.upper()}"
             )
             if result.failing:
                 lines.append(f"  failures: {', '.join(result.failing)}")
         # must_pass is an assertion over every ran outcome, independent of membership,
         # so surface it even when the group's selectors matched nothing.
-        for entry in group.must_pass:
-            if entry in result.must_pass_failed:
-                lines.append(f"  must_pass: {entry} FAILED")
-            elif entry in result.must_pass_missing:
-                lines.append(f"  WARNING: must_pass entry '{entry}' did not run")
-            else:
-                lines.append(f"  must_pass: {entry} ok")
+        lines.extend(
+            _must_pass_lines(
+                result,
+                template="  must_pass: {entry} FAILED",
+                missing="  WARNING: must_pass entry '{entry}' did not run",
+                ok="  must_pass: {entry} ok",
+            )
+        )
     return lines
 
 
@@ -192,31 +255,39 @@ def build_group_markdown_lines(results: list[GroupResult]) -> list[str]:
     notes: list[str] = []
     for result in results:
         group = result.group
-        if not result.matched:
-            status_cell = "❌ must_pass FAILED" if result.must_pass_failed else "⚠️ NO MATCH"
-            lines.append(f"| {group.name} | - | 0 | - | {group.threshold:.2f} | {status_cell} |")
-        elif result.skipped:
+        status = _classify(result)
+        if status == "no_match":
+            cell = "❌ must_pass FAILED" if result.must_pass_failed else "⚠️ NO MATCH"
+            lines.append(f"| {group.name} | - | 0 | - | {group.threshold:.2f} | {cell} |")
+        elif status == "skipped":
             lines.append(f"| {group.name} | - | 0 | - | {group.threshold:.2f} | ⏭ SKIPPED |")
         else:
-            status = "✅ PASS" if result.passed else "❌ FAIL"
+            cell = "✅ PASS" if status == "passed" else "❌ FAIL"
             lines.append(
                 f"| {group.name} | {result.passed_count} | {result.total} "
-                f"| {result.pass_rate:.2f} | {group.threshold:.2f} | {status} |"
+                f"| {result.pass_rate:.2f} | {group.threshold:.2f} | {cell} |"
             )
             if result.failing:
                 notes.append(f"- `{group.name}` failures: {', '.join(result.failing)}")
-        notes.extend(f"- `{group.name}` must_pass FAILED: {entry}" for entry in result.must_pass_failed)
-        notes.extend(f"- `{group.name}` must_pass did not run: {entry}" for entry in result.must_pass_missing)
+        notes.extend(
+            _must_pass_lines(
+                result,
+                template=f"- `{group.name}` must_pass FAILED: {{entry}}",
+                missing=f"- `{group.name}` must_pass did not run: {{entry}}",
+                ok=None,
+            )
+        )
     if notes:
         lines.append("")
         lines.extend(notes)
     return lines
 
 
-_KNOWN_KEYS = ("threshold", "tags", "pytest_markers", "must_pass")
+# `name` comes from the table key, so it is not a key users may set inside the table.
+_CONFIGURABLE_KEYS = ("threshold", "tags", "pytest_markers", "must_pass")
 
 
-def parse_groups(raw: Any) -> list[GroupConfig]:
+def parse_groups(raw: object) -> list[GroupConfig]:
     """Parse the raw [tool.agent_eval.groups] mapping into GroupConfig objects.
 
     Unlike the rest of [tool.agent_eval] (where unknown keys are silently
@@ -235,35 +306,37 @@ def parse_groups(raw: Any) -> list[GroupConfig]:
     """
     if not isinstance(raw, dict):
         raise ValueError(f"[tool.agent_eval.groups] must be a table of group tables, got {type(raw).__name__}")
+    return [_parse_group(name, cfg) for name, cfg in raw.items()]
 
-    groups: list[GroupConfig] = []
-    for name, cfg in raw.items():
-        prefix = f"[tool.agent_eval.groups.{name}]"
-        if not isinstance(cfg, dict):
-            raise ValueError(f"{prefix} must be a table, got {type(cfg).__name__}")
 
-        unknown = sorted(set(cfg) - set(_KNOWN_KEYS))
-        if unknown:
-            raise ValueError(f"{prefix}: unknown key(s) {unknown}; valid keys are {list(_KNOWN_KEYS)}")
+def _parse_group(name: str, cfg: object) -> GroupConfig:
+    """Validate one group table, reporting problems against its [table.path]."""
+    prefix = f"[tool.agent_eval.groups.{name}]"
+    if not isinstance(cfg, dict):
+        raise ValueError(f"{prefix} must be a table, got {type(cfg).__name__}")
 
-        threshold = cfg.get("threshold", 1.0)
-        if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not 0.0 <= threshold <= 1.0:
-            raise ValueError(f"{prefix}.threshold must be a number between 0 and 1, got {threshold!r}")
+    # Checked before the model, because `name` is a field there but not a key a user may
+    # write, so extra="forbid" alone would quietly accept it.
+    unknown = sorted(set(cfg) - set(_CONFIGURABLE_KEYS))
+    if unknown:
+        raise ValueError(f"{prefix}: unknown key(s) {unknown}; valid keys are {list(_CONFIGURABLE_KEYS)}")
 
-        lists: dict[str, list[str]] = {}
-        for key in ("tags", "pytest_markers", "must_pass"):
-            value = cfg.get(key, [])
-            if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
-                raise ValueError(f"{prefix}.{key} must be a list of strings, got {value!r}")
-            lists[key] = value
+    try:
+        return GroupConfig(name=name, **cfg)
+    except ValidationError as exc:
+        raise ValueError(_group_error(prefix, exc, cfg)) from exc
 
-        groups.append(
-            GroupConfig(
-                name=name,
-                threshold=float(threshold),
-                tags=lists["tags"],
-                pytest_markers=lists["pytest_markers"],
-                must_pass=lists["must_pass"],
-            )
-        )
-    return groups
+
+def _group_error(prefix: str, exc: ValidationError, cfg: dict[str, object]) -> str:
+    """Render a pydantic failure in the same didactic shape as the rest of the config.
+
+    The value reported is the one the user wrote, taken from cfg rather than from the
+    error: for a bad item in a list pydantic reports the item, and "must be a list of
+    strings, got 1" is a worse message than showing them the list they wrote.
+    """
+    error = exc.errors()[0]
+    field_name = str(error["loc"][0]) if error["loc"] else ""
+    written = cfg.get(field_name, error.get("input"))
+    if field_name == "threshold":
+        return f"{prefix}.threshold must be a number between 0 and 1, got {written!r}"
+    return f"{prefix}.{field_name} must be a list of strings, got {written!r}"

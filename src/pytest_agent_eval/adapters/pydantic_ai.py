@@ -2,24 +2,50 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Never
 
-from pytest_agent_eval.models import ToolCall
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    SystemPromptPart,
+    TextPart,
+    UserPromptPart,
+)
+
+from pytest_agent_eval.models import AgentReply, History, ToolCall
+
+if TYPE_CHECKING:
+    from pydantic_ai.agent import AbstractAgent
+    from pydantic_ai.messages import ModelMessage, ModelRequestPart, ModelResponsePart
+
+    AnyAgent = AbstractAgent[Never, object]
+    """Every concrete pydantic-ai ``Agent``, spelled as one type.
+
+    ``AbstractAgent`` is generic over (deps, output); deps is contravariant and output
+    covariant, so this pair is the supertype they are all assignable to. A hand-rolled
+    Protocol would also type-check here, but the real supertype is the honest name and
+    tracks the SDK.
+    """
 
 # Message parts that represent a tool call. pydantic-ai exposes provider-native
 # (server-side) tool calls under a distinct part_kind; both carry args_as_dict().
 _TOOL_CALL_PART_KINDS = frozenset({"tool-call", "builtin-tool-call"})
 
 
-def _is_tool_call_part(part: Any) -> bool:
-    if getattr(part, "part_kind", None) not in _TOOL_CALL_PART_KINDS:
+def _is_tool_call_part(part: ModelRequestPart | ModelResponsePart) -> bool:
+    """True for the parts that represent an outbound tool invocation.
+
+    Both halves of the union, because ``all_messages()`` interleaves requests and
+    responses. Every member of both declares ``part_kind``, so it is read directly.
+    """
+    if part.part_kind not in _TOOL_CALL_PART_KINDS:
         return False
     # Native tool-*search* parts share the 'builtin-tool-call' kind but represent
     # the model searching its own tool catalogue, not an external invocation.
     return "Search" not in type(part).__name__
 
 
-def _static_system_prompts(agent: Any) -> tuple[str, ...]:
+def _static_system_prompts(agent: AnyAgent) -> tuple[str, ...]:
     """Best-effort read of an Agent's static ``system_prompt=`` strings.
 
     pydantic-ai only re-applies a configured system prompt when ``message_history``
@@ -32,7 +58,7 @@ def _static_system_prompts(agent: Any) -> tuple[str, ...]:
     return tuple(prompts) if isinstance(prompts, (tuple, list)) else ()
 
 
-def _to_model_messages(history: list[dict[str, Any]], system_prompts: tuple[str, ...]) -> list[Any]:
+def _to_model_messages(history: History, system_prompts: tuple[str, ...]) -> list[ModelMessage]:
     """Convert OpenAI-style message dicts into pydantic-ai ModelMessage objects.
 
     pydantic-ai's ``message_history`` takes ``ModelMessage`` instances, not raw
@@ -42,18 +68,10 @@ def _to_model_messages(history: list[dict[str, Any]], system_prompts: tuple[str,
     static system prompt is prepended to the first request so it survives across
     turns.
     """
-    from pydantic_ai.messages import (
-        ModelRequest,
-        ModelResponse,
-        SystemPromptPart,
-        TextPart,
-        UserPromptPart,
-    )
-
-    messages: list[Any] = []
+    messages: list[ModelMessage] = []
     for msg in history:
-        role = msg.get("role")
-        content = msg.get("content", "")
+        role = msg.role
+        content = msg.content
         if role == "assistant":
             messages.append(ModelResponse(parts=[TextPart(content=content)]))
         elif role == "system":
@@ -88,7 +106,7 @@ class PydanticAIAdapter:
         ```
     """
 
-    def __init__(self, agent: Any) -> None:
+    def __init__(self, agent: AnyAgent) -> None:
         """Store the pydantic-ai agent to delegate calls to."""
         if not hasattr(agent, "run"):
             raise TypeError(
@@ -97,9 +115,9 @@ class PydanticAIAdapter:
             )
         self._agent = agent
 
-    async def __call__(self, history: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    async def __call__(self, history: History) -> AgentReply:
         """Run the agent and normalise output to (reply, tool_calls)."""
-        user_msg = history[-1]["content"] if history else ""
+        user_msg = history[-1].content if history else ""
         message_history = _to_model_messages(history[:-1], _static_system_prompts(self._agent))
         result = await self._agent.run(user_msg, message_history=message_history or None)
 
@@ -111,4 +129,4 @@ class PydanticAIAdapter:
         ]
 
         reply = result.output if isinstance(result.output, str) else str(result.output)
-        return reply, tool_calls
+        return AgentReply(reply, tool_calls)

@@ -156,7 +156,7 @@ Wraps a [LiveKit Agents](https://docs.livekit.io/agents) `AgentSession` so you c
 2. Builds a fresh `(AgentSession, Agent)` pair via the user-supplied factory.
 3. Streams the WAV at real-time pace into `session.input.audio`.
 4. Captures `function_tools_executed` events as tool calls and `conversation_item_added` events (filtered to `assistant` items) as the reply.
-5. Returns `(reply, tool_calls)` to the same evaluator surface used by text adapters.
+5. Returns `AgentReply(reply, tool_calls)` — still a tuple — to the same evaluator surface used by text adapters.
 
 ```python
 import pytest
@@ -233,24 +233,34 @@ The CLI requires `OPENAI_API_KEY` and writes a `.gitignore` next to every WAV (`
 
 ## Writing a custom adapter
 
-Any async callable that accepts `list[dict]` and returns `(str, list[str])` works directly. No base class needed:
+Any async callable that takes the conversation history and returns a reply plus the tools it
+called works directly. No base class needed:
 
 ```python
 import pytest
 
-async def my_custom_agent(messages: list[dict]) -> tuple[str, list[str]]:
+from pytest_agent_eval import AgentReply
+from pytest_agent_eval.models import History
+
+async def my_custom_agent(history: History) -> AgentReply:
     """
-    messages: OpenAI-style [{"role": "user", "content": "..."}, ...]
-    Returns: (reply_text, list_of_tool_names_called)
+    history: a list of Message records, oldest first.
+    Returns: AgentReply(reply_text, tools_called)
     """
-    user_text = messages[-1]["content"]
+    user_text = history[-1].content
     reply = await call_my_backend(user_text)
-    return reply, []    # return empty list if no tool tracking
+    return AgentReply(reply, [])    # empty list if no tool tracking
 
 @pytest.fixture
 def llm_eval_agent():
     return my_custom_agent
 ```
+
+!!! note "The older forms still work"
+    `Message` implements `Mapping`, so `history[-1]["content"]` reads the same value, and
+    returning a plain `(reply, tool_calls)` tuple is still a valid agent — `AgentReply` is a
+    `NamedTuple`, so it *is* that tuple. Nothing below needs changing to keep working; the
+    typed forms are just what the type checker and your editor can help you with.
 
 ### Capturing tool-call arguments
 
@@ -260,7 +270,7 @@ The `args` must be a mapping (`dict`). If your framework hands you a JSON string
 
 ```python
 import json
-from pytest_agent_eval import ToolCall
+from pytest_agent_eval import AgentReply, ToolCall
 
 def _to_dict(raw):
     if isinstance(raw, dict):
@@ -271,9 +281,9 @@ def _to_dict(raw):
     except (TypeError, ValueError):
         return None
 
-async def my_custom_agent(messages):
-    reply, calls = await call_my_backend(messages[-1]["content"])
-    return reply, [ToolCall(c.name, _to_dict(c.arguments)) for c in calls]
+async def my_custom_agent(history):
+    reply, calls = await call_my_backend(history[-1].content)
+    return AgentReply(reply, [ToolCall(c.name, _to_dict(c.arguments)) for c in calls])
 ```
 
 All bundled adapters already capture arguments this way. When arguments are missing or not a dict, argument evaluators fail with an explicit "no dict arguments were captured" message rather than a misleading mismatch.
@@ -283,8 +293,8 @@ If your agent wraps a synchronous function, use `asyncio.to_thread`:
 ```python
 import asyncio
 
-async def my_sync_wrapper(messages):
+async def my_sync_wrapper(history):
     def _sync(text):
-        return my_blocking_agent(text), []
-    return await asyncio.to_thread(_sync, messages[-1]["content"])
+        return AgentReply(my_blocking_agent(text), [])
+    return await asyncio.to_thread(_sync, history[-1].content)
 ```
