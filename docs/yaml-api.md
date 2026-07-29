@@ -29,7 +29,7 @@ A published [JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema
 # Unique ID, used as the pytest test name
 id: booking_confirmation
 
-# Fraction of runs that must pass (0.0 – 1.0)
+# Fraction of runs that must pass (0.0 to 1.0)
 threshold: 0.8
 
 # Number of times to run the full transcript
@@ -128,7 +128,7 @@ All `expect` fields are optional. Omit `expect` entirely for turns where you onl
 | `tool_calls_args`    | `list`        | Assertions on the arguments of specific tool calls   |
 | `judge`              | `JudgeConfig` | LLM-as-judge rubric evaluation                       |
 
-String and regex checks are case-insensitive. Regex patterns use Python `re.search` semantics — quote them in YAML so `\d` and friends survive parsing:
+String and regex checks are case-insensitive. Regex patterns use Python `re.search` semantics: quote them in YAML so `\d` and friends survive parsing:
 
 ```yaml
 expect:
@@ -163,7 +163,7 @@ expect:
 | `mode`  | `str`         | `"subset"` | `subset`: expected items must appear; `exact`: full dict equality  |
 | `judge` | `JudgeConfig` | `null`     | Rubric + optional model, judged against the call's JSON arguments  |
 
-If the tool is called several times in the turn, the assertion passes when any call matches. Argument capture requires an adapter that records arguments — all bundled adapters do; custom agents must return `ToolCall(name, args)` (see [Adapters](adapters.md#writing-a-custom-adapter)).
+If the tool is called several times in the turn, the assertion passes when any call matches. Argument capture requires an adapter that records arguments: all bundled adapters do; custom agents must return `ToolCall(name, args)` (see [Adapters](adapters.md#writing-a-custom-adapter)).
 
 ### `turns[].expect.judge`
 

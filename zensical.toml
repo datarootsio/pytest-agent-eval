@@ -1,6 +1,6 @@
 [project]
 site_name = "pytest-agent-eval"
-site_description = "LLM evaluation plugin for pytest — multi-turn YAML transcripts, threshold-based scoring, LLM-as-judge"
+site_description = "LLM evaluation plugin for pytest: multi-turn YAML transcripts, threshold-based scoring, LLM-as-judge"
 site_author = "Dataroots"
 site_url = "https://datarootsio.github.io/pytest-agent-eval"
 repo_url = "https://github.com/datarootsio/pytest-agent-eval"
@@ -23,6 +23,7 @@ nav = [
         { "All four break at once" = "why/why-it-breaks.md" },
         { "Runs, thresholds, tiers" = "why/runs-and-tiers.md" },
         { "Asserting on behaviour" = "why/tool-calls.md" },
+        { "LLM as a judge" = "why/judges.md" },
         { "Gates and statistics" = "why/gates.md" },
         { "One contract" = "why/one-contract.md" },
         { "Agents author evals" = "why/agents-author-evals.md" },

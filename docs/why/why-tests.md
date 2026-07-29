@@ -1,4 +1,4 @@
-# Tests aren't about correctness. They're about *change*.
+# Tests go beyond correctness. They're about *confidence*.
 
 <figure class="why-fig">
 <div class="why-fig-scroll">
@@ -19,7 +19,7 @@
 
   <path class="s-arrow" d="M484 76 V96" stroke="var(--why-red)"/>
   <text class="s-lbl-strong" x="470" y="112" fill="var(--why-red)">pytest fails here</text>
-  <text class="s-lbl" x="470" y="128">4 minutes after the cause —</text>
+  <text class="s-lbl" x="470" y="128">4 minutes after the cause,</text>
   <text class="s-lbl" x="470" y="142">not 4 weeks, in production</text>
 
   <line class="s-rule" x1="24" y1="156" x2="736" y2="156"/>
@@ -41,25 +41,27 @@
   <text class="s-lbl" x="536" y="206" fill="var(--why-amber)">three matter at all</text>
 </svg>
 </div>
-<figcaption>svg — the four jobs a test does</figcaption>
+<figcaption>svg - the four jobs a test does</figcaption>
 </figure>
 
-## The argument
 
-Ask why people write tests and you get four answers. Tests make a failure **reproducible**, so
+## Why tests?
+
+Ask why people write tests and you get a few different answers. Tests make a failure **reproducible**, so
 you can look at it whenever you like instead of waiting for it to happen again. They make bugs
-**non-recurring** — the fix comes with a guard, so yesterday's incident cannot be reintroduced
+**non-recurring**: the fix comes with a guard, so yesterday's incident cannot be reintroduced
 next quarter by someone who never heard about it. They are **documentation** that cannot drift,
 because a lie in a test suite fails loudly.
 
 The fourth is the one that actually pays for the other three: a test suite is what lets you
 **change code you no longer remember writing**. Rename the function, swap the backend, upgrade
-the dependency — the suite tells you within minutes whether you got away with it.
+the dependency, and the suite tells you within minutes whether you got away with it.
 
-That framing matters here, because "my agent works" is not the interesting question. "My agent
-still works, after I edited the prompt" is.
+Tests are not always perfect: edge cases, exceptions, and much more can cause tests to pass with bad behavior. But more than ensuring correctness, tests raise when unexpected changes occur. In the age of Agentic AI, that matters most because "my agent works" is not the interesting question. "My agent still works, after I edited the prompt" is.
+
+But before going any further, what exactly *is* a test? How do we write them in Python?
 
 ## Go deeper
 
-- [Getting started](../getting-started.md) — where the same argument turns into a first eval
-- [pytest — get started](https://docs.pytest.org/en/stable/getting-started.html) — the framework this plugin extends
+- [Getting started](../getting-started.md): where the same argument turns into a first eval
+- [pytest, get started](https://docs.pytest.org/en/stable/getting-started.html): the framework this plugin extends

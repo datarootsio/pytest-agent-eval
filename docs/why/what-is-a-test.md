@@ -1,19 +1,30 @@
-# What a test *is*, in pytest
+# The anatomy of a test (in Pytest)
 
-Recording pending: `beat-03-pytest-basics.cast` — target 0:50, 90 cols.
+Imagine you have in your project:
 
-```console
-$ cat tests/test_pricing.py
+```python
+# In a `tests/test_pricing.py` file
+
+def discount(subtotal: int, code: str) -> float:
+    if code == "SPRING":
+        return subtotal * 0.9
+    return subtotal
+
 def test_discount_applies_to_subtotal():
     assert discount(subtotal=100, code="SPRING") == 90
 
-$ pytest -q
+def test_discount_dont_apply_to_subtotal():
+    assert discount(subtotal=100, code="SPRINGS") == 90
+```
+
+The `discount` function is tested in the `test_discount_applies_to_subtotal` and `test_discount_applies_to_subtotal`, and we can verify with Pytest running:
+
+```console
+$ pytest tests/test_pricing.py::test_discount_applies_to_subtotal
 .                                                          [100%]
 1 passed in 0.02s
 
-# now someone "optimises" discount()
-
-$ pytest -q
+$ pytest tests/test_pricing.py::test_discount_dont_apply_to_subtotal
 F                                                          [100%]
 =============================== FAILURES ================================
 ___________________ test_discount_applies_to_subtotal ___________________
@@ -26,9 +37,12 @@ E        +  where 100 = discount(subtotal=100, code='SPRING')
 1 failed in 0.02s
 ```
 
+Simple pattern, but in complex codebases, where functions call functions, abstractions, dependencies and classes, having these guarantees increases the **confidence** that the existing code works as expected.
+
+
 <figure class="why-fig">
 <div class="why-fig-scroll">
-<svg viewBox="0 0 760 240" role="img" aria-label="A test pipeline — fixed input, code under test, one output, an exact equality assertion, and a binary pass or fail — annotated with four properties: deterministic, single-valued, exact, and cheap">
+<svg viewBox="0 0 760 240" role="img" aria-label="A test pipeline: fixed input, code under test, one output, an exact equality assertion, and a binary pass or fail, annotated with four properties: deterministic, single-valued, exact, and cheap">
   <rect x="8" y="34" width="118" height="52" rx="8" class="s-box"/>
   <text class="s-node" x="67" y="65" text-anchor="middle">input</text>
   <rect x="176" y="34" width="128" height="52" rx="8" class="s-box"/>
@@ -75,26 +89,25 @@ E        +  where 100 = discount(subtotal=100, code='SPRING')
   <line class="s-rule" x1="8" y1="228" x2="752" y2="228"/>
 </svg>
 </div>
-<figcaption>svg — the four properties, redrawn broken on the <a href="why-it-breaks.md">next page</a></figcaption>
+<figcaption>svg: the four properties, redrawn broken on the <a href="why-it-breaks.md">next page</a></figcaption>
 </figure>
 
-## The argument
+## What is a test?
 
 Mechanically, a pytest test is a function whose name starts with `test_` containing a bare
-`assert`. There is no class to subclass and no assertion API to learn — pytest rewrites the
+`assert`. There is no class to subclass and no assertion API to learn: pytest rewrites the
 `assert` so a failure reports the actual values, which is why `assert 100 == 90` comes back with
-the call that produced the 100. Fixtures supply inputs; `@pytest.mark.parametrize` runs the same
-body over many cases.
+the call that produced the 100. You could apply many imputs with fixtures: `@pytest.mark.parametrize` runs the same body over many cases.
 
 Conceptually it is a bet that four things hold. The input is **deterministic**. The output is
-**single-valued** — one right answer to compare against. The assertion is **exact**, equality or
+**single-valued**: one right answer to compare against. The assertion is **exact**, equality or
 membership rather than taste. And the whole thing is **cheap**: milliseconds, no marginal cost,
 which is the only reason it is sane to run thousands on every commit.
 
-Those four are what let a test collapse into one bit and gate a merge. Hold them in that order.
+Those four are what let a test collapse into one bit and gate a merge. Hold them in that order. But what happens when we don't know exactly what the code will output?
 
 ## Go deeper
 
-- [Python API](../python-api.md) — `Turn`, `Expect`, and `parametrize` over transcripts
-- [Configuration](../configuration.md) — where eval settings live in `pyproject.toml`
-- [pytest — fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html) — the mechanism the agent fixture uses
+- [Python API](../python-api.md): `Turn`, `Expect`, and `parametrize` over transcripts
+- [Configuration](../configuration.md): where eval settings live in `pyproject.toml`
+- [pytest, fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html): the mechanism the agent fixture uses

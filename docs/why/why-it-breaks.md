@@ -1,4 +1,4 @@
-# All four break at once
+# Where LLM breaks
 
 <figure class="why-fig">
 <div class="why-fig-scroll">
@@ -59,13 +59,21 @@
   <text class="s-lbl" x="580" y="190">× every run</text>
 
   <line class="s-rule" x1="8" y1="212" x2="752" y2="212"/>
-  <text class="s-note" x="8" y="236">You are not asserting on an output. You are asserting on a property of a distribution — from one sample.</text>
+  <text class="s-note" x="8" y="236">You are not asserting on an output. You are asserting on a property of a distribution, from one sample.</text>
 </svg>
 </div>
-<figcaption>svg — the <a href="what-is-a-test.md">previous page's</a> geometry, broken. The rhyme is the point.</figcaption>
+<figcaption>svg: the <a href="what-is-a-test.md">previous page's</a> geometry, broken. The rhyme is the point.</figcaption>
 </figure>
 
-Recording pending: `beat-04-flake.cast` — target 0:35, 90 cols, the one that has to be right.
+Now imagine you have a function that calls an LLM:
+
+```python
+# tests/test_naive.py
+
+async def test_naive_booking(agent):
+    reply, _ = await agent([Message(role="user", content="book me a slot tomorrow at 10am")])
+    assert "confirmed" in reply
+```
 
 ```console
 $ for i in 1 2 3 4 5; do pytest -q tests/test_naive.py; done
@@ -73,7 +81,7 @@ $ for i in 1 2 3 4 5; do pytest -q tests/test_naive.py; done
 .                                                          [100%]  1 passed
 F                                                          [100%]  1 failed
     assert "confirmed" in reply
-E   assert 'confirmed' in "You're all set for tomorrow at 10am — ref BK-4417."
+E   assert 'confirmed' in "You're all set for tomorrow at 10am, ref BK-4417."
 .                                                          [100%]  1 passed
 .                                                          [100%]  1 passed
 F                                                          [100%]  1 failed
@@ -82,21 +90,21 @@ E   assert 'confirmed' in "Done! Your 10am slot is reserved."
 # same code. same prompt. same commit.
 ```
 
-## The argument
+## LLMs are probabilistic
 
-Run the naive test five times and it fails twice — not because the agent misbehaved, but because
+Run the naive test five times and it fails twice, not because the agent misbehaved, but because
 "you're all set" and "reserved" are perfectly good confirmations that happen not to contain the
 word we picked. Every one of the four properties is gone at once, and they took the binary
 outcome down with them.
 
-This part should feel familiar if you work with models: **you are looking at a sample, not the
+LLMs are designed to predict the next likely token. However, especially for closed models, we cannot guarantee
+reproducibility for the models (even setting hyperparameters). In the end, **you are looking at a sample, not the
 distribution.** A single run cannot answer a question about a distribution's behaviour, and no
 amount of staring at that one run will fix it.
 
-The fourth property is the cruel one. The obvious remedy — run it many more times — is exactly
-what costs seconds and cents per call, so you cannot buy your way out on every push.
+Running it many more times costs seconds and cents per call, and we would still miss how many results are acceptable or not. What can we do?
 
 ## Go deeper
 
-- [Evaluators](../evaluators.md) — what to assert instead of a hand-picked substring
-- [Configuration](../configuration.md) — `runs`, `retries`, `timeout`
+- [Evaluators](../evaluators.md): what to assert instead of a hand-picked substring
+- [Configuration](../configuration.md): `runs`, `retries`, `timeout`

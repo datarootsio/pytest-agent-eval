@@ -1,11 +1,32 @@
 # Sample the distribution. Then assert in *tiers*.
 
-Recording pending: `beat-05-threshold.cast` — target 0:30, 90 cols.
+The main idea of `pytest-agent-eval` is first to run the function more than once, and what's the percentage
+of acceptable answers. The next question is "how do we measure an acceptable answer?"
+
+```python
+# tests/test_booking.py
+
+import pytest
+from pytest_agent_eval import Expect, Turn
+
+@pytest.mark.agent_eval(runs=3, threshold=0.66)
+async def test_booking_confirmation(agent_eval, booking_agent):
+    result = await agent_eval.run(
+        agent=booking_agent,
+        turns=[
+            Turn(
+                user="book me a slot tomorrow at 10am",
+                expect=Expect(reply_contains_any=["confirmed", "booked"]),
+            )
+        ],
+    )
+    result.assert_threshold()
+```
 
 ```console
 $ pytest --agent-eval-live -vv
 
-tests/evals/booking.yaml::booking_confirmation PASSED
+tests/test_booking.py::test_booking_confirmation PASSED
   ---- LLM Eval ----
   [2/3 runs, score=0.67 >= 0.66]
     Run 1 ✅  all substring checks passed · all tool call checks passed
@@ -56,14 +77,14 @@ tests/evals/booking.yaml::booking_confirmation PASSED
   <text class="s-note" x="322" y="244">A judge is a last resort, not a default.</text>
 </svg>
 </div>
-<figcaption>svg — the three tiers, cheapest first</figcaption>
+<figcaption>svg: the three tiers, cheapest first</figcaption>
 </figure>
 
-## The argument
+## Look at distributions and distribute asserts in tiers
 
-If a single sample cannot answer the question, take several and assert on the rate. `runs: 3`
-with `threshold: 0.66` says: run the whole transcript three times, pass if two of them do. The
-amber line in that output is the point — a test that fails a third of the time is now a
+If a single sample cannot answer the question, take several and assert on the rate. `runs=3`
+with `threshold=0.66` says: run the whole transcript three times, pass if two of them do. The
+amber line in that output is the point: a test that fails a third of the time is now a
 **passing** test, on purpose.
 
 The second half is what you assert on each run, and there are only three kinds. Exact string
@@ -71,12 +92,10 @@ checks on what it *said*. Structural checks on what it *did*. And a graded rubri
 that genuinely need taste. They cost wildly different amounts and they compose freely on the same
 turn.
 
-One rule follows: **push every check as far down that stack as it will go.** Most rubrics people
-reach for are a string check that hasn't been thought through yet — and the middle tier, which is
-where agents actually live, is [the next page](tool-calls.md).
+Ideally, a good test suite covers all tiers, where deterministic tests are more reproducible and cheap and can be run often.
 
 ## Go deeper
 
-- [Evaluators](../evaluators.md) — every evaluator and how they compose
-- [YAML API](../yaml-api.md) — `runs`, `threshold`, `turns`
-- [Reporting](../reporting.md) — `-v`, `-vv`, and the markdown report
+- [Evaluators](../evaluators.md): every evaluator and how they compose
+- [Python API](../python-api.md): the `agent_eval` fixture, `Turn`, `Expect`, `runs`, `threshold`
+- [Reporting](../reporting.md): `-v`, `-vv`, and the markdown report

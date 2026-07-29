@@ -1,6 +1,6 @@
 # Examples
 
-The repository ships eight small, self-contained projects under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples) — one per feature. Each is a known-good starting point to copy from: CI exercises every one of them (see [`tests/test_examples.py`](https://github.com/datarootsio/pytest-agent-eval/blob/main/tests/test_examples.py)), so they never drift from the current release.
+The repository ships eight small, self-contained projects under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples): one per feature. Each is a known-good starting point to copy from: CI exercises every one of them (see [`tests/test_examples.py`](https://github.com/datarootsio/pytest-agent-eval/blob/main/tests/test_examples.py)), so they never drift from the current release.
 
 Every example except `voice-livekit` uses a deterministic mock agent, so it runs offline with no API key. Swap the `llm_eval_agent` fixture for a real [adapter](adapters.md) to point any of them at your own agent.
 
@@ -20,7 +20,7 @@ The sections below follow the same pedagogical order as the [examples README](ht
 
 ## single-turn
 
-The minimal setup: one YAML transcript plus one `llm_eval_agent` fixture. Reach for this shape first — a single user turn with deterministic substring and tool-call checks is enough for most smoke tests, and it needs no Python test file at all.
+The minimal setup: one YAML transcript plus one `llm_eval_agent` fixture. Reach for this shape first: a single user turn with deterministic substring and tool-call checks is enough for most smoke tests, and it needs no Python test file at all.
 
 === "evals/booking.yaml"
 
@@ -56,7 +56,7 @@ The minimal setup: one YAML transcript plus one `llm_eval_agent` fixture. Reach 
 
 ## multi-turn-judge
 
-A multi-turn conversation where the second turn is graded by an LLM-as-judge rubric. Reach for this when correctness depends on context carried across turns — here the assistant must reschedule the *existing* booking without asking the user to repeat themselves, which no substring check can verify.
+A multi-turn conversation where the second turn is graded by an LLM-as-judge rubric. Reach for this when correctness depends on context carried across turns: here the assistant must reschedule the *existing* booking without asking the user to repeat themselves, which no substring check can verify.
 
 === "evals/reschedule.yaml"
 
@@ -95,7 +95,7 @@ A multi-turn conversation where the second turn is graded by an LLM-as-judge rub
             message = history[-1].content.lower()
             if "11am" in message:
                 return AgentReply(
-                    "Done — moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
+                    "Done, moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
                 )
             return AgentReply("Booked for tomorrow at 10am. Reference BK-1234.", ["create_booking"])
 
@@ -106,7 +106,7 @@ A multi-turn conversation where the second turn is graded by an LLM-as-judge rub
 
 ## tool-calls
 
-Assertions on *which* tools the agent invoked — include, exclude, and order. Reach for this when the reply text is not enough and you need to verify the agent took the right actions: authenticate before fetching, never call a destructive tool, and do it all in sequence.
+Assertions on *which* tools the agent invoked: include, exclude, and order. Reach for this when the reply text is not enough and you need to verify the agent took the right actions: authenticate before fetching, never call a destructive tool, and do it all in sequence.
 
 === "evals/ordered_flow.yaml"
 
@@ -145,7 +145,7 @@ Assertions on *which* tools the agent invoked — include, exclude, and order. R
 
 ## tool-call-args
 
-Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent passed. Reach for this when calling the right tool is not enough — the party size, date, and time have to be correct too. The example shows all three modes side by side: `subset` (default), `exact`, and an LLM-judged rubric over the call's JSON arguments. Note that the fixture returns `ToolCall(name, args)` objects rather than plain strings — that is what makes the arguments available to assert on.
+Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent passed. Reach for this when calling the right tool is not enough: the party size, date, and time have to be correct too. The example shows all three modes side by side: `subset` (default), `exact`, and an LLM-judged rubric over the call's JSON arguments. Note that the fixture returns `ToolCall(name, args)` objects rather than plain strings, and that is what makes the arguments available to assert on.
 
 === "evals/booking_args.yaml"
 
@@ -200,7 +200,7 @@ Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent
 
 ## regex-contains
 
-Deterministic reply assertions: substring `all_of` plus regex matching. Reach for this when the reply must contain structured tokens — a reference number in a known format, a time, an order ID — that you can pin down with a pattern instead of paying for a judge.
+Deterministic reply assertions: substring `all_of` plus regex matching. Reach for this when the reply must contain structured tokens (a reference number in a known format, a time, an order ID) that you can pin down with a pattern instead of paying for a judge.
 
 === "evals/reference_number.yaml"
 
@@ -239,9 +239,9 @@ Deterministic reply assertions: substring `all_of` plus regex matching. Reach fo
 
 ## python-parametrize
 
-The Python API instead of YAML, combined with `@pytest.mark.parametrize`. Reach for this when your eval cases are data-driven — one transcript shape run across many inputs (cities, locales, product IDs) — where hand-writing a YAML file per case would be repetitive. You get the full expressiveness of pytest: fixtures, marks, and parametrization.
+The Python API instead of YAML, combined with `@pytest.mark.parametrize`. Reach for this when your eval cases are data-driven: one transcript shape run across many inputs (cities, locales, product IDs), where hand-writing a YAML file per case would be repetitive. You get the full expressiveness of pytest: fixtures, marks, and parametrization.
 
-The `agent_eval` argument is injected by the plugin's fixture; annotating it as `EvalSession` (from `pytest_agent_eval.runner`) makes that explicit and unlocks editor autocompletion for `.run(...)`. Because `from __future__ import annotations` defers annotation evaluation, the import lives under `TYPE_CHECKING` — it is only needed by type checkers and editors, never at runtime.
+The `agent_eval` argument is injected by the plugin's fixture; annotating it as `EvalSession` (from `pytest_agent_eval.runner`) makes that explicit and unlocks editor autocompletion for `.run(...)`. Because `from __future__ import annotations` defers annotation evaluation, the import lives under `TYPE_CHECKING`: it is only needed by type checkers and editors, never at runtime.
 
 ```python
 from __future__ import annotations
@@ -345,7 +345,7 @@ Group-level pass thresholds with a per-group exit-code override. Reach for this 
         return agent
     ```
 
-The `booking` group requires 50% of its `gate:booking` transcripts to pass, so the deliberately-failing `edge_case` is absorbed — but `must_pass` still forces `booking_happy_path` to pass regardless of the threshold.
+The `booking` group requires 50% of its `gate:booking` transcripts to pass, so the deliberately-failing `edge_case` is absorbed, but `must_pass` still forces `booking_happy_path` to pass regardless of the threshold.
 
 [Runnable project ↗](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples/groups) · See [Group thresholds](groups.md) for the full configuration surface.
 
