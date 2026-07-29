@@ -18,6 +18,7 @@ import pytest
 
 _REPO_ROOT = Path(__file__).parent.parent.parent
 _PROBE = Path("tests") / "adapters" / "_sdk_probe.py"
+_NEGATIVE_PROBE = Path("tests") / "adapters" / "_sdk_probe_negative.py"
 
 _SDKS = ("openai", "langchain_core", "smolagents", "livekit.agents", "pydantic_ai")
 
@@ -28,8 +29,13 @@ def _ty() -> str:
     return str(local) if local.exists() else (shutil.which("ty") or "")
 
 
-def test_every_adapter_accepts_its_real_sdk_type() -> None:
-    """Type-check the probe. A failure here means a Protocol rejects the class it describes."""
+def _check(probe: Path) -> subprocess.CompletedProcess[str]:
+    """Run ``ty`` over one probe file, skipping the test when an SDK or ty is missing.
+
+    No ``--exit-zero-on-warning``: the ratcheted rules in pyproject are demoted to
+    warnings, and the negative probe's two expected diagnostics are among them. Passing
+    that flag would make the inverted assertion below vacuous.
+    """
     for module in _SDKS:
         pytest.importorskip(module)
     ty = _ty()
@@ -37,18 +43,42 @@ def test_every_adapter_accepts_its_real_sdk_type() -> None:
         pytest.skip("ty is not installed")
 
     # Trusted argv, no shell: the binary is resolved above and the path is a repo constant.
-    result = subprocess.run(  # noqa: S603
-        [ty, "check", str(_PROBE), "--output-format", "concise"],
+    return subprocess.run(  # noqa: S603
+        [ty, "check", str(probe), "--output-format", "concise"],
         cwd=_REPO_ROOT,
         capture_output=True,
         text=True,
         check=False,
     )
 
+
+def test_every_adapter_accepts_its_real_sdk_type() -> None:
+    """Type-check the probe. A failure here means a Protocol rejects the class it describes."""
+    result = _check(_PROBE)
+
     assert result.returncode == 0, (
         f"tests/adapters/_sdk_probe.py does not type-check, so an adapter's declared "
         f"parameter type rejects a real SDK object:\n{result.stdout}{result.stderr}"
     )
+
+
+def test_asdict_and_to_dict_are_not_assignable_to_a_message_param() -> None:
+    """The inverted probe: it must fail, for the two stated reasons and no others.
+
+    This is what keeps ``adapters/openai.py::_as_param``'s role dispatch from being
+    "simplified" into ``asdict(message)`` — a change that shipped once as a bug (5f22d19)
+    and that no runtime test can catch, because both failures are static.
+    """
+    result = _check(_NEGATIVE_PROBE)
+    output = result.stdout + result.stderr
+
+    assert result.returncode != 0, f"_sdk_probe_negative.py type-checks, so _as_param is now redundant:\n{output}"
+    # Named, not just counted: a probe that fails for a third reason — a bad import, say —
+    # would satisfy the returncode assertion while proving nothing about asdict.
+    assert "Found 2 diagnostics" in output, f"expected exactly the two documented failures, got:\n{output}"
+    assert output.count("invalid-return-type") == 2, f"both failures must be assignability, got:\n{output}"
+    assert "dict[str, Any]" in output, "the asdict failure must name its Any-valued dict"
+    assert "dict[str, str]" in output, "the to_dict failure must name its str-valued dict"
 
 
 def test_every_adapter_constructor_accepts_a_real_sdk_object() -> None:

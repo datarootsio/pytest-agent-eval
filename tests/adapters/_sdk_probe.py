@@ -27,8 +27,11 @@ if TYPE_CHECKING:
     from livekit.agents.voice import Agent as LiveKitAgent
     from livekit.agents.voice import AgentSession
     from openai import AsyncAzureOpenAI, AsyncOpenAI
+    from openai.types.chat import ChatCompletionMessageParam
     from pydantic_ai import Agent as PydanticAgent
     from smolagents import CodeAgent, MultiStepAgent, ToolCallingAgent
+
+    from pytest_agent_eval.models import Message
 
 
 def probe_openai(client: AsyncOpenAI) -> OpenAIAdapter:
@@ -41,6 +44,20 @@ def probe_azure_openai(client: AsyncAzureOpenAI) -> OpenAIAdapter:
     return OpenAIAdapter(client, model="gpt-4o")
 
 
+def probe_openai_message_param(message: Message) -> ChatCompletionMessageParam:
+    """The positive control for ``_sdk_probe_negative.py``: a role literal *is* assignable.
+
+    Without this, the two expected failures over there could equally mean the annotation
+    is unsatisfiable rather than that ``asdict`` and ``to_dict`` are the wrong shape.
+    """
+    return {"role": "user", "content": message.content}
+
+
+# Both type arguments below are langchain's, not ours, and that is the finding these two
+# probes exist to hold: `Runnable` is invariant in Input and Output, so narrowing either
+# slot — `dict[str, JsonValue]` for Input, `str` for Output — makes a real RunnableLambda
+# and a real RunnableSequence stop being assignable. The same trap as an over-narrowed
+# Protocol parameter, one level up in the type arguments.
 def probe_langchain_lambda(runnable: RunnableLambda[dict[str, object], object]) -> LangChainAdapter:
     """The simplest real Runnable."""
     return LangChainAdapter(runnable)
