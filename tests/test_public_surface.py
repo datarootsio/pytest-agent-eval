@@ -6,6 +6,7 @@ than something a reviewer has to notice.
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import inspect
 import re
@@ -126,3 +127,62 @@ def test_any_is_confined_to_the_allowlist() -> None:
         if uses_any and rel not in ANY_ALLOWLIST:
             unexpected.append(rel)
     assert unexpected == [], f"new Any outside the allowlist: {unexpected}"
+
+
+# Every remaining `object` used as a type in src/, enumerated with the third party that
+# forces it. The default is the real SDK type under TYPE_CHECKING (see CLAUDE.md); these
+# are the sites where no real type exists to name, either because the value genuinely is
+# arbitrary at that boundary or because someone else's generic or hook signature dictates
+# the slot. Like ANY_ALLOWLIST this set only shrinks, and adding to it is a one-line diff.
+OBJECT_ALLOWLIST = {
+    "models.py": (
+        "ToolArgs values — an SDK may hand us any Python object as a tool argument; and "
+        "_reject_non_numeric, a pydantic mode='before' validator that runs pre-coercion"
+    ),
+    "config.py": "_parse_group_tables, same pydantic before-validator constraint",
+    "groups.py": "parse_groups / _parse_group / _group_error — raw TOML, narrowed by isinstance or display-only",
+    "_errors.py": "_model_of walks arbitrary annotation objects, including generic aliases that are not `type`",
+    "yaml_loader.py": "validate_transcript_dict — a parsed YAML document really can be a list, a scalar, or None",
+    "adapters/_args.py": (
+        "the Mapping value type an SDK fills in, and the local that forces json.loads' Any through an isinstance check"
+    ),
+    "adapters/langchain.py": (
+        "langchain's own Runnable Input/Output generics — Runnable is invariant, so narrowing "
+        "either slot rejects a real RunnableLambda (proved in adapters/_sdk_probe.py); "
+        "_last_message inherits ainvoke -> object"
+    ),
+    "adapters/smolagents.py": "smolagents ships no py.typed, so the Protocol and its Sequence[object] steps stay",
+    "adapters/pydantic_ai.py": (
+        "AbstractAgent[Never, object] — object is the covariant top type that makes every concrete Agent assignable"
+    ),
+}
+
+
+def _object_annotation_lines(source: str) -> list[int]:
+    """Line numbers where ``object`` is used as a type rather than written in prose.
+
+    An AST walk, not a grep: ``object`` is an ordinary English word and appears in a dozen
+    docstrings ("the pytest Config object"). The AST drops comments and string contents, so
+    every ``Name`` node left is a real reference to the builtin.
+    """
+    return [node.lineno for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Name) and node.id == "object"]
+
+
+def test_object_is_confined_to_the_allowlist() -> None:
+    """`object` is the fallback of last resort, so every remaining use names what forces it."""
+    from pathlib import Path
+
+    src = Path(__file__).parent.parent / "src" / "pytest_agent_eval"
+    unexpected: list[str] = []
+    stale: list[str] = []
+    for path in sorted(src.rglob("*.py")):
+        rel = str(path.relative_to(src))
+        uses_object = bool(_object_annotation_lines(path.read_text()))
+        if uses_object and rel not in OBJECT_ALLOWLIST:
+            unexpected.append(rel)
+        elif not uses_object and rel in OBJECT_ALLOWLIST:
+            stale.append(rel)
+    assert unexpected == [], f"new object outside the allowlist: {unexpected}"
+    # The stale half is what makes "this set only shrinks" true rather than aspirational:
+    # a residue that a refactor closed must leave the list, not sit there as false debt.
+    assert stale == [], f"allowlist entries whose object is gone: {stale}"
