@@ -1,14 +1,19 @@
-# Learn tab — "Why agent evals"
+# "Why pytest-agent-eval" tab
 
-**Status:** design approved, not yet implemented
+**Status:** pages, nav, and styles shipped. Every cast is a placeholder; the demo agent, the
+recordings, and the asciinema player are not built.
 **Date:** 2026-07-29
 **Visual reference:** <https://claude.ai/code/artifact/21018351-8c7d-464d-b251-5d74bcee339f>
 
 ## Summary
 
-Add a second top-level tab to the docs site — **Learn**, alongside **Docs** — containing a
-ten-page narrative that argues why agent evals are necessary and how this package answers
-that. The same pages are the source for a 20–30 minute conference talk.
+Add a second top-level tab to the docs site — **Why pytest-agent-eval**, alongside **Docs** —
+containing a ten-page narrative that argues why agent evals are necessary and how this package
+answers that. The same pages are the source for a 20–30 minute conference talk.
+
+The tab label is plain text, no backticks: nav titles come from TOML and render through
+`{{ ref.title or nav_item.title }}` with Jinja autoescaping
+(`zensical/templates/partials/nav-item.html:15`), so backticks would appear literally.
 
 The docs have no "why" content today: `docs/index.md` goes from tagline to `pip install` in
 three lines, and there are no visuals anywhere in the site. The talk assets (five diagrams,
@@ -22,15 +27,16 @@ implementation.
 
 | Decision | Reason |
 |---|---|
-| A separate **Learn** tab, FastAPI/SQLModel style | The narrative is read in order; reference docs are not. Mixing them makes both worse. |
-| **Nothing moves.** Docs tab keeps its exact current nav | Zero broken links, no muscle-memory reset. Learn's last page links across to Getting started. |
+| A separate **Why pytest-agent-eval** tab, FastAPI/SQLModel style | The narrative is read in order; reference docs are not. Mixing them makes both worse. |
+| **Nothing moves.** Docs tab keeps its exact current nav | Zero broken links, no muscle-memory reset. The last page links across to Getting started. |
 | Pages **must stand alone** for a reader without the speaker | The section is a permanent docs asset, not talk scaffolding. |
-| **No present/read mode switch** | One register. Claims are sized to work read at a desk *and* projected; the speaker scrolls past the prose. |
+| **No present/read mode switch** | One register. ~~Claims are sized to work read at a desk *and* projected~~ — the sizing was later dropped, so the register is the docs' own; the speaker scrolls past the prose. |
 | Beat 1 is a **live screen share in a separate window**, not a page cast | It is the opener and it needs to be live. An asciinema insurance take exists as a fallback. |
 | **All** screen recordings are asciinema | Rules out GUI demos — notably editor autocomplete from the JSON Schema, which becomes prose. |
 | **One purpose-built booking agent** for every cast | Continuity. The room learns one domain in beat 1 and never re-learns it. |
 | Talk-first build order; zone-4 prose backfilled after | The date is near. See [Build order](#build-order). |
-| Learn joins the published nav **only when prose lands** | Publishing sparse pages would violate the stand-alone requirement above. |
+| ~~Joins the published nav only when prose lands~~ — **dropped** | Not implementable. `tests/test_docs_surface.py:35` asserts `pages == nav` exactly and zensical has no `not_in_nav` equivalent, so an unlisted page cannot ship. The prose was written up front instead, which the stand-alone requirement wanted anyway. |
+| The section is **excluded from `llms-full.txt`** | It is narrative argument for human readers and carries no API facts an agent needs. Mirrors the existing `api-reference/` filter. |
 
 ### Audience
 
@@ -48,32 +54,110 @@ baked into the beat list and must not be optimised away:
 
 ## Information architecture
 
-Enabling tabs is **not** an additive change. `zensical.toml` currently sets
-`navigation.sections` and has no `navigation.tabs`; turning tabs on requires assigning all
-seven existing top-level nav entries to a tab. The assignment is:
+Enabling tabs is **not** an additive change. Tabs *are* the top-level nav entries, so turning
+them on required nesting the seven existing top-level entries under a new `Docs` parent. No page
+moved and no URL changed; the Docs sidebar simply gained a grouping level. The assignment is:
 
 - **Docs** — Home, Getting started, Examples, Writing evals, Running & CI, Using with coding
   agents, API reference. Unchanged in content and order.
-- **Learn** — the ten narrative pages, in `docs/learn/`.
+- **Why pytest-agent-eval** — the ten narrative pages, in `docs/why/`, served at `/why/<page>/`.
 
-Tab bar order is **Docs, Learn**. `docs/index.md` stays the site root and stays under Docs;
-Learn does not displace it.
+Tab bar order is **Docs, Why pytest-agent-eval**. `docs/index.md` stays the site root and stays
+under Docs.
+
+Every nav entry must be a `{ title = path }` table. A bare-string entry — the mkdocs idiom for a
+`navigation.indexes` section landing page — breaks tooling: both `_walk_nav` in
+`scripts/build_llms_full.py` and the walker in `tests/test_docs_surface.py:18` call
+`entry.values()`. `why/index.md` is therefore a titled page inside the section rather than the
+section's own index; the tab still lands on it.
+
+### Confirmed zensical capabilities
+
+Checked against zensical 0.0.51 rather than extrapolated from mkdocs-material:
+
+- `navigation.tabs` and `navigation.tabs.sticky` are supported
+  (`templates/partials/header.html:5,64-66`, `nav.html:6`, `base.html:156-157`) and compose with
+  the existing `navigation.sections`. Tabs render above 1220px and collapse into the drawer below
+  it — widen the window before concluding they are broken.
+- `extra_css` is supported (`templates/base.html:82`), path relative to `docs_dir`.
+- The palette scheme attribute is set on `<body>` (`templates/base.html:100`), so dark overrides
+  are `body[data-md-color-scheme="slate"]`.
+- Relative `.md` links are rewritten **even inside raw HTML blocks**, so a link in a raw
+  `<figcaption>` resolves like any other.
+- `md_in_html` and `pymdownx.superfences` compose: a fenced block inside a
+  `<div markdown="1">` highlights normally. This was the one build-time unknown.
+- There is **no `not_in_nav` equivalent.**
 
 ## Page anatomy
 
-Every Learn page has the same five zones, top to bottom. The order is the design: a reader
+Every page has the same five zones, top to bottom. The order is the design: a reader
 gets the argument, a presenter stays in zones 1–3.
 
-1. **Claim** — one room-legible line. `clamp()`-sized so it reads at a desk and projects.
+1. **Claim** — one room-legible line. ~~`clamp()`-sized so it reads at a desk and projects.~~
+   **Not implemented** — a plain H1 at the theme's own scale.
 2. **One SVG** — carries exactly one idea. Theme-aware via CSS custom properties.
 3. **One cast** — asciinema, 20–50s, one idea.
-4. **Argument** — 120–180 words that make the point unaided. Set in a serif to separate it
-   from the slide-shaped zones above.
+4. **Argument** — 120–180 words that make the point unaided. ~~Set in a serif to separate it
+   from the slide-shaped zones above.~~ **Not implemented** — body text like any other page.
 5. **Go deeper** — two or three links into the Docs tab.
+
+The two struck clauses were dropped on the instruction that nothing in this section is styled
+differently from the rest of the docs. See
+[How the zones are realised in markdown](#how-the-zones-are-realised-in-markdown) for what that
+costs a presenter.
 
 Zones 2 and 3 are both optional per page; zones 1, 4 and 5 are mandatory.
 
 **Presenting discipline:** never read zone 4 aloud. That is what blows the clock.
+
+### How the zones are realised in markdown
+
+**No custom typography.** The mock's type treatment — the `clamp()`-scaled claim, the amber
+emphasis inside it, the mono captions and meta lines, the small-caps section headings, the serif
+argument prose — is **not** implemented. Every piece of text on these pages takes the theme's own
+font, size and colour, exactly like the rest of the docs. The claim is a plain H1; it is
+room-legible because it is short, not because it is scaled.
+
+- Zone 1 is a plain H1. Nothing else.
+- Zone 2 is **inline** SVG in a raw `<figure class="why-fig">`, never an `.svg` file in an `<img>`:
+  an external file cannot inherit the page's CSS custom properties, so it could not be theme-aware
+  without shipping light/dark pairs. No `markdown="1"` on these — the figure is passed through as
+  raw HTML. The figcaption is styled by the theme.
+- Zone 3 is a plain sentence naming the pending recording, followed by an ordinary fenced `console`
+  block. No wrapper, no marker styling. The intended terminal output is useful documentation on its
+  own, so it ships as real text that a future asciinema player can wrap rather than as a stub, and
+  it gets the theme's normal code styling including the copy button.
+- Zones 4 and 5 are plain `## The argument` and `## Go deeper`.
+- Content the mock carried beyond the five zones — the agent signature, the tool-call assertion
+  list, the "Monday morning" commands — uses already-enabled extensions (`def_list`,
+  `admonition`, fenced blocks) rather than new bespoke components.
+
+This drops two things the design asked for, deliberately: zone 1's `clamp()` sizing and zone 4's
+serif register. **A presenter therefore cannot project these pages as-is** — the claim will not
+read from the back of a room at body-text scale. If the talk needs that, it wants a present-mode
+stylesheet, which is a separate decision from the docs asset.
+
+### Colour
+
+`docs/stylesheets/why.css` is diagram support only. It does two things the theme cannot: keep a
+wide diagram's scrollbar off the page body (`.why-fig-scroll { overflow-x: auto }`), and give
+inline SVG the fills and font stacks it does not inherit from the typeset styles. Those SVG rules
+mirror the docs' own variables — `--md-default-fg-color` and its `--light`/`--lighter` steps,
+`--md-code-bg-color`, `--md-code-font-family`, `--md-text-font-family` — rather than introducing
+values of their own. The font sizes in them are diagram geometry, not a typographic choice.
+
+Only four semantic colours are defined — green, red, amber, accent — with slate overrides; their
+`-soft` fills are `color-mix`ed against `--md-default-bg-color`, so one declaration covers both
+schemes.
+
+Amber marks the threshold zone consistently inside the diagrams: `score=0.67 >= 0.66`, the
+distribution envelope, the semantic tier, the exit-code override.
+
+The semantic values are **not** the mock's. The diagrams label 11–13px text directly on those
+soft tints, and the mock's light-mode green (3.77:1) and amber (3.29:1) failed WCAG AA there, as
+did `--md-typeset-a-color` as the accent (3.05:1). The shipped set clears 4.5:1 against both the
+page background and its own tint in both schemes. `--md-primary-fg-color` (#4051b5) is fine as the
+default-scheme accent but must not be carried into slate, where it stays #4051b5 on near-black.
 
 ## The ten beats
 
@@ -139,10 +223,34 @@ gate over forty evals aggregates hundreds of runs.
 
 ## API surface to write against
 
-`main` is mid-refactor. **Write every page against the PR #38 surface**
-(`refac/type-safety-pydantic`), which the author states is close to final.
+**Superseded during implementation.** This section planned to write against the PR #38 surface
+(`refac/type-safety-pydantic`). That PR is not merged, so `AgentReply`, `History`, `Message`, and
+`ToolCalls` do not exist in the tree the docs are built from — and a published page cannot describe
+types that do not ship. Beat 8 was written against the shipped contract instead:
 
-### The agent contract (beat 8's slide)
+```python
+async def agent(messages: list[dict]) -> tuple[str, list[str]]
+```
+
+which is what `docs/adapters.md:236-241` already documents. `ToolCall(str)` with `.args` *does*
+ship and is exported, so beats 6 and 8 keep the "a tool call is a string" argument unchanged.
+
+Beat 8's point survives the substitution intact — arguably better grounded. Instead of "naming the
+types did not narrow what the plugin accepts", it now argues that this is the loosest contract that
+still supports every assertion in the narrative: bare names get the name checks, `ToolCall(name,
+args)` lights up the argument checks on the same suite, because a `ToolCall` *is* a `str`. **Richer
+assertions never demanded a richer contract.**
+
+**When PR #38 merges, rewrite `docs/why/one-contract.md` first** — it is the only page coupled to
+the refactor.
+
+Two other claims drafted in the mock for beat 9 were dropped for the same reason: strict
+`[tool.agent_eval]` validation (`config.py` does not validate) and `py.typed` (absent). The claims
+that survive are all verified against the tree: the JSON Schema with `additionalProperties: false`,
+the `Did you mean ...?` unknown-field hint (`yaml_loader.py:56-61`), and the didactic
+missing-fixture message (`yaml_loader.py:326-333`).
+
+### The PR #38 contract, for when it lands
 
 ```python
 async def agent(history: History) -> AgentReply
@@ -160,8 +268,8 @@ async def agent(history: History) -> AgentReply
 - `AgentCallable = Callable[[History], Awaitable[tuple[str, ToolCalls]]]` — the plain tuple, so
   both adapters and hand-written agents satisfy one alias.
 
-Beat 8's argument makes the point that **naming the types did not narrow what the plugin
-accepts** — every old form still works. That is the page's whole reason to exist.
+Beat 8's argument would make the point that **naming the types did not narrow what the plugin
+accepts** — every old form still works.
 
 ### Unchanged, safe to write against now
 
@@ -170,9 +278,10 @@ accepts** — every old form still works. That is the page's whole reason to exi
 YAML transcript fields, CLI flags, `pytest` terminal output, and the group-summary format are
 all unchanged.
 
-### New evidence for beat 9
+### New evidence for beat 9, when PR #38 lands
 
-Three PR #38 outcomes strengthen the didactic-errors argument and should be cited there:
+Three PR #38 outcomes strengthen the didactic-errors argument and should be added there on merge.
+None of the three is true in the tree today, so none is claimed on the page yet:
 
 1. `[tool.agent_eval]` is now **strictly validated** — `threshold = "high"` is rejected at
    load rather than failing later inside a score comparison.
@@ -202,11 +311,18 @@ one *is* the argument. It must not be rigged: pick a prompt where a naive
 `assert "confirmed" in reply` genuinely fails about a third of the time because the model says
 "you're all set" or "reserved" instead. Record real sessions and choose a good take.
 
-### SVGs — 5
+**All eight are placeholders today.** Each ships as a fenced `console` block holding the intended
+output, preceded by a plain sentence naming the file and its target duration. Recording one is a
+matter of replacing the fence, not of adding a page.
+
+### SVGs — 6 shipped
 
 Beat 2 (commit timeline), beat 3 (four properties), beat 4 (the same, broken), beat 5 (three
-tiers), beat 7 (group gate). Beat 1's trace diagram is optional and built only if time allows —
-the live demo carries that beat.
+tiers), beat 7 (group gate). Beat 1's trace diagram was optional on the grounds that the live
+demo carries that beat — it shipped anyway, because a *reader* gets no live demo and the opening
+claim needs something concrete.
+
+Beat 4 reuses beat 3's exact geometry, broken. See [the visual rhyme](#beats-3-and-4-the-visual-rhyme).
 
 Hand-authored inline SVG, geometric only. Theme-aware through CSS custom properties so a single
 file works in both palettes; do not ship light/dark image pairs.
@@ -229,36 +345,47 @@ consistent with the docs for free.
 
 ## Build order
 
-Talk-first, per the decision above.
+The original order was talk-first, with nav last. It was reordered because the "join nav later"
+phasing turned out not to be implementable (see [Decisions](#decisions)) — the docs part shipped
+first instead, complete enough to stand on its own.
 
-1. **Keyboard and instant-nav check.** Cheap, and it is the failure that ruins a live talk.
-2. **Demo agent**, plus the broken variant. Blocks every cast.
-3. **`beat-04-flake.cast`.**
-4. Remaining casts.
-5. **Five SVGs.** Load-bearing for the room too, not just the reader.
-6. Zones 1–3 on all ten pages.
-7. **Give the talk.**
-8. Zone-4 prose.
-9. Enable `navigation.tabs`, add Learn to nav.
+**Done:**
 
-**Beat 8 is written last regardless** — it is the page whose content the refactor can still
-invalidate.
+1. Enable `navigation.tabs`, nest the existing nav under `Docs`, add the second tab.
+2. All ten pages: zones 1–5, including the zone-4 prose, and six SVGs.
+3. Cast placeholders holding the intended output.
+4. `docs/stylesheets/why.css`; exclude `why/` from `llms-full.txt`; mirror the exclusion in
+   `tests/test_docs_surface.py`.
+
+**Remaining, in order:**
+
+5. **Keyboard and instant-nav check.** Cheap, and it is the failure that ruins a live talk.
+6. **Demo agent**, plus the broken variant. Blocks every cast.
+7. **`beat-04-flake.cast`.**
+8. Remaining casts, replacing the placeholder fences.
+9. **Give the talk.**
+
+**Rewrite beat 8 when PR #38 merges** — it is the only page the refactor can invalidate.
 
 ## Risks and open items
 
-Everything here is stated as *needs verifying*. Zensical is a newer generator and its behaviour
-should not be extrapolated from mkdocs-material.
+### Verified during implementation
 
-### Verify before building
+Recorded in [Confirmed zensical capabilities](#confirmed-zensical-capabilities). In summary:
+`navigation.tabs` and `extra_css` are supported; `md_in_html` composes with `superfences`; there
+is **no `not_in_nav` equivalent**, which forced the nav decision above; and a top-level page under
+a tab keeps its URL, so nothing broke.
 
-- Does zensical support `navigation.tabs`, and how does it treat a top-level page (Home) when
-  tabs are on?
-- Does zensical have a `not_in_nav` equivalent, so Learn pages can build and be reachable by
-  direct URL without appearing in nav?
+`pytest tests/test_docs_surface.py` is the gate that proves it — nav, on-disk pages, `llms.txt`
+links, and the `llms-full.txt` build all stay in sync, and the new pages are covered
+automatically.
+
+### Still open
+
 - Does the asciinema player survive `navigation.instant`? Instant nav swaps content without a
   full page load, so players on pages 2–10 likely will not initialise. This is the same family
   of problem as the Context7 widget (`eddd2ce`, `3749226`, which had to move to the scripts
-  block). Mitigation: re-init on the nav event, or disable instant nav for Learn.
+  block). Mitigation: re-init on the nav event, or disable instant nav for this section.
 - **Do asciinema-player key bindings collide with the theme shortcuts?** `9c1627d` was a fix for
   widget keystrokes triggering theme shortcuts. The player binds space and arrows, and the
   collision would fire when pressing space to play a cast in front of the room. Check first.
@@ -273,7 +400,7 @@ should not be extrapolated from mkdocs-material.
 
 ## Out of scope
 
-- Moving Getting started or Examples into Learn. Explicitly rejected: nothing moves.
+- Moving Getting started or Examples into the new tab. Explicitly rejected: nothing moves.
 - A separate slide toolchain (Marp, reveal.js). Explicitly rejected: the pages *are* the deck.
 - Restructuring into three tabs (Learn / Guides / Reference). Better long-term IA, too large a
   change with a talk deadline live.

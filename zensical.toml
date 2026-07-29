@@ -5,14 +5,29 @@ site_author = "Dataroots"
 site_url = "https://datarootsio.github.io/pytest-agent-eval"
 repo_url = "https://github.com/datarootsio/pytest-agent-eval"
 repo_name = "datarootsio/pytest-agent-eval"
+extra_css = ["stylesheets/why.css"]
 nav = [
-    { "Home" = "index.md" },
-    { "Getting started" = "getting-started.md" },
-    { "Examples" = "examples.md" },
-    { "Writing evals" = [{ "YAML API" = "yaml-api.md" }, { "Python API" = "python-api.md" }, { "Evaluators" = "evaluators.md" }, { "Adapters" = "adapters.md" }] },
-    { "Running & CI" = [{ "Configuration" = "configuration.md" }, { "Group thresholds" = "groups.md" }, { "Reporting" = "reporting.md" }] },
-    { "Using with coding agents" = "agents.md" },
-    { "API reference" = [{ "Overview" = "api-reference/index.md" }, { "Models" = "api-reference/models.md" }, { "Evaluators" = "api-reference/evaluators.md" }, { "Adapters" = "api-reference/adapters.md" }] },
+    { "Docs" = [
+        { "Home" = "index.md" },
+        { "Getting started" = "getting-started.md" },
+        { "Examples" = "examples.md" },
+        { "Writing evals" = [{ "YAML API" = "yaml-api.md" }, { "Python API" = "python-api.md" }, { "Evaluators" = "evaluators.md" }, { "Adapters" = "adapters.md" }] },
+        { "Running & CI" = [{ "Configuration" = "configuration.md" }, { "Group thresholds" = "groups.md" }, { "Reporting" = "reporting.md" }] },
+        { "Using with coding agents" = "agents.md" },
+        { "API reference" = [{ "Overview" = "api-reference/index.md" }, { "Models" = "api-reference/models.md" }, { "Evaluators" = "api-reference/evaluators.md" }, { "Adapters" = "api-reference/adapters.md" }] },
+    ] },
+    { "Why pytest-agent-eval" = [
+        { "The agent wrote the agent" = "why/index.md" },
+        { "Why anyone writes tests" = "why/why-tests.md" },
+        { "What a test is, in pytest" = "why/what-is-a-test.md" },
+        { "All four break at once" = "why/why-it-breaks.md" },
+        { "Runs, thresholds, tiers" = "why/runs-and-tiers.md" },
+        { "Asserting on behaviour" = "why/tool-calls.md" },
+        { "Gates and statistics" = "why/gates.md" },
+        { "One contract" = "why/one-contract.md" },
+        { "Agents author evals" = "why/agents-author-evals.md" },
+        { "What else is in the box" = "why/whats-in-the-box.md" },
+    ] },
 ]
 
 [project.theme]
@@ -27,6 +42,8 @@ features = [
     "navigation.instant",
     "navigation.path",
     "navigation.sections",
+    "navigation.tabs",
+    "navigation.tabs.sticky",
     "navigation.top",
     "navigation.tracking",
     "search.highlight",
