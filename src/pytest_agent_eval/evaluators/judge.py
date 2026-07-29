@@ -60,9 +60,8 @@ def _build_judge_agent(
 async def _run_judge(agent: Agent[None, _JudgeOutput], user_msg: str, retries: int, timeout: float) -> EvalResult:
     """Run the judge, retrying transient failures, and never raise out of an evaluator.
 
-    A judge that cannot be reached must fail the turn with a reason the report can print,
-    not abort the session: one flaky API call would otherwise lose every other result in
-    the run.
+    An unreachable judge fails the turn with a printable reason instead of aborting the
+    session and losing every other result in the run.
     """
     last_error: Exception | None = None
     for _ in range(retries + 1):

@@ -275,11 +275,7 @@ def test_verbose_detail_section_lists_runs_and_reasoning() -> None:
 
 
 def test_detail_section_score_line_follows_the_verdict_not_the_numbers() -> None:
-    """The comparison symbol is derived from ``passed``, so it cannot contradict it.
-
-    Recomputing it from score and threshold is the tempting "simplification"; it makes the
-    line disagree with the ✅/❌ the moment the two are ever decided differently.
-    """
+    """Recomputing the symbol from score and threshold lets the line disagree with the ✅/❌."""
     plugin = AgentEvalReportPlugin(_make_mock_config(verbose=1))
     item = _FakeItem("transcript_one")
     item._eval_result = TranscriptResult(passed=False, score=0.25, threshold=0.8, runs=_make_full_result().runs)
@@ -346,9 +342,8 @@ def test_logreport_collects_result_on_controller() -> None:
     assert collected == result
 
 
-# Each of the three ways a session is *not* an xdist controller, asserted on the effect
-# rather than on a boolean: the same report that the test above collects must be dropped.
-# This replaces two private predicates whose truth value proved nothing on its own.
+# The three ways a session is *not* an xdist controller, asserted on the effect rather
+# than on a boolean: the report the test above collects must be dropped instead.
 
 
 def test_logreport_is_dropped_when_dist_is_off() -> None:

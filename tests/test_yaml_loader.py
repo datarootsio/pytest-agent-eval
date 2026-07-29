@@ -366,11 +366,7 @@ def test_validate_transcript_dict_rejects_non_mapping() -> None:
 
 
 def test_validate_transcript_dict_returns_the_parsed_transcript() -> None:
-    """It returns the Transcript it built rather than throwing it away.
-
-    ``load_transcript`` is now the only caller and it uses that return, so the widening
-    from ``-> None`` has to be part of the contract, not an implementation detail.
-    """
+    """The widening from ``-> None`` is part of the contract, not an implementation detail."""
     transcript = validate_transcript_dict({"id": "t", "threshold": 0.25, "turns": [{"user": "hi"}]})
     assert isinstance(transcript, Transcript)
     assert transcript.id == "t"

@@ -17,8 +17,7 @@ import pytest
 from pytest_agent_eval.models import Message, TurnContext
 
 if TYPE_CHECKING:
-    # The real SDK types, so the helpers below say what they build. Every runtime import
-    # stays inside the test that needs it: this module must import without the extras.
+    # Type-only, because this module must import without the extras installed.
     from langchain_core.messages import BaseMessage
     from openai.types.chat import ChatCompletion
 
@@ -157,12 +156,7 @@ async def test_tool_call_args_judge_against_real_agent() -> None:
 
 
 def _real_chat_completion() -> ChatCompletion:
-    """Build the SDK's own response object, so the adapter is read against the real shape.
-
-    The return type is the real class under ``TYPE_CHECKING`` while the runtime import
-    stays inside the body: this module must import without the openai extra, which the
-    ``test-no-extras`` job enforces.
-    """
+    """Build the SDK's own response object, so the adapter is read against the real shape."""
     from openai.types.chat import ChatCompletion, ChatCompletionMessage
     from openai.types.chat.chat_completion import Choice
 

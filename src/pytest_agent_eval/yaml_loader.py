@@ -32,10 +32,6 @@ __all__ = [
 def validate_transcript_dict(data: object, source: str = "transcript") -> Transcript:
     """Parse a raw transcript document into a Transcript, raising on the first problem.
 
-    ``data`` is ``object`` because a parsed YAML document really can be anything the
-    author typed — a list, a scalar, ``None``. Narrowing it is what pydantic is for, and
-    ``as_transcript_error`` is what turns its report into a message naming the location.
-
     Args:
         data: The parsed YAML document.
         source: Label used as the location prefix in error messages.

@@ -32,9 +32,8 @@ def _ty() -> str:
 def _check(probe: Path) -> subprocess.CompletedProcess[str]:
     """Run ``ty`` over one probe file, skipping the test when an SDK or ty is missing.
 
-    No ``--exit-zero-on-warning``: the ratcheted rules in pyproject are demoted to
-    warnings, and the negative probe's two expected diagnostics are among them. Passing
-    that flag would make the inverted assertion below vacuous.
+    No ``--exit-zero-on-warning``: the negative probe's two expected diagnostics are among
+    the rules pyproject demotes to warnings, so that flag would make its assertion vacuous.
     """
     for module in _SDKS:
         pytest.importorskip(module)
@@ -63,18 +62,17 @@ def test_every_adapter_accepts_its_real_sdk_type() -> None:
 
 
 def test_asdict_and_to_dict_are_not_assignable_to_a_message_param() -> None:
-    """The inverted probe: it must fail, for the two stated reasons and no others.
+    """The inverted probe: it must fail, for the two reasons its docstring states.
 
-    This is what keeps ``adapters/openai.py::_as_param``'s role dispatch from being
-    "simplified" into ``asdict(message)`` — a change that shipped once as a bug (5f22d19)
-    and that no runtime test can catch, because both failures are static.
+    What keeps ``openai._as_param``'s role dispatch from being "simplified" into
+    ``asdict(message)``, which shipped once as a bug (5f22d19).
     """
     result = _check(_NEGATIVE_PROBE)
     output = result.stdout + result.stderr
 
     assert result.returncode != 0, f"_sdk_probe_negative.py type-checks, so _as_param is now redundant:\n{output}"
-    # Named, not just counted: a probe that fails for a third reason — a bad import, say —
-    # would satisfy the returncode assertion while proving nothing about asdict.
+    # Counted and named, because a probe that broke for a third reason — a bad import, say
+    # — would satisfy the returncode assertion while proving nothing about asdict.
     assert "Found 2 diagnostics" in output, f"expected exactly the two documented failures, got:\n{output}"
     assert output.count("invalid-return-type") == 2, f"both failures must be assignability, got:\n{output}"
     assert "dict[str, Any]" in output, "the asdict failure must name its Any-valued dict"

@@ -96,7 +96,7 @@ def build_markdown_report(
 
 
 def _format_run_lines(run: RunResult) -> list[str]:
-    """Render one run of the markdown report's Details section: a heading, then its turns."""
+    """One run of the markdown report's Details section: a heading, then its turns."""
     lines = [f"**Run {run.run_index + 1}** {'✅' if run.passed else '❌'}"]
     for turn in run.turn_results:
         lines.append(f"- Turn {turn.turn_index + 1}: {'PASS' if turn.passed else 'FAIL'}")
@@ -120,10 +120,10 @@ def _detail_section(result: TranscriptResult, verbosity: int) -> str | None:
 
 
 def _score_line(result: TranscriptResult) -> str:
-    """The one-line verdict shown above the per-run detail: runs passed, score, threshold.
+    """The verdict line above the per-run detail: runs passed, score, threshold.
 
-    The comparison symbol is derived from ``passed`` rather than recomputed from the two
-    numbers, so the line can never disagree with the verdict it sits under.
+    The symbol comes from ``passed``, not from comparing the numbers again, so the line
+    cannot disagree with the verdict it sits under.
     """
     symbol = ">=" if result.passed else "<"
     passed, total = result.passed_run_count, len(result.runs)
@@ -180,22 +180,13 @@ class AgentEvalReportPlugin:
 
     @staticmethod
     def _item_meta(item: pytest.Item) -> JsonMapping:
-        """Everything group aggregation needs about an item, in a JSON-native shape.
-
-        A mapping rather than a record because this crosses the xdist wire as a
-        ``user_properties`` value, and xdist ships those through JSON.
-        """
+        """What group aggregation needs about an item, as a dict because it crosses the wire."""
         marker = item.get_closest_marker("agent_eval")
         tags = list((marker.kwargs.get("tags") if marker else None) or [])
         return {"identity": item.name, "tags": tags, "markers": [m.name for m in item.iter_markers()]}
 
     def _record_outcome(self, nodeid: str, meta: JsonMapping, when: str, outcome: str) -> None:
-        """Fold one phase report into this item's recorded outcome, creating it if new.
-
-        Every phase of every item lands here, so the entry starts as "passed" and is only
-        ever moved by ``_advance_outcome`` — which is what makes a setup skip and a call
-        failure land on the same record.
-        """
+        """Fold one phase report into this item's recorded outcome, creating it if new."""
         entry = self._outcomes.get(nodeid) or EvalOutcome(
             identity=meta["identity"],
             nodeid=nodeid,
@@ -247,9 +238,8 @@ class AgentEvalReportPlugin:
 
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         """On the xdist controller, replay outcomes and deserialise forwarded eval results."""
-        # `option.dist` is added by pytest-xdist, so its absence means the plugin is not
-        # installed and there is no controller to be. A worker forwards rather than
-        # replays, so it must fall straight through too.
+        # `option.dist` is added by pytest-xdist, so its absence means no controller to be;
+        # a worker forwards rather than replays, so it falls straight through too.
         if getattr(self._config.option, "dist", "no") == "no" or self._is_worker:
             return
 

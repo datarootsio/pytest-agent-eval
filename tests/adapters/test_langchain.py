@@ -55,11 +55,10 @@ async def test_langchain_adapter_handles_missing_args_key() -> None:
 
 @pytest.mark.parametrize("shape", ["message", "graph"], ids=["direct_message", "graph_result"])
 async def test_langchain_adapter_treats_tool_calls_of_none_as_no_tools(shape: str) -> None:
-    """LangChain sets ``tool_calls`` to None as well as omitting it, on both result shapes.
+    """LangChain sets ``tool_calls`` to None as well as omitting it.
 
-    The ``or []`` after the getattr default is what covers the None case; without it this
-    raises TypeError inside the comprehension. Both branches of ``__call__`` read the
-    attribute independently, so both need pinning.
+    The ``or []`` covers None; without it this raises TypeError. Both branches of
+    ``__call__`` read the attribute independently, so both need pinning.
     """
     from pytest_agent_eval.adapters.langchain import LangChainAdapter
 

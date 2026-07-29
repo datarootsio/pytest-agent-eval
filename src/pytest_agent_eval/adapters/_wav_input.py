@@ -80,9 +80,8 @@ class _WavStreamer:
     def _load(self) -> None:
         """Read the whole WAV into memory, rejecting any geometry the streamer can't replay.
 
-        Called from ``next_chunk`` on the first frame rather than from ``__init__``: a
-        session may be constructed and never started, and the three checks below are the
-        only place a mismatched fixture is caught before livekit receives garbage.
+        Deferred to the first frame rather than ``__init__``, because a session may be
+        built and never started.
         """
         with wave.open(str(self._wav_path), "rb") as wav:
             if wav.getnchannels() != 1:

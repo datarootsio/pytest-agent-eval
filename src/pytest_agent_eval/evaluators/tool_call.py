@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 def _is_ordered_subsequence(needle: Sequence[str], haystack: Sequence[str]) -> bool:
     """Whether every name in ``needle`` appears in ``haystack``, in that relative order.
 
-    The single shared iterator is the whole trick: ``n in it`` consumes ``haystack`` up to
-    the match, so the next name can only be found after it. Rewriting this as two
-    comprehensions loses the ordering and makes the evaluator accept any permutation.
+    The shared iterator is what enforces the order: ``n in it`` consumes ``haystack`` up
+    to the match, so the next name can only be found after it. Rebuild it per name and the
+    evaluator starts accepting any permutation.
     """
     it = iter(haystack)
     return all(n in it for n in needle)

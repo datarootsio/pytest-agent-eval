@@ -13,16 +13,10 @@ if TYPE_CHECKING:
 def coerce_args(raw: Mapping[str, object] | str | None) -> ToolArgs | None:
     """Coerce a framework's tool-call arguments into a dict, or None when uncapturable.
 
-    The parameter names the three shapes the four call sites actually pass: LangChain's
-    ``ToolCall["args"]`` mapping, OpenAI's JSON string, and the ``getattr`` default of
-    ``None`` where an SDK object carries no arguments at all. ``Mapping``, not ``dict``,
-    because a framework is free to hand back its own mapping type and turning that into
-    "not captured" would be a lie about arguments we plainly have.
-
-    The dict is rebuilt key by key rather than handed straight through, which is what makes
-    the return annotation true rather than asserted: the comprehension *constructs* a
-    ``dict[str, object]`` from whatever the mapping holds. ``str(k)`` rather than rejecting
-    a non-string key, for the same reason.
+    ``Mapping``, not ``dict``: a framework may hand back its own mapping type, and
+    reporting "not captured" for arguments we plainly have would be a lie. The dict is
+    rebuilt key by key — including ``str(k)`` — so the return annotation is constructed
+    rather than asserted.
 
     Args:
         raw: Whatever the framework exposes as call arguments — a mapping, a JSON
@@ -34,16 +28,14 @@ def coerce_args(raw: Mapping[str, object] | str | None) -> ToolArgs | None:
         distinctly from an argument mismatch.
     """
     if isinstance(raw, str):
-        # json.loads returns whatever the document held, so the Mapping check below is
-        # what turns `[1, 2]` or `null` into "not captured" rather than a crash.
         try:
             parsed: object = json.loads(raw)
         except ValueError:
             return None
     else:
         parsed = raw
-    # isinstance, not a bare `raw is None` check: the guard is also for callers without a
-    # type checker, and a stray scalar out of an untyped SDK must still say "not captured".
+    # The guard is also for callers with no type checker, so a stray scalar out of an
+    # untyped SDK must say "not captured" rather than raise.
     if not isinstance(parsed, Mapping):
         return None
     return {str(k): v for k, v in parsed.items()}

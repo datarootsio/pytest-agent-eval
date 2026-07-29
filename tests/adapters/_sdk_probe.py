@@ -45,19 +45,13 @@ def probe_azure_openai(client: AsyncAzureOpenAI) -> OpenAIAdapter:
 
 
 def probe_openai_message_param(message: Message) -> ChatCompletionMessageParam:
-    """The positive control for ``_sdk_probe_negative.py``: a role literal *is* assignable.
-
-    Without this, the two expected failures over there could equally mean the annotation
-    is unsatisfiable rather than that ``asdict`` and ``to_dict`` are the wrong shape.
-    """
+    """The positive control for ``_sdk_probe_negative.py``: a role literal *is* assignable."""
     return {"role": "user", "content": message.content}
 
 
-# Both type arguments below are langchain's, not ours, and that is the finding these two
-# probes exist to hold: `Runnable` is invariant in Input and Output, so narrowing either
-# slot — `dict[str, JsonValue]` for Input, `str` for Output — makes a real RunnableLambda
-# and a real RunnableSequence stop being assignable. The same trap as an over-narrowed
-# Protocol parameter, one level up in the type arguments.
+# `Runnable` is invariant in Input and Output, so narrowing either type argument makes a
+# real RunnableLambda and RunnableSequence stop being assignable. Both `object`s below are
+# langchain's; these two probes are what hold that.
 def probe_langchain_lambda(runnable: RunnableLambda[dict[str, object], object]) -> LangChainAdapter:
     """The simplest real Runnable."""
     return LangChainAdapter(runnable)

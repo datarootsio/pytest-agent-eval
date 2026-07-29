@@ -111,12 +111,9 @@ class LiveKitAdapter:
         tool_calls: list[ToolCall] = []
         reply_chunks: list[str] = []
 
-        # livekit ships py.typed, so the events are named for real — which is also what
-        # makes `session.on` type-check, since it takes a Literal of event names paired
-        # with the handler each one carries. The reads stay `getattr` with a default on
-        # purpose: livekit's event payloads vary by version and by which model fired
-        # them, and `event.item` is itself a union whose members differ. The defaults are
-        # what keeps the adapter working across that drift.
+        # The reads stay `getattr` with a default even though the events are typed:
+        # livekit's payloads vary by version and by which model fired them, and
+        # `event.item` is itself a union whose members differ.
         def _on_function_tools_executed(event: FunctionToolsExecutedEvent) -> None:
             """Record every tool call livekit reports as executed on this turn."""
             for fc in getattr(event, "function_calls", []) or []:

@@ -41,11 +41,7 @@ def _voice_turn(wav_path: Path, content: str = "hi") -> list[dict[str, str]]:
 
 
 def test_constructing_the_adapter_quiets_the_livekit_loggers() -> None:
-    """Livekit logs a wall of INFO per session, which buries the pytest output.
-
-    The loop that does this was a one-line private function with no docstring; inlining it
-    into ``__init__`` left the behaviour with nothing asserting it.
-    """
+    """Livekit logs a wall of INFO per session, which buries the pytest output."""
     import logging
 
     names = ("livekit.agents", "livekit", "livekit.plugins.openai")
