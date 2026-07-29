@@ -7,16 +7,24 @@ rule has a non-obvious reason, the reason is stated — follow the reason, not t
 
 - **Never `typing.Any`.** It silently switches off checking, and neither `ty` nor ruff's
   `ANN401` catches `dict[str, Any]`. Instead:
-  - unknown input → `object`, then narrow. That forces the `isinstance` check `Any` lets
-    you skip.
-  - a duck-typed third-party object → a `Protocol` for what you actually call.
-  - a dependency that ships types → the real type, imported under `TYPE_CHECKING`.
+  - a third-party value → **the real type from the SDK, imported under `TYPE_CHECKING`.**
+    This is the default, and the first thing to check is whether the dependency ships
+    `py.typed`: openai, langchain-core, pydantic-ai and livekit do; **smolagents does
+    not**. Verify rather than assume — `python -c "import importlib.util, pathlib;
+    print((pathlib.Path(importlib.util.find_spec('<pkg>').origin).parent / 'py.typed').exists())"`.
+  - a genuinely untyped dependency → a `Protocol` for what you actually call.
   - JSON → `JsonMapping`.
   - a foreign object you want to attach state to → `pytest.StashKey[T]`, never `setattr`.
+  - `object`, then narrow with `isinstance`, **only** where a third party's own generic or
+    hook signature forces the slot, or where the value really is arbitrary (a parsed YAML
+    document). It is the fallback of last resort, not the default: an earlier version of
+    this rule listed it first and every `object` in the repo was that rule being followed.
 
-  The remaining uses are enumerated in `tests/test_public_surface.py`. That allowlist only
-  shrinks; adding to it is a one-line diff a reviewer sees, which is more than a
-  `# type: ignore` would be.
+  The remaining `Any` and `object` uses are enumerated in `tests/test_public_surface.py`
+  (`ANY_ALLOWLIST`, `OBJECT_ALLOWLIST`), each with the third party that forces it. Both
+  allowlists only shrink; adding to one is a one-line diff a reviewer sees, which is more
+  than a `# type: ignore` would be. `OBJECT_ALLOWLIST` fails on a stale entry too, so a
+  residue a refactor closed cannot linger as false debt.
 
 - **Accept `Sequence`, return `list`.** `list` is invariant, so `list[ToolCall]` is not
   assignable to `list[str]` even though `ToolCall` subclasses `str`. That single fact
@@ -30,17 +38,28 @@ rule has a non-obvious reason, the reason is stated — follow the reason, not t
   `payload: Mapping[str, object]` where the real method takes a `dict` also rejects the
   real class. Type the parameter as what you actually pass.
 
+  **The same trap sits one level up, in a third party's own invariant generic.**
+  `langchain_core.runnables.Runnable[Input, Output]` is invariant in both, so narrowing
+  either type argument below what langchain declares — `dict[str, JsonValue]` in the Input
+  slot, `str` in the Output slot — rejects a real `RunnableLambda` and a real
+  `RunnableSequence`. `Runnable[dict[str, object], object]` is the only spelling that
+  accepts them, and those two `object`s are langchain's, not ours. Don't "tighten" a type
+  argument you did not declare.
+
   `tests/adapters/_sdk_probe.py` assigns a real SDK object to every adapter's declared
   parameter type and is type-checked by `tests/adapters/test_sdk_types.py`. That static
-  check is the only thing that catches this — the adapter still imports and passes every
-  fake-based test while being unusable from a typed call site.
+  check is the only thing that catches either failure — the adapter still imports and
+  passes every fake-based test while being unusable from a typed call site.
+  `tests/adapters/_sdk_probe_negative.py` is the same idea inverted: `test_sdk_types.py`
+  asserts it *fails* to type-check, for two named diagnostics and no others, which is how
+  "why not just `asdict(message)`?" is answered by the checker instead of by a comment.
 
 - **Put the type on the parameter.** A `client: object` parameter with a `cast(...)` in the
-  body is an unchecked assertion, not a type. Use a Protocol (spelled per the rule above),
-  or the real SDK type under `TYPE_CHECKING` where a Protocol provably cannot express the
-  surface — `openai.AsyncOpenAI` is the one such case, because `create` is overloaded.
-  `hasattr` guards stay regardless: they name the extra to install, which an assignability
-  error does not.
+  body is an unchecked assertion, not a type. Use the real SDK type under `TYPE_CHECKING`,
+  or a Protocol (spelled per the rule above) where the SDK ships no types.
+  `openai.AsyncOpenAI` could not be a Protocol even if we wanted one, because `create` is
+  overloaded. `hasattr` guards stay regardless: they name the extra to install, which an
+  assignability error does not.
 
 - **Every Protocol must be named by an annotation.** One that isn't is documentation the
   checker never verifies — three had drifted out of use and two of them described a shape
@@ -100,7 +119,15 @@ rule has a non-obvious reason, the reason is stated — follow the reason, not t
   `type(x).__name__` at ten call sites, and `_get_agent()` was a pure alias for the
   `_agent` cached_property beside it. Inline or delete those. If inlining would duplicate
   a decision, bind it once instead — `ContainsEvaluator.evaluate` binds `fold` rather than
-  spelling the case-sensitivity ternary four times.
+  spelling the case-sensitivity ternary four times, and `langchain._tool_calls` binds how a
+  LangChain tool call maps onto ours rather than spelling it in both branches of `__call__`.
+
+  **A private one-liner with no docstring is the tell.** Every one that turned out to be
+  removable had that shape: `report._xdist_active` and `_is_xdist_controller` were a
+  two-deep alias chain collapsed into their single caller, `_reasoning_lines` was a
+  one-use comprehension, `livekit._quiet_livekit_loggers` had one caller, and
+  `yaml_loader._validate` was a pass-through with no production caller — it merged into
+  `validate_transcript_dict`, which now returns the `Transcript` it built.
 
   **Exempt, because the name is buying something:**
   - `@property` / `@cached_property` — a property *is* the interface.
@@ -174,7 +201,7 @@ Both are intentional; don't "fix" them.
 ## Running Tests and Linting
 
 ```bash
-uv run pytest tests/ -q                                            # 436 tests
+uv run pytest tests/ -q                                            # 458 tests
 uv run coverage run -m pytest tests/ && uv run coverage report      # 100%, gated
 uv run pytest tests/ -n auto -q                                     # xdist path (no --cov)
 uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/
