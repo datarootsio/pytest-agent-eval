@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from pytest_agent_eval.models import Transcript
 from pytest_agent_eval.yaml_loader import TranscriptError, load_transcript, validate_transcript_dict
 from tests.helpers.pytester_project import EvalProject, raising_agent, static_agent
 
@@ -362,6 +363,19 @@ def test_yaml_transcript_defaults_come_from_config(pytester: pytest.Pytester) ->
 def test_validate_transcript_dict_rejects_non_mapping() -> None:
     with pytest.raises(TranscriptError, match="must be a YAML mapping"):
         validate_transcript_dict(["not", "a", "dict"], source="x.yaml")
+
+
+def test_validate_transcript_dict_returns_the_parsed_transcript() -> None:
+    """It returns the Transcript it built rather than throwing it away.
+
+    ``load_transcript`` is now the only caller and it uses that return, so the widening
+    from ``-> None`` has to be part of the contract, not an implementation detail.
+    """
+    transcript = validate_transcript_dict({"id": "t", "threshold": 0.25, "turns": [{"user": "hi"}]})
+    assert isinstance(transcript, Transcript)
+    assert transcript.id == "t"
+    assert transcript.threshold == 0.25
+    assert [turn.user for turn in transcript.turns] == ["hi"]
 
 
 def test_invalid_yaml_shows_clean_collect_error(pytester: pytest.Pytester) -> None:

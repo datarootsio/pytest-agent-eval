@@ -267,10 +267,26 @@ def test_verbose_detail_section_lists_runs_and_reasoning() -> None:
 
     title, body = report.sections[0]
     assert title == "LLM Eval"
+    assert body.startswith("[1/2 runs, score=0.75 >= 0.50]")
     assert "Run 1 ✅" in body
     assert "Run 2 ❌" in body
     assert "looks good" in body
     assert "missing keyword" in body
+
+
+def test_detail_section_score_line_follows_the_verdict_not_the_numbers() -> None:
+    """The comparison symbol is derived from ``passed``, so it cannot contradict it.
+
+    Recomputing it from score and threshold is the tempting "simplification"; it makes the
+    line disagree with the ✅/❌ the moment the two are ever decided differently.
+    """
+    plugin = AgentEvalReportPlugin(_make_mock_config(verbose=1))
+    item = _FakeItem("transcript_one")
+    item._eval_result = TranscriptResult(passed=False, score=0.25, threshold=0.8, runs=_make_full_result().runs)
+
+    _, body = _drive_makereport(plugin, item, _FakeReport()).sections[0]
+
+    assert body.startswith("[1/2 runs, score=0.25 < 0.80]")
 
 
 def test_verbose_level_one_omits_per_turn_reasoning() -> None:
@@ -303,24 +319,9 @@ def test_is_not_xdist_worker_normally() -> None:
     assert plugin._is_worker is False
 
 
-def test_is_xdist_controller_when_dist_active_and_not_worker() -> None:
-    cfg = _make_mock_config(dist="load")
-    plugin = AgentEvalReportPlugin(cfg)
-    assert plugin._is_xdist_controller() is True
-
-
-def test_is_not_xdist_controller_when_dist_no() -> None:
-    cfg = _make_mock_config(dist="no")
-    plugin = AgentEvalReportPlugin(cfg)
-    assert plugin._is_xdist_controller() is False
-
-
-def test_logreport_collects_result_on_controller() -> None:
-    cfg = _make_mock_config(dist="load")
-    plugin = AgentEvalReportPlugin(cfg)
-    result = _make_full_result()
-
-    report = types.SimpleNamespace(
+def _forwarded_report(result: TranscriptResult) -> Any:
+    """A worker's report as the controller receives it: the eval result on user_properties."""
+    return types.SimpleNamespace(
         when="call",
         nodeid="tests/evals/foo.yaml::my_transcript",
         failed=False,
@@ -330,12 +331,47 @@ def test_logreport_collects_result_on_controller() -> None:
             ("llm_eval_result", _serialize_result(result)),
         ],
     )
-    plugin.pytest_runtest_logreport(report)
+
+
+def test_logreport_collects_result_on_controller() -> None:
+    cfg = _make_mock_config(dist="load")
+    plugin = AgentEvalReportPlugin(cfg)
+    result = _make_full_result()
+
+    plugin.pytest_runtest_logreport(_forwarded_report(result))
 
     assert len(plugin._results) == 1
     name, collected = plugin._results[0]
     assert name == "my_transcript"
     assert collected == result
+
+
+# Each of the three ways a session is *not* an xdist controller, asserted on the effect
+# rather than on a boolean: the same report that the test above collects must be dropped.
+# This replaces two private predicates whose truth value proved nothing on its own.
+
+
+def test_logreport_is_dropped_when_dist_is_off() -> None:
+    """Without -n, results are buffered by makereport; replaying here would double-count."""
+    plugin = AgentEvalReportPlugin(_make_mock_config(dist="no"))
+    plugin.pytest_runtest_logreport(_forwarded_report(_make_full_result()))
+    assert plugin._results == []
+
+
+def test_logreport_is_dropped_on_a_worker() -> None:
+    """A worker forwards its results; replaying them locally would strand them there."""
+    plugin = AgentEvalReportPlugin(_make_mock_config(dist="load", has_workerinput=True))
+    plugin.pytest_runtest_logreport(_forwarded_report(_make_full_result()))
+    assert plugin._results == []
+
+
+def test_logreport_is_dropped_when_xdist_is_not_installed() -> None:
+    """`option.dist` is added by pytest-xdist, so its absence means there is no controller."""
+    cfg = types.SimpleNamespace()
+    cfg.option = types.SimpleNamespace()
+    plugin = AgentEvalReportPlugin(cfg)
+    plugin.pytest_runtest_logreport(_forwarded_report(_make_full_result()))
+    assert plugin._results == []
 
 
 def test_logreport_ignores_non_call_phases() -> None:
@@ -349,14 +385,6 @@ def test_logreport_ignores_non_call_phases() -> None:
         plugin.pytest_runtest_logreport(report)
 
     assert plugin._results == []
-
-
-def test_xdist_active_returns_false_when_no_dist_option() -> None:
-    cfg = types.SimpleNamespace()
-    # config.option does not have a 'dist' attribute
-    cfg.option = types.SimpleNamespace()
-    plugin = AgentEvalReportPlugin(cfg)
-    assert plugin._xdist_active() is False
 
 
 def test_logreport_ignores_reports_without_llm_eval_result() -> None:

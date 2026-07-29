@@ -78,6 +78,12 @@ class _WavStreamer:
         self._exhausted = asyncio.Event()
 
     def _load(self) -> None:
+        """Read the whole WAV into memory, rejecting any geometry the streamer can't replay.
+
+        Called from ``next_chunk`` on the first frame rather than from ``__init__``: a
+        session may be constructed and never started, and the three checks below are the
+        only place a mismatched fixture is caught before livekit receives garbage.
+        """
         with wave.open(str(self._wav_path), "rb") as wav:
             if wav.getnchannels() != 1:
                 raise ValueError(f"{self._wav_path}: expected mono, got {wav.getnchannels()} ch")

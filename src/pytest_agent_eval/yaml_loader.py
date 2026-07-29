@@ -29,23 +29,23 @@ __all__ = [
 ]
 
 
-def validate_transcript_dict(data: object, source: str = "transcript") -> None:
-    """Validate a raw transcript mapping, raising on the first problem.
+def validate_transcript_dict(data: object, source: str = "transcript") -> Transcript:
+    """Parse a raw transcript document into a Transcript, raising on the first problem.
 
-    Kept as a named entry point for callers that want validation without a Transcript.
+    ``data`` is ``object`` because a parsed YAML document really can be anything the
+    author typed — a list, a scalar, ``None``. Narrowing it is what pydantic is for, and
+    ``as_transcript_error`` is what turns its report into a message naming the location.
 
     Args:
         data: The parsed YAML document.
         source: Label used as the location prefix in error messages.
 
+    Returns:
+        The validated Transcript.
+
     Raises:
         TranscriptError: With a location-aware, suggestion-bearing message.
     """
-    _validate(data, source)
-
-
-def _validate(data: object, source: str) -> Transcript:
-    """Parse a raw document into a Transcript, translating pydantic errors."""
     try:
         return Transcript.model_validate(data)
     except ValidationError as exc:
@@ -83,7 +83,7 @@ def load_transcript(
     Raises:
         TranscriptError: If the document fails validation.
     """
-    transcript = _validate(yaml.safe_load(path.read_text()), path.name)
+    transcript = validate_transcript_dict(yaml.safe_load(path.read_text()), path.name)
     # `model_fields_set` is pydantic's own record of which keys the document supplied, so
     # a config default fills in only where the author was silent. Presence-based, never
     # truthiness: `threshold: 0.0` is a real value that `or default_threshold` would eat.

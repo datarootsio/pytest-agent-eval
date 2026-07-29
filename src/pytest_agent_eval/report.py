@@ -96,16 +96,12 @@ def build_markdown_report(
 
 
 def _format_run_lines(run: RunResult) -> list[str]:
+    """Render one run of the markdown report's Details section: a heading, then its turns."""
     lines = [f"**Run {run.run_index + 1}** {'✅' if run.passed else '❌'}"]
     for turn in run.turn_results:
         lines.append(f"- Turn {turn.turn_index + 1}: {'PASS' if turn.passed else 'FAIL'}")
         lines.extend(f"  - {er.reasoning}" for er in turn.eval_results if er.reasoning)
     return lines
-
-
-def _reasoning_lines(run: RunResult) -> list[str]:
-    """Every non-empty evaluator reasoning for one run, indented under it."""
-    return [f"    {er.reasoning}" for turn in run.turn_results for er in turn.eval_results if er.reasoning]
 
 
 def _detail_section(result: TranscriptResult, verbosity: int) -> str | None:
@@ -119,11 +115,16 @@ def _detail_section(result: TranscriptResult, verbosity: int) -> str | None:
     for run in result.runs:
         lines.append(f"  Run {run.run_index + 1} {'✅' if run.passed else '❌'}")
         if verbosity >= _VERBOSITY_WITH_REASONING:
-            lines.extend(_reasoning_lines(run))
+            lines.extend(f"    {er.reasoning}" for turn in run.turn_results for er in turn.eval_results if er.reasoning)
     return f"{_score_line(result)}\n" + "\n".join(lines)
 
 
 def _score_line(result: TranscriptResult) -> str:
+    """The one-line verdict shown above the per-run detail: runs passed, score, threshold.
+
+    The comparison symbol is derived from ``passed`` rather than recomputed from the two
+    numbers, so the line can never disagree with the verdict it sits under.
+    """
     symbol = ">=" if result.passed else "<"
     passed, total = result.passed_run_count, len(result.runs)
     return f"[{passed}/{total} runs, score={result.score:.2f} {symbol} {result.threshold:.2f}]"
@@ -179,11 +180,22 @@ class AgentEvalReportPlugin:
 
     @staticmethod
     def _item_meta(item: pytest.Item) -> JsonMapping:
+        """Everything group aggregation needs about an item, in a JSON-native shape.
+
+        A mapping rather than a record because this crosses the xdist wire as a
+        ``user_properties`` value, and xdist ships those through JSON.
+        """
         marker = item.get_closest_marker("agent_eval")
         tags = list((marker.kwargs.get("tags") if marker else None) or [])
         return {"identity": item.name, "tags": tags, "markers": [m.name for m in item.iter_markers()]}
 
     def _record_outcome(self, nodeid: str, meta: JsonMapping, when: str, outcome: str) -> None:
+        """Fold one phase report into this item's recorded outcome, creating it if new.
+
+        Every phase of every item lands here, so the entry starts as "passed" and is only
+        ever moved by ``_advance_outcome`` — which is what makes a setup skip and a call
+        failure land on the same record.
+        """
         entry = self._outcomes.get(nodeid) or EvalOutcome(
             identity=meta["identity"],
             nodeid=nodeid,
@@ -201,15 +213,6 @@ class AgentEvalReportPlugin:
         parentheses were the only thing it added.
         """
         return hasattr(self._config, "workerinput")
-
-    def _xdist_active(self) -> bool:
-        try:
-            return self._config.option.dist != "no"
-        except AttributeError:
-            return False
-
-    def _is_xdist_controller(self) -> bool:
-        return self._xdist_active() and not self._is_worker
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(
@@ -244,7 +247,10 @@ class AgentEvalReportPlugin:
 
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         """On the xdist controller, replay outcomes and deserialise forwarded eval results."""
-        if not self._is_xdist_controller():
+        # `option.dist` is added by pytest-xdist, so its absence means the plugin is not
+        # installed and there is no controller to be. A worker forwards rather than
+        # replays, so it must fall straight through too.
+        if getattr(self._config.option, "dist", "no") == "no" or self._is_worker:
             return
 
         if report.failed:
@@ -310,6 +316,7 @@ class AgentEvalReportPlugin:
         self._maybe_override_exit_code(session, exitstatus)
 
     def _maybe_override_exit_code(self, session: pytest.Session, exitstatus: int) -> None:
+        """Downgrade a red session to green when every failure is covered by a passing gate."""
         # Only downgrade TESTS_FAILED to OK, and only when every failure is absorbed
         # by a passing gated group — a failing plain unit test, an ungrouped
         # transcript, or a collection error must keep the red exit code.
