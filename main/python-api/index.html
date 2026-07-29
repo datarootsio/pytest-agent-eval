@@ -1320,7 +1320,7 @@
 <tr>
 <td><code>agent</code></td>
 <td><code>Callable</code></td>
-<td>Async callable: <code>(messages) -&gt; (reply, tool_calls)</code></td>
+<td>Async callable: <code>(history) -&gt; AgentReply</code>; a plain <code>(reply, tool_calls)</code> tuple also works</td>
 </tr>
 <tr>
 <td><code>turns</code></td>
@@ -1490,13 +1490,13 @@
 <h2 id="full-annotated-example">Full annotated example<a class="headerlink" href="#full-annotated-example" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">Turn</span><span class="p">,</span> <span class="n">Expect</span><span class="p">,</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">AgentReply</span><span class="p">,</span> <span class="n">Turn</span><span class="p">,</span> <span class="n">Expect</span><span class="p">,</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">ContainsEvaluator</span><span class="p">,</span> <span class="n">ToolCallEvaluator</span><span class="p">,</span> <span class="n">JudgeEvaluator</span><span class="p">,</span>
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="p">)</span>
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">booking_agent</span><span class="p">(</span><span class="n">messages</span><span class="p">):</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="c1"># Your real agent implementation here — return (reply, tool_calls)</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="k">return</span> <span class="s2">&quot;Booking confirmed! Reference: BK-1234 for tomorrow at 10am.&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;create_booking&quot;</span><span class="p">]</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">booking_agent</span><span class="p">(</span><span class="n">history</span><span class="p">):</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="c1"># Your real agent implementation here — return an AgentReply</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="k">return</span> <span class="n">AgentReply</span><span class="p">(</span><span class="s2">&quot;Booking confirmed! Reference: BK-1234 for tomorrow at 10am.&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;create_booking&quot;</span><span class="p">])</span>
 </span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
 </span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">agent_eval</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">runs</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 </span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_full_booking_flow</span><span class="p">(</span><span class="n">agent_eval</span><span class="p">):</span>

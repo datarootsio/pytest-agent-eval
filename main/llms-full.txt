@@ -233,16 +233,21 @@ For framework-specific adapters, install one of the optional extras shown in the
 
 === "Custom"
 
-    Any `async def agent(messages) -> tuple[reply: str, tool_calls: list[str]]` callable works as-is. No base class, no inheritance.
+    Any `async def agent(history) -> AgentReply` callable works as-is. No base class, no inheritance.
 
     ```python
+    from pytest_agent_eval import AgentReply
+
     @pytest.fixture
     def llm_eval_agent():
-        async def agent(messages):
-            reply = await call_my_backend(messages[-1]["content"])
-            return reply, []
+        async def agent(history):
+            reply = await call_my_backend(history[-1].content)
+            return AgentReply(reply, [])
         return agent
     ```
+
+    A plain `(reply, tool_calls)` tuple is still a valid return, and `history[-1]["content"]`
+    still reads the same value — see [writing a custom adapter](adapters.md#writing-a-custom-adapter).
 
 ## YAML auto-discovery
 
@@ -361,11 +366,11 @@ Create `tests/test_my_agent.py`:
 
 ```python
 import pytest
-from pytest_agent_eval import Turn, Expect, ContainsEvaluator
+from pytest_agent_eval import AgentReply, Turn, Expect, ContainsEvaluator
 
-async def my_agent(messages):
-    """Your agent callable: receives OpenAI-style messages, returns (reply, tool_calls)."""
-    return "Your booking is confirmed for tomorrow at 10am.", []
+async def my_agent(history):
+    """Your agent callable: receives the conversation history, returns an AgentReply."""
+    return AgentReply("Your booking is confirmed for tomorrow at 10am.", [])
 
 @pytest.mark.agent_eval(threshold=0.8, runs=3)
 async def test_booking_confirmation(agent_eval):
@@ -420,10 +425,12 @@ You must also provide an `llm_eval_agent` fixture so the loader knows what to ca
 # tests/conftest.py
 import pytest
 
+from pytest_agent_eval import AgentReply
+
 @pytest.fixture
 def llm_eval_agent():
-    async def my_agent(messages):
-        return "Your booking is confirmed for tomorrow at 10am.", []
+    async def my_agent(history):
+        return AgentReply("Your booking is confirmed for tomorrow at 10am.", [])
     return my_agent
 ```
 
@@ -514,12 +521,14 @@ The minimal setup: one YAML transcript plus one `llm_eval_agent` fixture. Reach 
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         # Deterministic mock agent; replace with a framework adapter to test yours.
         async def agent(history):
-            return "Booking confirmed! Reference BK-1234.", ["create_booking"]
+            return AgentReply("Booking confirmed! Reference BK-1234.", ["create_booking"])
 
         return agent
     ```
@@ -557,15 +566,19 @@ A multi-turn conversation where the second turn is graded by an LLM-as-judge rub
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         # Deterministic mock agent that remembers nothing but answers plausibly per turn.
         async def agent(history):
-            message = history[-1]["content"].lower()
+            message = history[-1].content.lower()
             if "11am" in message:
-                return "Done — moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
-            return "Booked for tomorrow at 10am. Reference BK-1234.", ["create_booking"]
+                return AgentReply(
+                    "Done — moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
+                )
+            return AgentReply("Booked for tomorrow at 10am. Reference BK-1234.", ["create_booking"])
 
         return agent
     ```
@@ -595,11 +608,13 @@ Assertions on *which* tools the agent invoked — include, exclude, and order. R
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         async def agent(history):
-            return (
+            return AgentReply(
                 "You're booked! Reference BK-1234.",
                 ["authenticate", "fetch_availability", "create_booking"],
             )
@@ -649,7 +664,7 @@ Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent
     ```python
     import pytest
 
-    from pytest_agent_eval import ToolCall
+    from pytest_agent_eval import AgentReply, ToolCall
 
 
     @pytest.fixture
@@ -657,7 +672,7 @@ Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent
         # Return ToolCall(name, args) instead of plain strings to enable argument assertions.
         async def agent(history):
             call = ToolCall("create_booking", {"time": "10am", "date": "tomorrow", "party_size": 2})
-            return "Booked for two, tomorrow at 10am!", [call]
+            return AgentReply("Booked for two, tomorrow at 10am!", [call])
 
         return agent
     ```
@@ -690,11 +705,13 @@ Deterministic reply assertions: substring `all_of` plus regex matching. Reach fo
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         async def agent(history):
-            return "Confirmed! Your reference number: BK-1234, tomorrow at 10am.", []
+            return AgentReply("Confirmed! Your reference number: BK-1234, tomorrow at 10am.", [])
 
         return agent
     ```
@@ -714,7 +731,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pytest_agent_eval import Expect, Turn
+from pytest_agent_eval import AgentReply, Expect, Turn
 
 if TYPE_CHECKING:
     from pytest_agent_eval.runner import EvalSession
@@ -725,7 +742,7 @@ if TYPE_CHECKING:
 async def test_booking_mentions_city(agent_eval: EvalSession, city: str) -> None:
     # Deterministic mock agent; replace with your real agent or an adapter.
     async def agent(history):
-        return f"Booked a table in {city}! Reference BK-1234.", ["create_booking"]
+        return AgentReply(f"Booked a table in {city}! Reference BK-1234.", ["create_booking"])
 
     result = await agent_eval.run(
         agent=agent,
@@ -794,15 +811,17 @@ Group-level pass thresholds with a per-group exit-code override. Reach for this 
     ```python
     import pytest
 
+    from pytest_agent_eval import AgentReply
+
 
     @pytest.fixture
     def llm_eval_agent():
         # Handles the happy path, "fails" on the deliberately hard edge case.
         async def agent(history):
-            message = history[-1]["content"].lower()
+            message = history[-1].content.lower()
             if "gluten-free" in message:
-                return "I'm not sure I can help with that.", []
-            return "Booking confirmed! Reference BK-1234.", ["create_booking"]
+                return AgentReply("I'm not sure I can help with that.", [])
+            return AgentReply("Booking confirmed! Reference BK-1234.", ["create_booking"])
 
         return agent
     ```
@@ -1044,12 +1063,14 @@ YAML-loaded tests require a pytest fixture named `llm_eval_agent` that returns y
 # tests/conftest.py
 import pytest
 
+from pytest_agent_eval import AgentReply
+
 @pytest.fixture
 def llm_eval_agent():
-    async def my_agent(messages):
-        # messages is a list of OpenAI-style {"role": ..., "content": ...} dicts
-        # Return (reply, tool_calls): the reply string plus the tool names called.
-        return "Booking confirmed! Reference BK-1234.", ["create_booking"]
+    async def my_agent(history):
+        # history is a list of Message records; history[-1].content is this turn's user text.
+        # Return AgentReply(reply, tool_calls): the reply string plus the tool names called.
+        return AgentReply("Booking confirmed! Reference BK-1234.", ["create_booking"])
     return my_agent
 ```
 
@@ -1095,7 +1116,7 @@ result = await agent_eval.run(agent=my_agent, turns=[...])
 
 | Parameter   | Type            | Description                                            |
 |-------------|-----------------|--------------------------------------------------------|
-| `agent`     | `Callable`      | Async callable: `(messages) -> (reply, tool_calls)`    |
+| `agent`     | `Callable`      | Async callable: `(history) -> AgentReply`; a plain `(reply, tool_calls)` tuple also works |
 | `turns`     | `list[Turn]`    | Ordered list of turns to execute                       |
 
 Threshold and run count come from the `@pytest.mark.agent_eval(threshold=..., runs=...)` marker, falling back to `[tool.agent_eval]` config.
@@ -1222,13 +1243,13 @@ result.assert_threshold()
 ```python
 import pytest
 from pytest_agent_eval import (
-    Turn, Expect,
+    AgentReply, Turn, Expect,
     ContainsEvaluator, ToolCallEvaluator, JudgeEvaluator,
 )
 
-async def booking_agent(messages):
-    # Your real agent implementation here — return (reply, tool_calls)
-    return "Booking confirmed! Reference: BK-1234 for tomorrow at 10am.", ["create_booking"]
+async def booking_agent(history):
+    # Your real agent implementation here — return an AgentReply
+    return AgentReply("Booking confirmed! Reference: BK-1234 for tomorrow at 10am.", ["create_booking"])
 
 @pytest.mark.agent_eval(threshold=0.8, runs=3)
 async def test_full_booking_flow(agent_eval):
@@ -1614,7 +1635,7 @@ Wraps a [LiveKit Agents](https://docs.livekit.io/agents) `AgentSession` so you c
 2. Builds a fresh `(AgentSession, Agent)` pair via the user-supplied factory.
 3. Streams the WAV at real-time pace into `session.input.audio`.
 4. Captures `function_tools_executed` events as tool calls and `conversation_item_added` events (filtered to `assistant` items) as the reply.
-5. Returns `(reply, tool_calls)` to the same evaluator surface used by text adapters.
+5. Returns `AgentReply(reply, tool_calls)` — still a tuple — to the same evaluator surface used by text adapters.
 
 ```python
 import pytest
@@ -1691,24 +1712,34 @@ The CLI requires `OPENAI_API_KEY` and writes a `.gitignore` next to every WAV (`
 
 ## Writing a custom adapter
 
-Any async callable that accepts `list[dict]` and returns `(str, list[str])` works directly. No base class needed:
+Any async callable that takes the conversation history and returns a reply plus the tools it
+called works directly. No base class needed:
 
 ```python
 import pytest
 
-async def my_custom_agent(messages: list[dict]) -> tuple[str, list[str]]:
+from pytest_agent_eval import AgentReply
+from pytest_agent_eval.models import History
+
+async def my_custom_agent(history: History) -> AgentReply:
     """
-    messages: OpenAI-style [{"role": "user", "content": "..."}, ...]
-    Returns: (reply_text, list_of_tool_names_called)
+    history: a list of Message records, oldest first.
+    Returns: AgentReply(reply_text, tools_called)
     """
-    user_text = messages[-1]["content"]
+    user_text = history[-1].content
     reply = await call_my_backend(user_text)
-    return reply, []    # return empty list if no tool tracking
+    return AgentReply(reply, [])    # empty list if no tool tracking
 
 @pytest.fixture
 def llm_eval_agent():
     return my_custom_agent
 ```
+
+!!! note "The older forms still work"
+    `Message` implements `Mapping`, so `history[-1]["content"]` reads the same value, and
+    returning a plain `(reply, tool_calls)` tuple is still a valid agent — `AgentReply` is a
+    `NamedTuple`, so it *is* that tuple. Nothing below needs changing to keep working; the
+    typed forms are just what the type checker and your editor can help you with.
 
 ### Capturing tool-call arguments
 
@@ -1718,7 +1749,7 @@ The `args` must be a mapping (`dict`). If your framework hands you a JSON string
 
 ```python
 import json
-from pytest_agent_eval import ToolCall
+from pytest_agent_eval import AgentReply, ToolCall
 
 def _to_dict(raw):
     if isinstance(raw, dict):
@@ -1729,9 +1760,9 @@ def _to_dict(raw):
     except (TypeError, ValueError):
         return None
 
-async def my_custom_agent(messages):
-    reply, calls = await call_my_backend(messages[-1]["content"])
-    return reply, [ToolCall(c.name, _to_dict(c.arguments)) for c in calls]
+async def my_custom_agent(history):
+    reply, calls = await call_my_backend(history[-1].content)
+    return AgentReply(reply, [ToolCall(c.name, _to_dict(c.arguments)) for c in calls])
 ```
 
 All bundled adapters already capture arguments this way. When arguments are missing or not a dict, argument evaluators fail with an explicit "no dict arguments were captured" message rather than a misleading mismatch.
@@ -1741,10 +1772,10 @@ If your agent wraps a synchronous function, use `asyncio.to_thread`:
 ```python
 import asyncio
 
-async def my_sync_wrapper(messages):
+async def my_sync_wrapper(history):
     def _sync(text):
-        return my_blocking_agent(text), []
-    return await asyncio.to_thread(_sync, messages[-1]["content"])
+        return AgentReply(my_blocking_agent(text), [])
+    return await asyncio.to_thread(_sync, history[-1].content)
 ```
 
 
@@ -2065,8 +2096,20 @@ Gotchas:
 - Eval tests are SKIPPED unless run with `--agent-eval-live` or `EVAL_LIVE=1`.
   "N eval test(s) skipped — live mode is off" in the output means they did not run.
 - A conftest.py fixture named `llm_eval_agent` must return the agent under test:
-  an async callable `(messages) -> (reply, tool_calls)`. Framework adapters exist
+  an async callable `(history) -> AgentReply`. Framework adapters exist
   for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
+
+!!! note "`AgentReply` and `Message`"
+    The built-in adapters return `AgentReply(reply, tool_calls)`, a `NamedTuple`.
+    It *is* a tuple, so `reply, tool_calls = await agent(history)` and returning a
+    plain `(reply, tool_calls)` from your own agent both keep working — you never
+    have to import it.
+
+    The `history` your agent receives is a list of `Message` objects. `Message`
+    implements `Mapping`, so `history[-1]["content"]` works exactly as before, and
+    `history[-1].content` now works too. If you forward `history` to an SDK, convert
+    it first with `[m.to_dict() for m in history]` — `to_dict()` also drops the
+    plugin-internal `audio` key that voice turns carry.
 
 Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
 https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (schema),

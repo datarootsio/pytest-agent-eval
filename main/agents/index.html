@@ -1031,12 +1031,24 @@
 </span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="k">-</span><span class="w"> </span>Eval tests are SKIPPED unless run with <span class="sb">`--agent-eval-live`</span> or <span class="sb">`EVAL_LIVE=1`</span>.
 </span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>  &quot;N eval test(s) skipped — live mode is off&quot; in the output means they did not run.
 </span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="k">-</span><span class="w"> </span>A conftest.py fixture named <span class="sb">`llm_eval_agent`</span> must return the agent under test:
-</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>  an async callable <span class="sb">`(messages) -&gt; (reply, tool_calls)`</span>. Framework adapters exist
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>  an async callable <span class="sb">`(history) -&gt; AgentReply`</span>. Framework adapters exist
 </span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>  for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
 </span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>
-</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
-</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (schema),
-</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>https://github.com/datarootsio/pytest-agent-eval/tree/main/examples (runnable examples).
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>!!! note &quot;<span class="sb">`AgentReply`</span> and <span class="sb">`Message`</span>&quot;
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>    The built-in adapters return <span class="sb">`AgentReply(reply, tool_calls)`</span>, a <span class="sb">`NamedTuple`</span>.
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>    It <span class="ge">*is*</span> a tuple, so <span class="sb">`reply, tool_calls = await agent(history)`</span> and returning a
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>    plain <span class="sb">`(reply, tool_calls)`</span> from your own agent both keep working — you never
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>    have to import it.
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>    The <span class="sb">`history`</span> your agent receives is a list of <span class="sb">`Message`</span> objects. <span class="sb">`Message`</span>
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>    implements <span class="sb">`Mapping`</span>, so <span class="sb">`history[-1][&quot;content&quot;]`</span> works exactly as before, and
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>    <span class="sb">`history[-1].content`</span> now works too. If you forward <span class="sb">`history`</span> to an SDK, convert
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>    it first with <span class="sb">`[m.to_dict() for m in history]`</span> — <span class="sb">`to_dict()`</span> also drops the
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>    plugin-internal <span class="sb">`audio`</span> key that voice turns carry.
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json (schema),
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>https://github.com/datarootsio/pytest-agent-eval/tree/main/examples (runnable examples).
 </span></code></pre></div>
 <h2 id="why-agents-do-well-with-this-plugin">Why agents do well with this plugin<a class="headerlink" href="#why-agents-do-well-with-this-plugin" title="Permanent link">&para;</a></h2>
 <ul>
