@@ -10,7 +10,7 @@ import re
 from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Literal, NamedTuple, Protocol, TypeAlias, runtime_checkable
+from typing import Annotated, Literal, NamedTuple, Protocol, runtime_checkable
 
 from pydantic import (
     AfterValidator,
@@ -27,17 +27,17 @@ from pydantic_ai.models import Model
 
 _PathLike = str | Path
 
-Role: TypeAlias = Literal["user", "assistant", "system"]
+Role = Literal["user", "assistant", "system"]
 """Who produced a conversation message."""
 
-JsonMapping: TypeAlias = dict[str, JsonValue]
+JsonMapping = dict[str, JsonValue]
 """A JSON object — tool-call arguments, serialised results, config sections.
 
 ``JsonValue`` is re-exported from pydantic rather than hand-rolled: a recursive alias
 written as a string cannot be resolved by pydantic when it appears in a model field.
 """
 
-ToolArgs: TypeAlias = dict[str, object]
+ToolArgs = dict[str, object]
 """The arguments an adapter captured off one tool call.
 
 ``object`` values rather than ``JsonValue``, because that is the truth: LangChain declares
@@ -50,7 +50,7 @@ adapters *construct* this type from a raw mapping instead of asserting it with a
 ``ToolCallArgsConfig.args`` (which a transcript author writes by hand).
 """
 
-ToolCalls: TypeAlias = Sequence[str]
+ToolCalls = Sequence[str]
 """Tool calls from one turn.
 
 ``Sequence``, not ``list``: ``list`` is invariant, so ``list[ToolCall]`` is not
@@ -59,13 +59,13 @@ and the tool-call evaluator hit that, and widening to ``Sequence`` fixes all of 
 once while letting a ``ToolCall`` flow through the contract without a cast.
 """
 
-ToolCallArgsMode: TypeAlias = Literal["subset", "exact"]
+ToolCallArgsMode = Literal["subset", "exact"]
 """How ``ToolCallArgsEvaluator`` compares observed arguments to expected ones."""
 
-OutcomeName: TypeAlias = Literal["passed", "failed", "skipped"]
+OutcomeName = Literal["passed", "failed", "skipped"]
 """A test item's outcome, as group aggregation consumes it."""
 
-PhaseName: TypeAlias = Literal["setup", "call", "teardown"]
+PhaseName = Literal["setup", "call", "teardown"]
 """A pytest runtest phase."""
 
 DEFAULT_THRESHOLD = 0.8
@@ -138,10 +138,10 @@ class Message(Mapping[str, str]):
 
 _MESSAGE_FIELDS = frozenset({"role", "content", "audio"})
 
-History: TypeAlias = list[Message]
+History = list[Message]
 """Accumulated conversation, oldest first."""
 
-AgentCallable: TypeAlias = Callable[[History], Awaitable["tuple[str, ToolCalls]"]]
+AgentCallable = Callable[[History], Awaitable["tuple[str, ToolCalls]"]]
 """What the plugin calls to get one turn out of an agent.
 
 Declared as the plain tuple rather than :class:`AgentReply`: return covariance means an
@@ -346,7 +346,7 @@ def _valid_regex(pattern: str) -> str:
     return pattern
 
 
-RegexPattern: TypeAlias = Annotated[str, AfterValidator(_valid_regex)]
+RegexPattern = Annotated[str, AfterValidator(_valid_regex)]
 """A regex validated per item, so the error names the offending index."""
 
 

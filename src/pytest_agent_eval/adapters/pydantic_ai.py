@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Never, TypeAlias
+from typing import TYPE_CHECKING, Never
 
 from pydantic_ai.messages import (
     ModelRequest,
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from pydantic_ai.agent import AbstractAgent
     from pydantic_ai.messages import ModelMessage, ModelRequestPart, ModelResponsePart
 
-    AnyAgent: TypeAlias = AbstractAgent[Never, object]
+    AnyAgent = AbstractAgent[Never, object]
     """Every concrete pydantic-ai ``Agent``, spelled as one type.
 
     ``AbstractAgent`` is generic over (deps, output); deps is contravariant and output
@@ -35,10 +35,8 @@ _TOOL_CALL_PART_KINDS = frozenset({"tool-call", "builtin-tool-call"})
 def _is_tool_call_part(part: ModelRequestPart | ModelResponsePart) -> bool:
     """True for the parts that represent an outbound tool invocation.
 
-    Both real unions, not ``object``: ``all_messages()`` interleaves requests and
-    responses, so both halves reach here, and every member of both declares
-    ``part_kind`` — which is what lets this read the attribute directly instead of
-    through a ``getattr`` default that would quietly accept anything.
+    Both halves of the union, because ``all_messages()`` interleaves requests and
+    responses. Every member of both declares ``part_kind``, so it is read directly.
     """
     if part.part_kind not in _TOOL_CALL_PART_KINDS:
         return False

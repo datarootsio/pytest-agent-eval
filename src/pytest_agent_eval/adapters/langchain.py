@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING
 
 from pytest_agent_eval.adapters._args import coerce_args
 from pytest_agent_eval.models import AgentReply, History, ToolCall
@@ -13,28 +13,19 @@ if TYPE_CHECKING:
     from langchain_core.messages import ToolCall as LangChainToolCall
     from langchain_core.runnables import Runnable
 
-    LangChainRunnable: TypeAlias = Runnable[dict[str, object], object]
+    LangChainRunnable = Runnable[dict[str, object], object]
     """Every real LangChain Runnable, spelled as one type.
 
-    langchain-core ships ``py.typed``, so the real class is nameable and the hand-rolled
-    Protocol that used to stand here is gone. Both type arguments are langchain's, not
-    ours: ``Runnable`` is invariant in Input and Output, so narrowing either —
-    ``dict[str, JsonValue]`` in the Input slot, ``str`` in the Output slot — rejects a real
-    ``RunnableLambda`` and a real ``RunnableSequence``. ``tests/adapters/_sdk_probe.py``
-    holds both of those assignments, so the claim is machine-checked rather than asserted.
+    Both type arguments are langchain's, not ours: ``Runnable`` is invariant in Input and
+    Output, so narrowing either slot rejects a real ``RunnableLambda`` and a real
+    ``RunnableSequence``. ``tests/adapters/_sdk_probe.py`` holds both assignments.
     """
 
 
 def _tool_calls(raw: Sequence[LangChainToolCall]) -> list[ToolCall]:
-    """Normalise LangChain's own ``tool_calls`` list into ours.
+    """Normalise LangChain's own ``ToolCall`` TypedDicts into ours.
 
-    The parameter is langchain's ``ToolCall`` TypedDict — the thing a real
-    ``AIMessage.tool_calls`` holds — so the subscripts below are checked rather than
-    hoped for. Reading the attribute off a message stays a ``getattr`` at the two call
-    sites, because that is the one genuinely untyped hop: ``ainvoke`` returns ``object``.
-
-    A one-liner that keeps its name because inlining it would duplicate a decision: how a
-    LangChain tool call maps onto ours, at both branches of ``__call__``.
+    Kept as a name because both branches of ``__call__`` need this mapping.
     """
     return [ToolCall(tc["name"], coerce_args(tc.get("args"))) for tc in raw]
 
@@ -42,8 +33,7 @@ def _tool_calls(raw: Sequence[LangChainToolCall]) -> list[ToolCall]:
 def _last_message(result: object) -> object | None:
     """The final message of a graph-shaped ``{"messages": [...]}`` result, if it is one.
 
-    ``object`` in and out because ``Runnable.ainvoke`` is declared to return ``object``;
-    every hop is checked, because each can fail independently: the result may not be a
+    Every hop is checked, because each can fail independently: the result may not be a
     mapping, may not carry ``messages``, and that value may not be a non-empty list. The
     cast this replaced asserted all three while checking only the first.
     """
@@ -93,9 +83,8 @@ class LangChainAdapter:
         # NotImplementedError on a Mapping that is not a dict.
         result = await self._runnable.ainvoke({"messages": [m.to_dict() for m in history]})
 
-        # The `getattr` is here rather than inside `_tool_calls` because this is the one
-        # genuinely untyped hop: `ainvoke` is declared to return `object`. Absent *and*
-        # None both mean "no tools were called" — LangChain produces either.
+        # `ainvoke` returns `object`, so reading the attribute is the one untyped hop.
+        # Absent *and* None both mean "no tools were called"; LangChain produces either.
         if hasattr(result, "content"):
             return AgentReply(str(result.content), _tool_calls(getattr(result, "tool_calls", []) or []))
         last = _last_message(result)

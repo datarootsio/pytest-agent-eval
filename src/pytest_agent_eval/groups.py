@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
@@ -169,7 +169,7 @@ def evaluate_groups(groups: Sequence[GroupConfig], outcomes: Sequence[EvalOutcom
     return [_evaluate_group(group, outcomes) for group in groups]
 
 
-GroupStatus: TypeAlias = Literal["no_match", "skipped", "passed", "failed"]
+GroupStatus = Literal["no_match", "skipped", "passed", "failed"]
 """Which of the four states a group ended a session in."""
 
 
