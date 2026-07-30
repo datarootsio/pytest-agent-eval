@@ -184,11 +184,16 @@ else
   printf 'note: zsh not found, recording with bash — prompt and quoting may differ\n'
 fi
 
+# The title goes in ONE argument, joined with `=`, never as a flag followed by a separate
+# value. asciinema's argument parser rejects a flag value that itself looks like a flag, so a
+# title beginning with a dash aborts the take before it starts — 08-collect-only's title used
+# to open with `--collect-only` and did exactly that. The joined form is unambiguous and takes
+# the value verbatim whatever it starts with. Pinned by tests/test_casts.py.
 cd "$rec_dir"
 exec asciinema rec \
   --overwrite \
   --window-size "$WINDOW_SIZE" \
   --idle-time-limit "$IDLE_TIME_LIMIT" \
-  --title "$title" \
+  "--title=$title" \
   -c "$rec_shell" \
   "$CASTS_DIR/$slug.cast"

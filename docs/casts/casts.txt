@@ -21,6 +21,6 @@
 05-judge-reasoning    | an LLM judge's verdict and its reasoning            | docs/why/judges.md
 06-group-summary      | a group gate absorbs one failure, exit code 0       | docs/why/gates.md
 07-agent-authors-eval | a coding agent writes a YAML transcript             | docs/why/agents-author-evals.md
-08-collect-only       | --collect-only: a transcript is a pytest test       | docs/why/agents-author-evals.md
+08-collect-only       | pytest --collect-only on a YAML transcript          | docs/why/agents-author-evals.md
 09-voice-eval         | synthesize_audio, then a voice eval                 | docs/why/whats-in-the-box.md
 10-install            | four commands, from empty project to first run      | docs/why/whats-in-the-box.md
