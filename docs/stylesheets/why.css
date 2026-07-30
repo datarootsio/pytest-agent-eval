@@ -1,0 +1,115 @@
+/* Diagram support for the "Why pytest-agent-eval" narrative pages (docs/why/).
+ *
+ * No typography. The claim, the prose, the captions and the section headings all
+ * take the theme's own font, size and colour — nothing on those pages is styled
+ * differently from the rest of the docs.
+ *
+ * This file exists for two things the theme cannot do on its own: keep a wide
+ * diagram's scrollbar off the page body, and give inline SVG the fills and font
+ * stacks it does not inherit from the typeset styles. The SVG rules mirror the
+ * docs' own variables rather than introducing new values.
+ *
+ * Only the four semantic colours are defined, with slate overrides; their soft
+ * fills are color-mixed against --md-default-bg-color, so one declaration covers
+ * both schemes.
+ *
+ * The semantic values are chosen for >= 4.5:1 against both the page background
+ * and their own 12% tint, because the diagrams label 11px text directly on those
+ * tints. That rules out --md-typeset-a-color as the accent (3.05:1 on its own
+ * tint in the default scheme), and it rules out carrying --md-primary-fg-color
+ * into slate, where it stays #4051b5 on a near-black background.
+ */
+
+:root {
+  --why-green: #167a42;
+  --why-red: #c0392b;
+  --why-amber: #8d5c00;
+  --why-accent: var(--md-primary-fg-color);
+
+  --why-green-soft: color-mix(in srgb, var(--why-green) 12%, var(--md-default-bg-color));
+  --why-red-soft: color-mix(in srgb, var(--why-red) 12%, var(--md-default-bg-color));
+  --why-amber-soft: color-mix(in srgb, var(--why-amber) 12%, var(--md-default-bg-color));
+  --why-accent-soft: color-mix(in srgb, var(--why-accent) 12%, var(--md-default-bg-color));
+}
+
+body[data-md-color-scheme="slate"] {
+  --why-green: #4ed88a;
+  --why-red: #f5776a;
+  --why-amber: #f0a93b;
+  --why-accent: #9095f2;
+}
+
+/* ---------- diagram layout ---------- */
+
+/* The scroll container, not the page body, absorbs a diagram wider than the
+ * viewport. */
+.md-typeset .why-fig-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.md-typeset .why-fig svg {
+  display: block;
+  width: 100%;
+  min-width: 33rem;
+  height: auto;
+}
+
+/* ---------- svg text and shapes ---------- */
+
+/* SVG inherits none of the typeset styles, so it needs its font stack and fill
+ * stated. Both come from the theme's variables; the sizes are diagram geometry,
+ * not a typographic choice. */
+.why-fig .s-lbl,
+.why-fig .s-lbl-strong {
+  font-family: var(--md-code-font-family, monospace);
+  letter-spacing: 0.04em;
+}
+
+.why-fig .s-lbl {
+  font-size: 11px;
+  fill: var(--md-default-fg-color--light);
+}
+
+.why-fig .s-lbl-strong {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--md-default-fg-color);
+}
+
+.why-fig .s-node {
+  font-family: var(--md-text-font-family, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--md-default-fg-color);
+}
+
+.why-fig .s-note {
+  font-family: var(--md-text-font-family, sans-serif);
+  font-size: 12.5px;
+  font-style: italic;
+  fill: var(--md-default-fg-color--light);
+}
+
+.why-fig .s-box {
+  fill: var(--md-code-bg-color);
+  stroke: var(--md-default-fg-color--lighter);
+  stroke-width: 1.5;
+}
+
+.why-fig .s-arrow {
+  fill: none;
+  stroke: var(--md-default-fg-color--light);
+  stroke-width: 1.5;
+}
+
+.why-fig .s-brace,
+.why-fig .s-rule {
+  fill: none;
+  stroke: var(--md-default-fg-color--lighter);
+  stroke-width: 1.5;
+}
+
+.why-fig .s-rule {
+  stroke-width: 1;
+}

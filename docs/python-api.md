@@ -18,7 +18,7 @@ async def test_my_agent(agent_eval):
 
 | Parameter   | Type    | Default                   | Description                                 |
 |-------------|---------|---------------------------|---------------------------------------------|
-| `threshold` | `float` | from `[tool.agent_eval]`    | Fraction of runs that must pass (0.0–1.0)   |
+| `threshold` | `float` | from `[tool.agent_eval]`    | Fraction of runs that must pass (0.0 to 1.0) |
 | `runs`      | `int`   | from `[tool.agent_eval]`    | Number of times to execute the transcript   |
 
 Without `--agent-eval-live` or `EVAL_LIVE=1`, marked tests are automatically skipped.
@@ -167,7 +167,7 @@ from pytest_agent_eval import (
 )
 
 async def booking_agent(history):
-    # Your real agent implementation here — return an AgentReply
+    # Your real agent implementation here: return an AgentReply
     return AgentReply("Booking confirmed! Reference: BK-1234 for tomorrow at 10am.", ["create_booking"])
 
 @pytest.mark.agent_eval(threshold=0.8, runs=3)

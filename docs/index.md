@@ -240,7 +240,7 @@ For framework-specific adapters, install one of the optional extras shown in the
     ```
 
     A plain `(reply, tool_calls)` tuple is still a valid return, and `history[-1]["content"]`
-    still reads the same value — see [writing a custom adapter](adapters.md#writing-a-custom-adapter).
+    still reads the same value; see [writing a custom adapter](adapters.md#writing-a-custom-adapter).
 
 ## YAML auto-discovery
 

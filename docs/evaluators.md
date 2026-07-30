@@ -71,7 +71,7 @@ ToolCallEvaluator(
 
 ## `ToolCallArgsEvaluator`
 
-Asserts the **arguments** a tool was called with. Requires an adapter (or custom agent) that captures arguments — all bundled adapters do; custom agents return `ToolCall(name, args)` instead of plain strings (see [Adapters](adapters.md#writing-a-custom-adapter)).
+Asserts the **arguments** a tool was called with. Requires an adapter (or custom agent) that captures arguments: all bundled adapters do; custom agents return `ToolCall(name, args)` instead of plain strings (see [Adapters](adapters.md#writing-a-custom-adapter)).
 
 ```python
 from pytest_agent_eval import ToolCallArgsEvaluator
@@ -97,7 +97,7 @@ If the tool is called several times in a turn, the check passes when **any** cal
 
 ## `ToolCallArgsJudgeEvaluator`
 
-Uses an LLM to judge a tool's arguments against a natural-language rubric — for constraints that are awkward to express as exact values ("the time must be within business hours", "the query must mention the user's city").
+Uses an LLM to judge a tool's arguments against a natural-language rubric, for constraints that are awkward to express as exact values ("the time must be within business hours", "the query must mention the user's city").
 
 ```python
 from pytest_agent_eval import ToolCallArgsJudgeEvaluator

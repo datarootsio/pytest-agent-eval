@@ -4,10 +4,10 @@ pytest-agent-eval is built to be authored by LLMs as much as by people: transcri
 
 Point your coding agent (Claude Code, Cursor, Copilot, ...) at these resources:
 
-- **[`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt)** — the index, at the site root per the [llms.txt convention](https://llmstxt.org/)
-- **[`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt)** — the entire documentation as one file, for tools that ingest a single URL
-- **[JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json)** — machine-readable transcript format
-- **[`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples)** — small runnable projects, one per feature
+- **[`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt)**: the index, at the site root per the [llms.txt convention](https://llmstxt.org/)
+- **[`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt)**: the entire documentation as one file, for tools that ingest a single URL
+- **[JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json)**: machine-readable transcript format
+- **[`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples)**: small runnable projects, one per feature
 
 ## AGENTS.md snippet
 
@@ -54,7 +54,7 @@ rubric (costs tokens; prefer deterministic checks when possible).
 
 Gotchas:
 - Eval tests are SKIPPED unless run with `--agent-eval-live` or `EVAL_LIVE=1`.
-  "N eval test(s) skipped — live mode is off" in the output means they did not run.
+  "N eval test(s) skipped: live mode is off" in the output means they did not run.
 - A conftest.py fixture named `llm_eval_agent` must return the agent under test:
   an async callable `(history) -> AgentReply`. Framework adapters exist
   for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
@@ -62,13 +62,13 @@ Gotchas:
 !!! note "`AgentReply` and `Message`"
     The built-in adapters return `AgentReply(reply, tool_calls)`, a `NamedTuple`.
     It *is* a tuple, so `reply, tool_calls = await agent(history)` and returning a
-    plain `(reply, tool_calls)` from your own agent both keep working — you never
+    plain `(reply, tool_calls)` from your own agent both keep working; you never
     have to import it.
 
     The `history` your agent receives is a list of `Message` objects. `Message`
     implements `Mapping`, so `history[-1]["content"]` works exactly as before, and
     `history[-1].content` now works too. If you forward `history` to an SDK, convert
-    it first with `[m.to_dict() for m in history]` — `to_dict()` also drops the
+    it first with `[m.to_dict() for m in history]`: `to_dict()` also drops the
     plugin-internal `audio` key that voice turns carry.
 
 Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
@@ -78,6 +78,6 @@ https://github.com/datarootsio/pytest-agent-eval/tree/main/examples (runnable ex
 
 ## Why agents do well with this plugin
 
-- **Schema-first authoring** — the `yaml-language-server` directive plus `additionalProperties: false` means invalid files fail loudly, not silently.
-- **Didactic errors** — a typo'd field produces `turns[0].expect: unknown field 'tool_call_include'. Did you mean 'tool_calls_include'?` with the full valid-field list, which agents self-correct from.
-- **Runnable examples** — every feature has a minimal project under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples) that CI keeps working, so copied code starts from a known-good state.
+- **Schema-first authoring**: the `yaml-language-server` directive plus `additionalProperties: false` means invalid files fail loudly, not silently.
+- **Didactic errors**: a typo'd field produces `turns[0].expect: unknown field 'tool_call_include'. Did you mean 'tool_calls_include'?` with the full valid-field list, which agents self-correct from.
+- **Runnable examples**: every feature has a minimal project under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples) that CI keeps working, so copied code starts from a known-good state.

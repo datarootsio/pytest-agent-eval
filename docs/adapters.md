@@ -156,7 +156,7 @@ Wraps a [LiveKit Agents](https://docs.livekit.io/agents) `AgentSession` so you c
 2. Builds a fresh `(AgentSession, Agent)` pair via the user-supplied factory.
 3. Streams the WAV at real-time pace into `session.input.audio`.
 4. Captures `function_tools_executed` events as tool calls and `conversation_item_added` events (filtered to `assistant` items) as the reply.
-5. Returns `AgentReply(reply, tool_calls)` — still a tuple — to the same evaluator surface used by text adapters.
+5. Returns `AgentReply(reply, tool_calls)`, still a tuple, to the same evaluator surface used by text adapters.
 
 ```python
 import pytest
@@ -258,15 +258,15 @@ def llm_eval_agent():
 
 !!! note "The older forms still work"
     `Message` implements `Mapping`, so `history[-1]["content"]` reads the same value, and
-    returning a plain `(reply, tool_calls)` tuple is still a valid agent — `AgentReply` is a
+    returning a plain `(reply, tool_calls)` tuple is still a valid agent: `AgentReply` is a
     `NamedTuple`, so it *is* that tuple. Nothing below needs changing to keep working; the
     typed forms are just what the type checker and your editor can help you with.
 
 ### Capturing tool-call arguments
 
-Plain tool-name strings support name assertions (`tool_calls_include`, `ordered`, ...) but not argument assertions. To enable `tool_calls_args` / `ToolCallArgsEvaluator`, return `ToolCall(name, args)` entries instead — `ToolCall` subclasses `str`, so everything that worked with names keeps working:
+Plain tool-name strings support name assertions (`tool_calls_include`, `ordered`, ...) but not argument assertions. To enable `tool_calls_args` / `ToolCallArgsEvaluator`, return `ToolCall(name, args)` entries instead: `ToolCall` subclasses `str`, so everything that worked with names keeps working:
 
-The `args` must be a mapping (`dict`). If your framework hands you a JSON string (as OpenAI-style tool calls do), parse it first — the bundled adapters route through an internal `coerce_args` helper that does exactly this:
+The `args` must be a mapping (`dict`). If your framework hands you a JSON string (as OpenAI-style tool calls do), parse it first: the bundled adapters route through an internal `coerce_args` helper that does exactly this:
 
 ```python
 import json

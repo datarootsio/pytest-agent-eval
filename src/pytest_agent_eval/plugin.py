@@ -76,7 +76,7 @@ def pytest_terminal_summary(
     skipped = getattr(config, "_agent_eval_live_skipped", 0)
     if skipped:
         terminalreporter.write_line(
-            f"{skipped} eval test(s) skipped — live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.",
+            f"{skipped} eval test(s) skipped: live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.",
             yellow=True,
         )
 

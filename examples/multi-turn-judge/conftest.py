@@ -10,7 +10,7 @@ def llm_eval_agent():
         message = history[-1].content.lower()
         if "11am" in message:
             return AgentReply(
-                "Done — moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
+                "Done, moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
             )
         return AgentReply("Booked for tomorrow at 10am. Reference BK-1234.", ["create_booking"])
 

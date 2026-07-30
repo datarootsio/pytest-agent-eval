@@ -1,8 +1,9 @@
 """Concatenate the documentation into a single llms-full.txt, following nav order.
 
 Generated at docs-build time (never committed), so it cannot drift from the
-pages it is built from. The api-reference section is skipped: it is generated
-from docstrings and mostly duplicates the source.
+pages it is built from. Two sections are skipped: api-reference, which is
+generated from docstrings and mostly duplicates the source, and why, which is
+narrative argument for human readers and carries no API facts an agent needs.
 
 Usage::
 
@@ -18,6 +19,8 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
+
+_SKIP_PREFIXES = ("api-reference/", "why/")
 
 _HEADER = (
     "# pytest-agent-eval — full documentation\n\n"
@@ -39,9 +42,9 @@ def _walk_nav(nav: list[dict[str, Any]]) -> list[str]:
 
 
 def nav_page_paths() -> list[str]:
-    """Return the docs pages in sidebar order, skipping the api-reference section."""
+    """Return the docs pages in sidebar order, skipping the excluded sections."""
     config = tomllib.loads((REPO_ROOT / "zensical.toml").read_text())
-    return [p for p in _walk_nav(config["project"]["nav"]) if not p.startswith("api-reference/")]
+    return [p for p in _walk_nav(config["project"]["nav"]) if not p.startswith(_SKIP_PREFIXES)]
 
 
 def build_llms_full() -> str:

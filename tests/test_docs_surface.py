@@ -51,7 +51,7 @@ def test_llms_full_contains_every_nav_page_h1() -> None:
     full = build_llms_full()
     pages = nav_page_paths()
     assert pages, "nav walk returned no pages"
-    assert not any(p.startswith("api-reference/") for p in pages)
+    assert not any(p.startswith(("api-reference/", "why/")) for p in pages)
     for page in pages:
         first_heading = next(
             (line for line in (DOCS_DIR / page).read_text().splitlines() if line.startswith("# ")), None
