@@ -41,7 +41,7 @@
   <text class="s-lbl" x="536" y="206" fill="var(--why-amber)">three matter at all</text>
 </svg>
 </div>
-<figcaption>svg - the four jobs a test does</figcaption>
+<figcaption>svg - tests' main purposes</figcaption>
 </figure>
 
 

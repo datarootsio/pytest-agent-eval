@@ -62,7 +62,7 @@
   <text class="s-note" x="8" y="236">You are not asserting on an output. You are asserting on a property of a distribution, from one sample.</text>
 </svg>
 </div>
-<figcaption>svg: the <a href="what-is-a-test.md">previous page's</a> geometry, broken. The rhyme is the point.</figcaption>
+<figcaption>svg: the <a href="what-is-a-test.md">previous page's</a> geometry, broken.</figcaption>
 </figure>
 
 Now imagine you have a function that calls an LLM:
@@ -88,7 +88,7 @@ async def test_naive_booking(agent):
 
 ## LLMs are probabilistic
 
-Run the naive test five times and it fails twice — same code, same prompt, same commit — not
+Run the naive test five times and it fails twice - same code, same prompt, same commit - not
 because the agent misbehaved, but because "you're all set" and "reserved" are perfectly good
 confirmations that happen not to contain the word we picked. Every one of the four properties is
 gone at once, and they took the binary outcome down with them.

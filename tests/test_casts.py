@@ -254,6 +254,9 @@ def test_tool_calls_cast_fails_every_run_on_the_forbidden_tool(pytester: pytest.
     )
     assert detail.count("    Forbidden tool 'create_booking' was called") == 3
     assert "turn 2:" not in detail
+    # No assertion on the `models.py:NNN` traceback locator: the page used to publish a
+    # transcript quoting it, and a test kept the two in step. The pages now carry the
+    # player alone, so there is no published copy of this output left to drift.
     # At -vv pytest does NOT truncate the short-summary line, and the duration carries a
     # rule banner. The page quoted a -q-shaped summary under a -vv command until an audit
     # caught it, so both halves are pinned.
