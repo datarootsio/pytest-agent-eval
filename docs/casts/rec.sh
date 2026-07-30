@@ -185,10 +185,15 @@ else
 fi
 
 cd "$rec_dir"
+# `--title=` and `--command=`, not a space, because a value may begin with a dash. Quoting
+# does not help: the shell strips the quotes and asciinema's parser then sees a bare `--...`
+# token and reports `unexpected argument`. 08-collect-only's title is literally
+# `--collect-only: a transcript is a pytest test`, which is how this was found. The `=` form
+# binds the value to the option no matter what it starts with.
 exec asciinema rec \
   --overwrite \
-  --window-size "$WINDOW_SIZE" \
-  --idle-time-limit "$IDLE_TIME_LIMIT" \
-  --title "$title" \
-  -c "$rec_shell" \
+  --window-size="$WINDOW_SIZE" \
+  --idle-time-limit="$IDLE_TIME_LIMIT" \
+  --title="$title" \
+  --command="$rec_shell" \
   "$CASTS_DIR/$slug.cast"
