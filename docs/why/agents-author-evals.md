@@ -2,32 +2,39 @@
 
 AI-native development is the new norm. And `pytest-agent-eval` is also designed to pair nicely with AI coding agents.
 
-```console
-$ claude
-> write an eval for the reschedule flow.
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id=""
+     data-cast-slug="07-agent-authors-eval"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="A coding agent is asked to write an eval for the reschedule flow. It reads the published schema, writes a YAML transcript to tests/evals, and the eval passes on the first pytest run with no edits."></div>
+<figcaption>asciinema: a real Claude Code session writing a YAML transcript</figcaption>
+</figure>
 
-  …reading llms.txt
-  …creating tests/evals/reschedule.yaml
+??? note "What the recording shows"
 
-  # yaml-language-server: $schema=.../schema/transcript.json
-  id: reschedule_flow
-  threshold: 0.8
-  runs: 3
-  tags: [gate:booking]
-  turns:
-    - user: "Actually make it 11am."
-      expect:
-        tool_calls_include: [update_booking]
-        tool_calls_exclude: [create_booking]
+    A live coding session runs for minutes and no two takes print the same words, so there
+    is no transcript to paste here. What the recording shows:
 
-$ pytest --agent-eval-live -q
-.                                                          [100%]
-1 passed in 9.7s          # first try, no edits
-```
+    - A scratch project with four things in it: a `pyproject.toml` naming
+      `yaml_dirs`, a `conftest.py` whose `llm_eval_agent` fixture is a stub with two fixed
+      replies, the `AGENTS.md` snippet this documentation publishes, and an empty
+      `tests/evals/`.
+    - One prompt, typed at Claude Code's `>` box: `write an eval for the reschedule flow.`
+    - The agent reads `AGENTS.md` and `conftest.py`, fetches the published `llms.txt` and
+      JSON Schema, and writes `tests/evals/reschedule.yaml` — as Claude Code's own tool
+      lines and their results, not as narration.
+    - Back at the shell: `cat tests/evals/reschedule.yaml`, then
+      `pytest --agent-eval-live -q`. One dot, one pass, first try, no edits.
+
+    The stub fixture and the `AGENTS.md` snippet are part of the setup and they are doing
+    real work: the model writes expectations that hold because it can read the replies it
+    is writing them against. There is no API key anywhere in the session.
 
 ## The YAML transcript surface
 
-We also allow for tests and conversations and cases to be expressed as YAML files, which is more visualy appealing for humans but also more LLM-friendly:
+We also allow for tests and conversations and cases to be expressed as YAML files, which is more visually appealing for humans but also more LLM-friendly:
 
 ```yaml
 # tests/evals/reschedule.yaml
@@ -69,14 +76,25 @@ under `yaml_dirs` and generates one pytest test per transcript *dynamically*, na
 yaml_dirs = ["tests/evals"]
 ```
 
-```console
-$ pytest --collect-only -q
-evals/reschedule.yaml::reschedule_flow
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id=""
+     data-cast-slug="08-collect-only"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="pytest collects a YAML transcript as a test node id with no Python file beside it, then reports that the eval was skipped because live mode is off."></div>
+<figcaption>asciinema: <code>pytest --collect-only -q</code> on a YAML transcript</figcaption>
+</figure>
 
-1 eval test(s) skipped: live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.
-1 test collected in 0.00s
-```
+??? note "Transcript"
 
+    ```console
+    $ pytest --collect-only -q
+    tests/evals/reschedule.yaml::reschedule_flow
+
+    1 eval test(s) skipped: live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.
+    1 test collected in 0.00s
+    ```
 
 Which means a transcript is a first-class pytest test from there on. `-k reschedule` selects it,
 `-n auto` distributes it, a tag puts it behind a gate, and the one thing it needs from you is the
@@ -99,7 +117,7 @@ anything else at load. Ask for Python instead and the model has to get imports, 
 names and a call graph right, any of which can be subtly wrong while still executing. Here the
 worst case is a field name, and a field name is exactly what the loader can catch and correct.
 
-`Pytest-agent-eval` was also designed with AI native coding in mind. We also include other
+`pytest-agent-eval` was also designed with AI-native coding in mind. We also include other
 LLM-friendly features to support agent-driven development:
 
 `schema`

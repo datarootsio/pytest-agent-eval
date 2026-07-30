@@ -17,28 +17,42 @@ def test_discount_dont_apply_to_subtotal():
     assert discount(subtotal=100, code="SPRINGS") == 90
 ```
 
-The `discount` function is tested in the `test_discount_applies_to_subtotal` and `test_discount_applies_to_subtotal`, and we can verify with Pytest running:
+The `discount` function is tested in the `test_discount_applies_to_subtotal` and `test_discount_dont_apply_to_subtotal`, and we can verify with Pytest running:
 
-```console
-$ pytest tests/test_pricing.py::test_discount_applies_to_subtotal
-.                                                          [100%]
-1 passed in 0.02s
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id=""
+     data-cast-slug="01-pytest-basics"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="Two pytest runs on the same file. The first node id passes with a single dot. The second fails, and the assertion-rewrite traceback names test_discount_dont_apply_to_subtotal and reports assert 100 == 90 with the call that produced the 100."></div>
+<figcaption>asciinema: <code>pytest -q</code> on a passing test, then on a failing one</figcaption>
+</figure>
 
-$ pytest tests/test_pricing.py::test_discount_dont_apply_to_subtotal
-F                                                          [100%]
-=============================== FAILURES ================================
-___________________ test_discount_applies_to_subtotal ___________________
+??? note "Transcript"
 
-    def test_discount_applies_to_subtotal():
->       assert discount(subtotal=100, code="SPRING") == 90
-E       assert 100 == 90
-E        +  where 100 = discount(subtotal=100, code='SPRING')
+    ```console
+    $ pytest -q tests/test_pricing.py::test_discount_applies_to_subtotal
+    .                                                                        [100%]
+    1 passed in 0.00s
 
-1 failed in 0.02s
-```
+    $ pytest -q tests/test_pricing.py::test_discount_dont_apply_to_subtotal
+    F                                                                        [100%]
+    =================================== FAILURES ===================================
+    _____________________ test_discount_dont_apply_to_subtotal _____________________
+
+        def test_discount_dont_apply_to_subtotal():
+    >       assert discount(subtotal=100, code="SPRINGS") == 90
+    E       AssertionError: assert 100 == 90
+    E        +  where 100 = discount(subtotal=100, code='SPRINGS')
+
+    tests/test_pricing.py:12: AssertionError
+    =========================== short test summary info ============================
+    FAILED tests/test_pricing.py::test_discount_dont_apply_to_subtotal - Assertio...
+    1 failed in 0.07s
+    ```
 
 Simple pattern, but in complex codebases, where functions call functions, abstractions, dependencies and classes, having these guarantees increases the **confidence** that the existing code works as expected.
-
 
 <figure class="why-fig">
 <div class="why-fig-scroll">
@@ -97,7 +111,7 @@ Simple pattern, but in complex codebases, where functions call functions, abstra
 Mechanically, a pytest test is a function whose name starts with `test_` containing a bare
 `assert`. There is no class to subclass and no assertion API to learn: pytest rewrites the
 `assert` so a failure reports the actual values, which is why `assert 100 == 90` comes back with
-the call that produced the 100. You could apply many imputs with fixtures: `@pytest.mark.parametrize` runs the same body over many cases.
+the call that produced the 100. To run the same body over many inputs, `@pytest.mark.parametrize` takes the cases as data.
 
 Conceptually it is a bet that four things hold. The input is **deterministic**. The output is
 **single-valued**: one right answer to compare against. The assertion is **exact**, equality or

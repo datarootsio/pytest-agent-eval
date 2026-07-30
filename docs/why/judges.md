@@ -6,7 +6,7 @@ Whether the reply actually answered the question. Whether it stayed on the booki
 already made instead of quietly starting a new one. Whether it asked the user to repeat something
 they had already said. Whether it used a specific tone of voice. These are judgements, and the top
 tier of the stack is where you make them: you write the standard down as a **rubric**, and another
-model grades the reply against it. This is commonly referred as **LLM-as-a-Judge.**
+model grades the reply against it. This is commonly referred to as **LLM-as-a-Judge.**
 
 ## The rubric is the test
 
@@ -53,26 +53,46 @@ gives the judge something to check and gives you a verdict you can act on.
 
 ## What comes back is a verdict and its reasoning
 
-```console
-$ pytest --agent-eval-live -vv tests/test_reschedule.py
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id=""
+     data-cast-slug="05-judge-reasoning"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="A three-run eval whose second run fails the rubric. The judge's verdict for each run is printed with its reasoning in the model's own words, and the test passes overall at score 0.67."></div>
+<figcaption>asciinema: <code>pytest --agent-eval-live -vv -rP</code>, with a live judge</figcaption>
+</figure>
 
-tests/test_reschedule.py::test_reschedule_reads_well PASSED
-  ---- LLM Eval ----
-  [2/3 runs, score=0.67 >= 0.66]
-    Run 1 ✅
-    States 11am and repeats BK-1234 unchanged. No repeated questions.
-    Run 2 ❌
-    Confirms the change but never states the new time, so the first requirement fails.
-    Run 3 ✅
-    New time given as 11am, reference BK-1234 carried over, nothing re-asked.
+??? note "Transcript (the judge's wording is illustrative until this cast is recorded)"
 
-1 passed in 12.08s
-```
+    ```console
+    $ pytest --agent-eval-live -vv -rP tests/test_reschedule.py
+    tests/test_reschedule.py::test_reschedule_reads_well PASSED              [100%]
 
-That second line exemplifies when you may need a judge. A substring check that
+    ==================================== PASSES ====================================
+    __________________________ test_reschedule_reads_well __________________________
+    ----------------------------------- LLM Eval -----------------------------------
+    [2/3 runs, score=0.67 >= 0.66]
+      Run 1 ✅
+        States 11am and repeats BK-1234 unchanged. Nothing is re-asked.
+        All tool call checks passed
+      Run 2 ❌
+        Confirms the change but never states the new time, so the first requirement fails.
+        All tool call checks passed
+      Run 3 ✅
+        New time given as 11am, reference BK-1234 carried over, nothing re-asked.
+        All tool call checks passed
+    ============================== 1 passed in 4.31s ===============================
+    ```
+
+Run 2's sentence exemplifies when you may need a judge. A substring check that
 fails tells you a string was absent. A judge tells you **which clause of your rubric the reply
 broke**, in the reply's own terms, which is usually the sentence you would have had to write
 yourself while debugging.
+
+The `All tool call checks passed` line under each verdict is that same turn's
+`tool_calls_include` reporting next to the judge: every evaluator on a turn prints its own
+reasoning, so the check that costs nothing and the one that costs a cent sit side by side.
 
 <figure class="why-fig">
 <div class="why-fig-scroll">
@@ -112,7 +132,7 @@ yourself while debugging.
 
   <rect x="528" y="112" width="222" height="44" rx="8" class="s-box"/>
   <text class="s-node" x="540" y="132">reasoning: str</text>
-  <text class="s-lbl" x="540" y="148">printed at -vv, in the report</text>
+  <text class="s-lbl" x="540" y="148">printed at -vv -rP</text>
 
   <line class="s-rule" x1="8" y1="196" x2="752" y2="196"/>
   <text class="s-note" x="8" y="212">The judge is itself a sample. That is why it sits at the top of the cost stack, not the bottom.</text>
@@ -161,7 +181,7 @@ rubric that says "the reply must contain a reference number", you have written
 
     When we are talking about LLM testing, we need to think in terms of probabilities
     that the outcomes are aligned with what we expect. LLMs may not be perfect
-    all the time,including Judges. Tests increases our confidence that nothing will
+    all the time, including Judges. Tests increases our confidence that nothing will
     break, but they cannot guarantee it.
 
 ## Go deeper

@@ -23,18 +23,46 @@ async def test_booking_confirmation(agent_eval, booking_agent):
     result.assert_threshold()
 ```
 
-```console
-$ pytest --agent-eval-live -vv
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id=""
+     data-cast-slug="03-runs-and-threshold"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="A pytest run with runs=3 and threshold=0.66. Plain -vv reports only that one test passed; adding -rP reveals the per-run detail, where run 2 of 3 failed and the test still passes at score 0.67."></div>
+<figcaption>asciinema: <code>pytest --agent-eval-live -vv</code>, then again with <code>-rP</code></figcaption>
+</figure>
 
-tests/test_booking.py::test_booking_confirmation PASSED
-  ---- LLM Eval ----
-  [2/3 runs, score=0.67 >= 0.66]
-    Run 1 ✅  all substring checks passed · all tool call checks passed
-    Run 2 ❌  reply_contains_any: none of ['confirmed','booked'] found
-    Run 3 ✅  all substring checks passed · all tool call checks passed
+??? note "Transcript"
 
-1 passed in 12.08s
-```
+    ```console
+    $ pytest --agent-eval-live -vv
+    tests/test_booking.py::test_booking_confirmation PASSED                  [100%]
+
+    ============================== 1 passed in 0.01s ===============================
+
+    $ pytest --agent-eval-live -vv -rP
+    tests/test_booking.py::test_booking_confirmation PASSED                  [100%]
+
+    ==================================== PASSES ====================================
+    __________________________ test_booking_confirmation ___________________________
+    ----------------------------------- LLM Eval -----------------------------------
+    [2/3 runs, score=0.67 >= 0.66]
+      Run 1 ✅
+        All substring and pattern checks passed
+      Run 2 ❌
+        Reply did not contain any of ['confirmed', 'booked']
+      Run 3 ✅
+        All substring and pattern checks passed
+    ============================== 1 passed in 0.01s ===============================
+    ```
+
+!!! note "Why `-rP` and not just `-vv`"
+
+    pytest only prints a report section for a test that **failed**. A passing eval's
+    per-run detail is recorded either way, but you have to ask for it: `-rP` is pytest's
+    "report passed tests too". Without it, the run above is the single word `PASSED` — which
+    is precisely the problem this page is about, one bit where you wanted a distribution.
 
 <figure class="why-fig">
 <div class="why-fig-scroll">
@@ -84,8 +112,8 @@ tests/test_booking.py::test_booking_confirmation PASSED
 
 If a single sample cannot answer the question, take several and assert on the rate. `runs=3`
 with `threshold=0.66` says: run the whole transcript three times, pass if two of them do. The
-amber line in that output is the point: a test that fails a third of the time is now a
-**passing** test, on purpose.
+`Run 2 ❌` in that output is the point, sitting under a test pytest reports as `PASSED`: a
+test that fails a third of the time is now a **passing** test, on purpose.
 
 The second half is what you assert on each run, and there are only three kinds. Exact string
 checks on what it *said*. Structural checks on what it *did*. And a graded rubric for the things
