@@ -157,7 +157,20 @@ Four things, all of them off camera on purpose:
    working tree, which is the version the docs are being built for.
 3. **Sets `PS1='$ '`** and unsets `VIRTUAL_ENV_PROMPT`, so the prompt matches the `$ ` in
    every console block instead of showing your hostname, your cwd and a `(venv)` prefix.
-4. **Starts the recording** at `--window-size 80x24` with `--idle-time-limit 1.5`.
+4. **Starts the recording** in `zsh -f` at `--window-size 80x24` with
+   `--idle-time-limit 1.5`.
+
+zsh because it is the macOS default, so what a reader sees is the shell they actually have —
+and because macOS's bash 3.2 prints *"The default interactive shell is now zsh … run `chsh`"*
+on every interactive start, straight into the take. `--norc --noprofile` does not suppress
+that; Apple patched it into the binary rather than into `/etc/profile`. `-f` is zsh's
+equivalent of `--norc --noprofile`: it skips `.zshenv`, `.zprofile`, `.zshrc` and `.zlogin`,
+so a take cannot pick up your aliases, plugins or prompt theme.
+
+One shell for every cast rather than `$SHELL`, because the point is that two takes by two
+people look the same. Set `CAST_SHELL` to override (`CAST_SHELL='bash --norc --noprofile'`),
+and note the runsheets are all POSIX — the only shell-sensitive line is `10-install`'s
+`printf`, which is byte-identical under both.
 
 One window size for all ten, or the embedded players end up different widths and the pages
 look ragged. 80 columns is what pytest's rule lines are already sized for and it stays

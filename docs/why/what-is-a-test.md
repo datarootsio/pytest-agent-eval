@@ -21,7 +21,7 @@ The `discount` function is tested in the `test_discount_applies_to_subtotal` and
 
 <figure class="why-cast">
 <div class="why-cast-mount"
-     data-cast-id=""
+     data-cast-id="5L3hqAFZ7GCyJueL"
      data-cast-slug="01-pytest-basics"
      data-cast-poster="npt:0:02"
      role="img"

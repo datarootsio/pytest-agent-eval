@@ -120,8 +120,8 @@ source "$REPO_ROOT/.venv/bin/activate"
 
 # The prompt has to match the `$ ` already in every console block in docs/why/, not
 # show a hostname and a cwd. VIRTUAL_ENV_PROMPT would otherwise leak a `(...)` prefix.
-# PS1 is bash's and PROMPT is zsh's; we force bash below, so PS1 is the one that acts —
-# PROMPT is set too in case the recorded shell is ever changed.
+# PS1 and PROMPT are the same parameter in zsh; both are set so the recorded shell can be
+# swapped without the prompt silently reverting to a machine-specific default.
 unset VIRTUAL_ENV_PROMPT
 export PS1='$ '
 export PROMPT='$ '
@@ -149,11 +149,46 @@ if [[ $scratch -eq 1 ]]; then
   unset VIRTUAL_ENV
 fi
 
+# zsh, because it is the macOS default: what a reader sees on camera is then the shell they
+# actually have. macOS's bash 3.2 also prints "The default interactive shell is now zsh /
+# please run chsh" on every interactive start — straight into the recording, and --norc
+# --noprofile does not suppress it because Apple patched it into the binary rather than into
+# /etc/profile.
+#
+# `-f` is zsh's `--norc --noprofile`: it skips .zshenv, .zprofile, .zshrc and .zlogin, so the
+# take cannot pick up a recorder's aliases, plugins or prompt theme. Verified that an
+# exported PS1 survives it, which is what keeps the prompt `$ `.
+#
+# zsh also fixes the PROMPT, which bash could not get. asciinema runs `-c` through an
+# intermediate non-interactive shell, and non-interactive bash STRIPS PS1 from the
+# environment at startup — so the inner bash never saw our `$ ` and fell back to its default
+# `bash-3.2$`. Measured on a real pty: `sh -c 'exec bash --norc --noprofile'` prints
+# `bash-3.2$ `, `sh -c 'exec zsh -f'` prints `$ `. PROMPT is not special to bash, so it
+# survives the intermediate shell, and PROMPT is PS1 in zsh. That is what makes the prompt
+# right, and it is why both are exported above rather than just PS1.
+#
+# `+o promptsp` drops zsh's partial-line marker — an inverse-video `%` padded to the window
+# width before a CR. A terminal overwrites it so it is invisible either way, but it is 80-odd
+# bytes of noise per prompt in the .cast file.
+#
+# One shell for every cast, not $SHELL: the whole point is that two takes by two people look
+# the same. CAST_SHELL is an escape hatch, and BASH_SILENCE_DEPRECATION_WARNING covers the
+# fallback and any bash a runsheet line spawns.
+export BASH_SILENCE_DEPRECATION_WARNING=1
+if [[ -n ${CAST_SHELL-} ]]; then
+  rec_shell="$CAST_SHELL"
+elif command -v zsh >/dev/null 2>&1; then
+  rec_shell="zsh -f +o promptsp"
+else
+  rec_shell="bash --norc --noprofile"
+  printf 'note: zsh not found, recording with bash — prompt and quoting may differ\n'
+fi
+
 cd "$rec_dir"
 exec asciinema rec \
   --overwrite \
   --window-size "$WINDOW_SIZE" \
   --idle-time-limit "$IDLE_TIME_LIMIT" \
   --title "$title" \
-  -c "bash --norc --noprofile" \
+  -c "$rec_shell" \
   "$CASTS_DIR/$slug.cast"
