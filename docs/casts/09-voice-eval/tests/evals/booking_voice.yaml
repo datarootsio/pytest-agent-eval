@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+id: booking_voice
+threshold: 1.0
+runs: 1
+turns:
+  # `audio:` is both the WAV synthesize_audio writes and the one the adapter streams.
+  # It is resolved next to this file, and the WAV itself is never committed.
+  - user: "Book me a table for two tomorrow at 10am."
+    audio: turn-01.wav
+    expect:
+      reply_contains_any: [confirmed, booked]
+
+  - user: "Actually, can you move it to 11am instead?"
+    audio: turn-02.wav
+    expect:
+      reply_contains_any: ["11am", "11 am", eleven]

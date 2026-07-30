@@ -37,21 +37,13 @@
 :   **`synthesize_audio`**: turns the `user` text of a voice transcript into WAVs, cached by hash so it only re-synthesises what changed
 
 ```console
-$ python -m pytest_agent_eval.synthesize_audio
-  ✓ tests/evals/booking_voice.yaml  → turn-01.wav, turn-02.wav  (cached)
+$ python -m pytest_agent_eval.synthesize_audio tests/evals/
+
+Synthesized 0 new WAVs, 2 already up to date.
 
 $ pytest --agent-eval-live -q tests/evals/booking_voice.yaml
 .                                                          [100%]
 1 passed in 18.2s
-```
-
-Monday morning:
-
-```console
-$ uv add pytest-agent-eval
-$ mkdir -p tests/evals
-$ printf '\n[tool.agent_eval]\nyaml_dirs = ["tests/evals"]\n' >> pyproject.toml
-$ pytest --agent-eval-live
 ```
 
 ## Start small, add tiers as you need them

@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+id: booking_quiet_corner
+threshold: 1.0
+runs: 1
+tags: [gate:booking]
+turns:
+  - user: "Somewhere quiet for a work dinner, four people, Monday."
+    expect:
+      reply_contains_any: [confirmed, booked]
+      tool_calls_include: [create_booking]

@@ -27,7 +27,7 @@ $ pytest --agent-eval-live -q
 
 ## The YAML transcript surface
 
-We also allow for tests and conversations and cases to be expressed as YAML files, which is more visualy appealing for humans but also more LLM-friendly:
+We also allow for tests and conversations and cases to be expressed as YAML files, which is more visually appealing for humans but also more LLM-friendly:
 
 ```yaml
 # tests/evals/reschedule.yaml
@@ -69,14 +69,15 @@ under `yaml_dirs` and generates one pytest test per transcript *dynamically*, na
 yaml_dirs = ["tests/evals"]
 ```
 
-```console
-$ pytest --collect-only -q
-evals/reschedule.yaml::reschedule_flow
-
-1 eval test(s) skipped: live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.
-1 test collected in 0.00s
-```
-
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="XcNHiQW5xzH4eHNb"
+     data-cast-slug="08-collect-only"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="pytest collects a YAML transcript as a test node id with no Python file beside it, then reports that the eval was skipped because live mode is off."></div>
+<figcaption>asciinema: <code>pytest --collect-only -q</code> on a YAML transcript</figcaption>
+</figure>
 
 Which means a transcript is a first-class pytest test from there on. `-k reschedule` selects it,
 `-n auto` distributes it, a tag puts it behind a gate, and the one thing it needs from you is the
@@ -99,7 +100,7 @@ anything else at load. Ask for Python instead and the model has to get imports, 
 names and a call graph right, any of which can be subtly wrong while still executing. Here the
 worst case is a field name, and a field name is exactly what the loader can catch and correct.
 
-`Pytest-agent-eval` was also designed with AI native coding in mind. We also include other
+`pytest-agent-eval` was also designed with AI-native coding in mind. We also include other
 LLM-friendly features to support agent-driven development:
 
 `schema`

@@ -46,17 +46,15 @@ must_pass = ["booking_confirmation"]     # this one must individually pass
 tags = ["smoke"]                         # threshold defaults to 1.0
 ```
 
-```console
-============================== group summary ===============================
-booking: 9/10 passed (90%) >= 90% required -- PASSED
-  failures: booking_edge_case
-  must_pass: booking_confirmation ok
-smoke:   4/4 passed (100%) >= 100% required -- PASSED
-exit code overridden to 0: all group thresholds met
-
-$ echo $?
-0
-```
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="We0sxR1OLbsbgO1u"
+     data-cast-slug="06-group-summary"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="Fourteen evals run in one session. One fails, but the booking gate passes at nine of ten, the must_pass pin is satisfied, and the session exit code is overridden from failure to zero."></div>
+<figcaption>asciinema: a group gate absorbing one failure, and <code>exit code 0</code></figcaption>
+</figure>
 
 ## Predictability vs. flexibility
 
@@ -65,7 +63,9 @@ we cannot cover all possible combinations (or would be extremely expensive). The
 passes gives us enough indication that the remaining 10% is "ok". If any red turns CI red, you
 will be dealing with many false positives. So gate on the aggregate: 90% of booking
 evals must pass, **with specific ones must pass individually**. Everything else may
-flicker, and every failure is still printed.
+flicker, and every failure is still printed — the run above ends `1 failed, 13 passed`
+*below* the override line, because the override changes the process exit code and not the
+report.
 
 One may argue that: **three runs at 66% is not statistically significant.** Correct.
 It is not a hypothesis test and should not be read as one: you are not estimating a true pass

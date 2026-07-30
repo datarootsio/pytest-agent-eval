@@ -6,6 +6,7 @@ site_url = "https://datarootsio.github.io/pytest-agent-eval"
 repo_url = "https://github.com/datarootsio/pytest-agent-eval"
 repo_name = "datarootsio/pytest-agent-eval"
 extra_css = ["stylesheets/why.css"]
+extra_javascript = ["javascripts/casts.js"]
 nav = [
     { "Docs" = [
         { "Home" = "index.md" },

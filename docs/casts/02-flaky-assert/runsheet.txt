@@ -1,0 +1,30 @@
+02-flaky-assert — replaces the console block in docs/why/why-it-breaks.md
+
+  start:   docs/casts/rec.sh 02-flaky-assert
+  window:  80x24 (set for you)
+
+One typed line, five pytest processes. The stub cycles a fixed list of five replies
+kept in .cast-counter, so the pass/fail pattern is . F . . F every take. rec.sh deletes
+the counter for you by name; nothing to reset by hand.
+
+TYPE:
+  for i in 1 2 3 4 5; do pytest -q tests/test_naive.py; done
+      -> run 1: `.` then `1 passed in 0.00s`
+      -> run 2: `F`, then a FAILURES block whose last line is
+                E       assert 'confirmed' in "You're all set for tomorrow at 10am, ref BK-4417."
+      -> runs 3 and 4: `.` then `1 passed in 0.00s`
+      -> run 5: `F`, then a FAILURES block whose last line is
+                E       AssertionError: assert 'confirmed' in 'Done! Your 10am slot is reserved.'
+                (81 columns, so the closing quote wraps onto its own line — expected)
+      -> the whole point is the shape: . F . . F, three passes and two failures
+      -> if all five runs come out identical, .cast-counter survived the reset and every
+         run drew reply 1. Ctrl-D and rerun rec.sh
+      -> if `agent = <function agent.<locals>.call at 0x...>` appears above the assert,
+         the fixture is returning a closure again and the take is not reproducible.
+         Ctrl-D, fix conftest.py, rerun rec.sh
+
+  Ctrl-D
+
+THEN:
+  docs/casts/upload.sh 02-flaky-assert
+  paste the printed data-cast-id="..." into docs/why/why-it-breaks.md

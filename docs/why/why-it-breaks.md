@@ -1,4 +1,4 @@
-# Where LLM breaks
+# Where LLMs break
 
 <figure class="why-fig">
 <div class="why-fig-scroll">
@@ -62,40 +62,36 @@
   <text class="s-note" x="8" y="236">You are not asserting on an output. You are asserting on a property of a distribution, from one sample.</text>
 </svg>
 </div>
-<figcaption>svg: the <a href="what-is-a-test.md">previous page's</a> geometry, broken. The rhyme is the point.</figcaption>
+<figcaption>svg: the <a href="what-is-a-test.md">previous page's</a> geometry, broken.</figcaption>
 </figure>
 
 Now imagine you have a function that calls an LLM:
 
 ```python
 # tests/test_naive.py
+from pytest_agent_eval.models import Message
 
 async def test_naive_booking(agent):
     reply, _ = await agent([Message(role="user", content="book me a slot tomorrow at 10am")])
     assert "confirmed" in reply
 ```
 
-```console
-$ for i in 1 2 3 4 5; do pytest -q tests/test_naive.py; done
-
-.                                                          [100%]  1 passed
-F                                                          [100%]  1 failed
-    assert "confirmed" in reply
-E   assert 'confirmed' in "You're all set for tomorrow at 10am, ref BK-4417."
-.                                                          [100%]  1 passed
-.                                                          [100%]  1 passed
-F                                                          [100%]  1 failed
-E   assert 'confirmed' in "Done! Your 10am slot is reserved."
-
-# same code. same prompt. same commit.
-```
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="NBB1Wr2RpBCObkaZ"
+     data-cast-slug="02-flaky-assert"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="The same one-line assertion run five times in a loop. Three runs pass and two fail, each failure showing a different perfectly good confirmation that happens not to contain the word &quot;confirmed&quot;."></div>
+<figcaption>asciinema: the same <code>assert</code>, five processes, failing twice</figcaption>
+</figure>
 
 ## LLMs are probabilistic
 
-Run the naive test five times and it fails twice, not because the agent misbehaved, but because
-"you're all set" and "reserved" are perfectly good confirmations that happen not to contain the
-word we picked. Every one of the four properties is gone at once, and they took the binary
-outcome down with them.
+Run the naive test five times and it fails twice - same code, same prompt, same commit - not
+because the agent misbehaved, but because "you're all set" and "reserved" are perfectly good
+confirmations that happen not to contain the word we picked. Every one of the four properties is
+gone at once, and they took the binary outcome down with them.
 
 LLMs are designed to predict the next likely token. However, especially for closed models, we cannot guarantee
 reproducibility for the models (even setting hyperparameters). In the end, **you are looking at a sample, not the

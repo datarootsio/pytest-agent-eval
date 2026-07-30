@@ -34,19 +34,27 @@ async def test_reschedule_flow(agent_eval, booking_agent):
     result.assert_threshold()
 ```
 
-```console
-$ pytest --agent-eval-live -vv tests/test_reschedule.py
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="sash5Clv8LS3M3Dl"
+     data-cast-slug="04-tool-calls-fail"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="A three-run eval that fails every run at score 0.00. The reply is correct each time; what fails is tool_calls_exclude, because the agent called create_booking a second time as well as moving the existing booking."></div>
+<figcaption>asciinema: <code>tool_calls_exclude</code> catching a second booking</figcaption>
+</figure>
 
-tests/test_reschedule.py::test_reschedule_flow FAILED
-  ---- LLM Eval ----
-  [0/3 runs, score=0.00 < 0.80]
-    Run 1 ❌  turn 2:
-      ✅ tool_calls_include  [update_booking]
-      ❌ tool_calls_exclude  create_booking was called
+The reply was perfect — *"I've moved your booking to 11am."* — and all three runs fail anyway.
+What the agent actually did was move the booking *and* create a second one, and
+`tool_calls_exclude` is the check that saw it. You can read that off the output too: turn 2
+also asserts `tool_calls_include=["update_booking"]`, and a single evaluator reports every
+failure it finds, so an absent `update_booking` would have printed its own line beside the
+forbidden one. Only `create_booking` is named — which means the move happened as well.
 
-# the reply said "I've moved your booking to 11am." It was perfect.
-# it made a second booking instead of moving the first.
-```
+Read the two lines under each run as the two turns, in order: the report flattens every turn's
+reasoning into one flat list and does not label which turn each line came from. `All tool call
+checks passed` is turn 1 booking the 10am slot; `Forbidden tool 'create_booking' was called` is
+turn 2. It is not one turn that somehow both passed and failed.
 
 ```python
 from pytest_agent_eval import ToolCall
@@ -80,7 +88,8 @@ returns `ToolCall(name, args)` instead of a plain string.
 
 `tool_calls_ordered`
 
-:   **in what order**: `authenticate` before `create_booking`, always
+:   **in what order**: a bool that makes `tool_calls_include` order-sensitive, so
+    `authenticate` must appear before `create_booking`
 
 `tool_calls_args`
 

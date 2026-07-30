@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+id: booking_window_seat
+threshold: 1.0
+runs: 1
+tags: [gate:booking]
+turns:
+  - user: "Can we get a window table for two at 9pm tonight?"
+    expect:
+      reply_contains_any: [confirmed, booked]
+      tool_calls_include: [create_booking]
