@@ -110,7 +110,11 @@
      * and then writes preload: true after them, so the param cannot reach the player —
      * asking for preload=0 yields opts with "preload":false and a call site still reading
      * preload: true. Their script only sends it when the author set data-preload anyway. */
-    const query = `theme=asciinema${poster ? `&poster=${poster}` : ""}`;
+    /* 1.5x by default: these are recordings of someone typing, and real typing is slower
+     * than anyone wants to watch. Per-cast override is data-cast-speed, so tuning one
+     * recording stays a markdown attribute rather than a change here. */
+    const speed = el.dataset.castSpeed || "1.75";
+    const query = `theme=asciinema&speed=${speed}${poster ? `&poster=${poster}` : ""}`;
     iframe.src = `${API_HOST}/a/${encodeURIComponent(id)}/iframe?${query}`;
     /* The authored description, on the element that actually holds the recording: a frame's
      * title is its accessible name, and the mount cannot carry one (see mount). */
