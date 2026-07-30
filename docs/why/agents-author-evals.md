@@ -78,7 +78,7 @@ yaml_dirs = ["tests/evals"]
 
 <figure class="why-cast">
 <div class="why-cast-mount"
-     data-cast-id=""
+     data-cast-id="XcNHiQW5xzH4eHNb"
      data-cast-slug="08-collect-only"
      data-cast-poster="npt:0:02"
      role="img"
