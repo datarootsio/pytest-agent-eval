@@ -45,4 +45,37 @@
       <url>
         <loc>https://datarootsio.github.io/main/api-reference/adapters/</loc>
       </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/why-tests/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/what-is-a-test/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/why-it-breaks/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/runs-and-tiers/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/tool-calls/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/judges/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/gates/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/one-contract/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/agents-author-evals/</loc>
+      </url>
+      <url>
+        <loc>https://datarootsio.github.io/main/why/whats-in-the-box/</loc>
+      </url>
 </urlset>

@@ -247,7 +247,7 @@ For framework-specific adapters, install one of the optional extras shown in the
     ```
 
     A plain `(reply, tool_calls)` tuple is still a valid return, and `history[-1]["content"]`
-    still reads the same value — see [writing a custom adapter](adapters.md#writing-a-custom-adapter).
+    still reads the same value; see [writing a custom adapter](adapters.md#writing-a-custom-adapter).
 
 ## YAML auto-discovery
 
@@ -481,7 +481,7 @@ For large eval suites, install the `xdist` extra and pass `-n` to run tests acro
 
 # Examples
 
-The repository ships eight small, self-contained projects under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples) — one per feature. Each is a known-good starting point to copy from: CI exercises every one of them (see [`tests/test_examples.py`](https://github.com/datarootsio/pytest-agent-eval/blob/main/tests/test_examples.py)), so they never drift from the current release.
+The repository ships eight small, self-contained projects under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples): one per feature. Each is a known-good starting point to copy from: CI exercises every one of them (see [`tests/test_examples.py`](https://github.com/datarootsio/pytest-agent-eval/blob/main/tests/test_examples.py)), so they never drift from the current release.
 
 Every example except `voice-livekit` uses a deterministic mock agent, so it runs offline with no API key. Swap the `llm_eval_agent` fixture for a real [adapter](adapters.md) to point any of them at your own agent.
 
@@ -501,7 +501,7 @@ The sections below follow the same pedagogical order as the [examples README](ht
 
 ## single-turn
 
-The minimal setup: one YAML transcript plus one `llm_eval_agent` fixture. Reach for this shape first — a single user turn with deterministic substring and tool-call checks is enough for most smoke tests, and it needs no Python test file at all.
+The minimal setup: one YAML transcript plus one `llm_eval_agent` fixture. Reach for this shape first: a single user turn with deterministic substring and tool-call checks is enough for most smoke tests, and it needs no Python test file at all.
 
 === "evals/booking.yaml"
 
@@ -537,7 +537,7 @@ The minimal setup: one YAML transcript plus one `llm_eval_agent` fixture. Reach 
 
 ## multi-turn-judge
 
-A multi-turn conversation where the second turn is graded by an LLM-as-judge rubric. Reach for this when correctness depends on context carried across turns — here the assistant must reschedule the *existing* booking without asking the user to repeat themselves, which no substring check can verify.
+A multi-turn conversation where the second turn is graded by an LLM-as-judge rubric. Reach for this when correctness depends on context carried across turns: here the assistant must reschedule the *existing* booking without asking the user to repeat themselves, which no substring check can verify.
 
 === "evals/reschedule.yaml"
 
@@ -576,7 +576,7 @@ A multi-turn conversation where the second turn is graded by an LLM-as-judge rub
             message = history[-1].content.lower()
             if "11am" in message:
                 return AgentReply(
-                    "Done — moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
+                    "Done, moved your booking from 10am to 11am. Reference stays BK-1234.", ["update_booking"]
                 )
             return AgentReply("Booked for tomorrow at 10am. Reference BK-1234.", ["create_booking"])
 
@@ -587,7 +587,7 @@ A multi-turn conversation where the second turn is graded by an LLM-as-judge rub
 
 ## tool-calls
 
-Assertions on *which* tools the agent invoked — include, exclude, and order. Reach for this when the reply text is not enough and you need to verify the agent took the right actions: authenticate before fetching, never call a destructive tool, and do it all in sequence.
+Assertions on *which* tools the agent invoked: include, exclude, and order. Reach for this when the reply text is not enough and you need to verify the agent took the right actions: authenticate before fetching, never call a destructive tool, and do it all in sequence.
 
 === "evals/ordered_flow.yaml"
 
@@ -626,7 +626,7 @@ Assertions on *which* tools the agent invoked — include, exclude, and order. R
 
 ## tool-call-args
 
-Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent passed. Reach for this when calling the right tool is not enough — the party size, date, and time have to be correct too. The example shows all three modes side by side: `subset` (default), `exact`, and an LLM-judged rubric over the call's JSON arguments. Note that the fixture returns `ToolCall(name, args)` objects rather than plain strings — that is what makes the arguments available to assert on.
+Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent passed. Reach for this when calling the right tool is not enough: the party size, date, and time have to be correct too. The example shows all three modes side by side: `subset` (default), `exact`, and an LLM-judged rubric over the call's JSON arguments. Note that the fixture returns `ToolCall(name, args)` objects rather than plain strings, and that is what makes the arguments available to assert on.
 
 === "evals/booking_args.yaml"
 
@@ -681,7 +681,7 @@ Goes one level deeper than `tool-calls`: it asserts on the *arguments* the agent
 
 ## regex-contains
 
-Deterministic reply assertions: substring `all_of` plus regex matching. Reach for this when the reply must contain structured tokens — a reference number in a known format, a time, an order ID — that you can pin down with a pattern instead of paying for a judge.
+Deterministic reply assertions: substring `all_of` plus regex matching. Reach for this when the reply must contain structured tokens (a reference number in a known format, a time, an order ID) that you can pin down with a pattern instead of paying for a judge.
 
 === "evals/reference_number.yaml"
 
@@ -720,9 +720,9 @@ Deterministic reply assertions: substring `all_of` plus regex matching. Reach fo
 
 ## python-parametrize
 
-The Python API instead of YAML, combined with `@pytest.mark.parametrize`. Reach for this when your eval cases are data-driven — one transcript shape run across many inputs (cities, locales, product IDs) — where hand-writing a YAML file per case would be repetitive. You get the full expressiveness of pytest: fixtures, marks, and parametrization.
+The Python API instead of YAML, combined with `@pytest.mark.parametrize`. Reach for this when your eval cases are data-driven: one transcript shape run across many inputs (cities, locales, product IDs), where hand-writing a YAML file per case would be repetitive. You get the full expressiveness of pytest: fixtures, marks, and parametrization.
 
-The `agent_eval` argument is injected by the plugin's fixture; annotating it as `EvalSession` (from `pytest_agent_eval.runner`) makes that explicit and unlocks editor autocompletion for `.run(...)`. Because `from __future__ import annotations` defers annotation evaluation, the import lives under `TYPE_CHECKING` — it is only needed by type checkers and editors, never at runtime.
+The `agent_eval` argument is injected by the plugin's fixture; annotating it as `EvalSession` (from `pytest_agent_eval.runner`) makes that explicit and unlocks editor autocompletion for `.run(...)`. Because `from __future__ import annotations` defers annotation evaluation, the import lives under `TYPE_CHECKING`: it is only needed by type checkers and editors, never at runtime.
 
 ```python
 from __future__ import annotations
@@ -826,7 +826,7 @@ Group-level pass thresholds with a per-group exit-code override. Reach for this 
         return agent
     ```
 
-The `booking` group requires 50% of its `gate:booking` transcripts to pass, so the deliberately-failing `edge_case` is absorbed — but `must_pass` still forces `booking_happy_path` to pass regardless of the threshold.
+The `booking` group requires 50% of its `gate:booking` transcripts to pass, so the deliberately-failing `edge_case` is absorbed, but `must_pass` still forces `booking_happy_path` to pass regardless of the threshold.
 
 [Runnable project ↗](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples/groups) · See [Group thresholds](groups.md) for the full configuration surface.
 
@@ -912,7 +912,7 @@ A published [JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema
 # Unique ID, used as the pytest test name
 id: booking_confirmation
 
-# Fraction of runs that must pass (0.0 – 1.0)
+# Fraction of runs that must pass (0.0 to 1.0)
 threshold: 0.8
 
 # Number of times to run the full transcript
@@ -1011,7 +1011,7 @@ All `expect` fields are optional. Omit `expect` entirely for turns where you onl
 | `tool_calls_args`    | `list`        | Assertions on the arguments of specific tool calls   |
 | `judge`              | `JudgeConfig` | LLM-as-judge rubric evaluation                       |
 
-String and regex checks are case-insensitive. Regex patterns use Python `re.search` semantics — quote them in YAML so `\d` and friends survive parsing:
+String and regex checks are case-insensitive. Regex patterns use Python `re.search` semantics: quote them in YAML so `\d` and friends survive parsing:
 
 ```yaml
 expect:
@@ -1046,7 +1046,7 @@ expect:
 | `mode`  | `str`         | `"subset"` | `subset`: expected items must appear; `exact`: full dict equality  |
 | `judge` | `JudgeConfig` | `null`     | Rubric + optional model, judged against the call's JSON arguments  |
 
-If the tool is called several times in the turn, the assertion passes when any call matches. Argument capture requires an adapter that records arguments — all bundled adapters do; custom agents must return `ToolCall(name, args)` (see [Adapters](adapters.md#writing-a-custom-adapter)).
+If the tool is called several times in the turn, the assertion passes when any call matches. Argument capture requires an adapter that records arguments: all bundled adapters do; custom agents must return `ToolCall(name, args)` (see [Adapters](adapters.md#writing-a-custom-adapter)).
 
 ### `turns[].expect.judge`
 
@@ -1099,7 +1099,7 @@ async def test_my_agent(agent_eval):
 
 | Parameter   | Type    | Default                   | Description                                 |
 |-------------|---------|---------------------------|---------------------------------------------|
-| `threshold` | `float` | from `[tool.agent_eval]`    | Fraction of runs that must pass (0.0–1.0)   |
+| `threshold` | `float` | from `[tool.agent_eval]`    | Fraction of runs that must pass (0.0 to 1.0) |
 | `runs`      | `int`   | from `[tool.agent_eval]`    | Number of times to execute the transcript   |
 
 Without `--agent-eval-live` or `EVAL_LIVE=1`, marked tests are automatically skipped.
@@ -1248,7 +1248,7 @@ from pytest_agent_eval import (
 )
 
 async def booking_agent(history):
-    # Your real agent implementation here — return an AgentReply
+    # Your real agent implementation here: return an AgentReply
     return AgentReply("Booking confirmed! Reference: BK-1234 for tomorrow at 10am.", ["create_booking"])
 
 @pytest.mark.agent_eval(threshold=0.8, runs=3)
@@ -1358,7 +1358,7 @@ ToolCallEvaluator(
 
 ## `ToolCallArgsEvaluator`
 
-Asserts the **arguments** a tool was called with. Requires an adapter (or custom agent) that captures arguments — all bundled adapters do; custom agents return `ToolCall(name, args)` instead of plain strings (see [Adapters](adapters.md#writing-a-custom-adapter)).
+Asserts the **arguments** a tool was called with. Requires an adapter (or custom agent) that captures arguments: all bundled adapters do; custom agents return `ToolCall(name, args)` instead of plain strings (see [Adapters](adapters.md#writing-a-custom-adapter)).
 
 ```python
 from pytest_agent_eval import ToolCallArgsEvaluator
@@ -1384,7 +1384,7 @@ If the tool is called several times in a turn, the check passes when **any** cal
 
 ## `ToolCallArgsJudgeEvaluator`
 
-Uses an LLM to judge a tool's arguments against a natural-language rubric — for constraints that are awkward to express as exact values ("the time must be within business hours", "the query must mention the user's city").
+Uses an LLM to judge a tool's arguments against a natural-language rubric, for constraints that are awkward to express as exact values ("the time must be within business hours", "the query must mention the user's city").
 
 ```python
 from pytest_agent_eval import ToolCallArgsJudgeEvaluator
@@ -1635,7 +1635,7 @@ Wraps a [LiveKit Agents](https://docs.livekit.io/agents) `AgentSession` so you c
 2. Builds a fresh `(AgentSession, Agent)` pair via the user-supplied factory.
 3. Streams the WAV at real-time pace into `session.input.audio`.
 4. Captures `function_tools_executed` events as tool calls and `conversation_item_added` events (filtered to `assistant` items) as the reply.
-5. Returns `AgentReply(reply, tool_calls)` — still a tuple — to the same evaluator surface used by text adapters.
+5. Returns `AgentReply(reply, tool_calls)`, still a tuple, to the same evaluator surface used by text adapters.
 
 ```python
 import pytest
@@ -1737,15 +1737,15 @@ def llm_eval_agent():
 
 !!! note "The older forms still work"
     `Message` implements `Mapping`, so `history[-1]["content"]` reads the same value, and
-    returning a plain `(reply, tool_calls)` tuple is still a valid agent — `AgentReply` is a
+    returning a plain `(reply, tool_calls)` tuple is still a valid agent: `AgentReply` is a
     `NamedTuple`, so it *is* that tuple. Nothing below needs changing to keep working; the
     typed forms are just what the type checker and your editor can help you with.
 
 ### Capturing tool-call arguments
 
-Plain tool-name strings support name assertions (`tool_calls_include`, `ordered`, ...) but not argument assertions. To enable `tool_calls_args` / `ToolCallArgsEvaluator`, return `ToolCall(name, args)` entries instead — `ToolCall` subclasses `str`, so everything that worked with names keeps working:
+Plain tool-name strings support name assertions (`tool_calls_include`, `ordered`, ...) but not argument assertions. To enable `tool_calls_args` / `ToolCallArgsEvaluator`, return `ToolCall(name, args)` entries instead: `ToolCall` subclasses `str`, so everything that worked with names keeps working:
 
-The `args` must be a mapping (`dict`). If your framework hands you a JSON string (as OpenAI-style tool calls do), parse it first — the bundled adapters route through an internal `coerce_args` helper that does exactly this:
+The `args` must be a mapping (`dict`). If your framework hands you a JSON string (as OpenAI-style tool calls do), parse it first: the bundled adapters route through an internal `coerce_args` helper that does exactly this:
 
 ```python
 import json
@@ -1908,16 +1908,16 @@ Markers named in `pytest_markers` are auto-registered, so `--strict-markers` pro
 A test belongs to a group when **any** of its tags or markers intersects the group's `tags`/`pytest_markers`:
 
 - YAML transcripts contribute their `tags:` list (also visible as `tags=` on their `agent_eval` marker).
-- Python tests contribute their pytest markers, so `@pytest.mark.booking` joins any group with `pytest_markers = ["booking"]` — plain non-LLM tests included.
+- Python tests contribute their pytest markers, so `@pytest.mark.booking` joins any group with `pytest_markers = ["booking"]`, plain non-LLM tests included.
 
 A test can belong to several groups; it counts in each.
 
 ## `must_pass` semantics
 
-`must_pass` entries are **assertions, not selectors** — they don't add tests to the group. An entry matches a test whose identity equals it exactly or is one of its parametrizations (`test_thing` matches `test_thing[case1]`). Identities are the transcript `id` for YAML tests and the test name for Python tests.
+`must_pass` entries are **assertions, not selectors**: they don't add tests to the group. An entry matches a test whose identity equals it exactly or is one of its parametrizations (`test_thing` matches `test_thing[case1]`). Identities are the transcript `id` for YAML tests and the test name for Python tests.
 
 - If any matching test **failed**, the group fails regardless of its pass rate.
-- If no matching test ran (deselected or skipped), the summary prints a warning — partial selection shouldn't flip gates.
+- If no matching test ran (deselected or skipped), the summary prints a warning; partial selection shouldn't flip gates.
 
 ## Pass/fail semantics
 
@@ -1925,7 +1925,7 @@ For each group per session:
 
 - **Denominator** = matched tests that ran. Skipped tests are excluded (so are xfails, which pytest reports as skips). A group whose matches were all skipped renders as `SKIPPED`, never as a vacuous pass.
 - The group **passes** when `passed / total >= threshold` and no `must_pass` entry failed.
-- A group that matches nothing prints a `WARNING` — usually a stale tag.
+- A group that matches nothing prints a `WARNING`, usually a stale tag.
 
 Under partial selection (`pytest -k booking_smoke`), the denominator is what actually ran, and a note flags the deselection. In CI you'll normally run the full suite, where the distinction vanishes.
 
@@ -1935,11 +1935,11 @@ When tests failed but every gate is green, the exit code is overridden to `0`. T
 
 - at least one group matched tests that ran,
 - every such group met its threshold (including `must_pass`),
-- **every failed test in the session belongs to a gated group** — a failing plain unit test or an ungrouped transcript keeps CI red,
+- **every failed test in the session belongs to a gated group**: a failing plain unit test or an ungrouped transcript keeps CI red,
 - there were no collection errors.
 
 !!! note "The stats bar still shows failures"
-    An absorbed failure is still a failure in pytest's own summary (`1 failed, 3 passed`) — only the exit code changes, and the group summary prints `exit code overridden to 0` so logs stay honest.
+    An absorbed failure is still a failure in pytest's own summary (`1 failed, 3 passed`); only the exit code changes, and the group summary prints `exit code overridden to 0` so logs stay honest.
 
 ## Terminal output
 
@@ -1952,7 +1952,7 @@ smoke: 4/4 passed (100%) >= 100% required -- PASSED
 exit code overridden to 0: all group thresholds met
 ```
 
-Failures are always listed when present — even inside a passing group — so absorbed regressions stay visible in logs.
+Failures are always listed when present, even inside a passing group, so absorbed regressions stay visible in logs.
 
 The [markdown report](reporting.md) gains a `## Groups` section with the same numbers when groups are configured.
 
@@ -2044,10 +2044,10 @@ pytest-agent-eval is built to be authored by LLMs as much as by people: transcri
 
 Point your coding agent (Claude Code, Cursor, Copilot, ...) at these resources:
 
-- **[`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt)** — the index, at the site root per the [llms.txt convention](https://llmstxt.org/)
-- **[`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt)** — the entire documentation as one file, for tools that ingest a single URL
-- **[JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json)** — machine-readable transcript format
-- **[`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples)** — small runnable projects, one per feature
+- **[`llms.txt`](https://datarootsio.github.io/pytest-agent-eval/llms.txt)**: the index, at the site root per the [llms.txt convention](https://llmstxt.org/)
+- **[`llms-full.txt`](https://datarootsio.github.io/pytest-agent-eval/llms-full.txt)**: the entire documentation as one file, for tools that ingest a single URL
+- **[JSON Schema](https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json)**: machine-readable transcript format
+- **[`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples)**: small runnable projects, one per feature
 
 ## AGENTS.md snippet
 
@@ -2094,7 +2094,7 @@ rubric (costs tokens; prefer deterministic checks when possible).
 
 Gotchas:
 - Eval tests are SKIPPED unless run with `--agent-eval-live` or `EVAL_LIVE=1`.
-  "N eval test(s) skipped — live mode is off" in the output means they did not run.
+  "N eval test(s) skipped: live mode is off" in the output means they did not run.
 - A conftest.py fixture named `llm_eval_agent` must return the agent under test:
   an async callable `(history) -> AgentReply`. Framework adapters exist
   for pydantic-ai, LangChain, OpenAI, smolagents, and LiveKit.
@@ -2102,13 +2102,13 @@ Gotchas:
 !!! note "`AgentReply` and `Message`"
     The built-in adapters return `AgentReply(reply, tool_calls)`, a `NamedTuple`.
     It *is* a tuple, so `reply, tool_calls = await agent(history)` and returning a
-    plain `(reply, tool_calls)` from your own agent both keep working — you never
+    plain `(reply, tool_calls)` from your own agent both keep working; you never
     have to import it.
 
     The `history` your agent receives is a list of `Message` objects. `Message`
     implements `Mapping`, so `history[-1]["content"]` works exactly as before, and
     `history[-1].content` now works too. If you forward `history` to an SDK, convert
-    it first with `[m.to_dict() for m in history]` — `to_dict()` also drops the
+    it first with `[m.to_dict() for m in history]`: `to_dict()` also drops the
     plugin-internal `audio` key that voice turns carry.
 
 Reference: https://datarootsio.github.io/pytest-agent-eval/llms.txt (index),
@@ -2118,6 +2118,6 @@ https://github.com/datarootsio/pytest-agent-eval/tree/main/examples (runnable ex
 
 ## Why agents do well with this plugin
 
-- **Schema-first authoring** — the `yaml-language-server` directive plus `additionalProperties: false` means invalid files fail loudly, not silently.
-- **Didactic errors** — a typo'd field produces `turns[0].expect: unknown field 'tool_call_include'. Did you mean 'tool_calls_include'?` with the full valid-field list, which agents self-correct from.
-- **Runnable examples** — every feature has a minimal project under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples) that CI keeps working, so copied code starts from a known-good state.
+- **Schema-first authoring**: the `yaml-language-server` directive plus `additionalProperties: false` means invalid files fail loudly, not silently.
+- **Didactic errors**: a typo'd field produces `turns[0].expect: unknown field 'tool_call_include'. Did you mean 'tool_calls_include'?` with the full valid-field list, which agents self-correct from.
+- **Runnable examples**: every feature has a minimal project under [`examples/`](https://github.com/datarootsio/pytest-agent-eval/tree/main/examples) that CI keeps working, so copied code starts from a known-good state.
