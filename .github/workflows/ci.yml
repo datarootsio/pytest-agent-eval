@@ -65,4 +65,13 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - run: uv sync --group docs
       - run: uv run python scripts/build_llms_full.py -o docs/llms-full.txt
-      - run: uv run zensical build
+      # The real guard for the API reference. zensical --strict does NOT cover
+      # griffe: verified against 0.0.51, the build prints every griffe warning
+      # and still reports "No issues found" and exits 0. Locally the warnings do
+      # not even print, because a warm ./.cache/ replays the cached
+      # api-reference render without re-collecting. Runs before the build so a
+      # docstring regression fails fast with a readable message.
+      - run: uv run python scripts/check_docstrings.py
+      # Kept for what it does catch -- zensical's own issues, e.g. broken links
+      # and missing anchors. Not a docstring guard; see the step above.
+      - run: uv run zensical build --strict
