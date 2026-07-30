@@ -25,7 +25,7 @@ async def test_booking_confirmation(agent_eval, booking_agent):
 
 <figure class="why-cast">
 <div class="why-cast-mount"
-     data-cast-id=""
+     data-cast-id="3yXYXmB1mggrMrlA"
      data-cast-slug="03-runs-and-threshold"
      data-cast-poster="npt:0:02"
      role="img"

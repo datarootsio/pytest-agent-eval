@@ -78,7 +78,7 @@ async def test_naive_booking(agent):
 
 <figure class="why-cast">
 <div class="why-cast-mount"
-     data-cast-id=""
+     data-cast-id="NBB1Wr2RpBCObkaZ"
      data-cast-slug="02-flaky-assert"
      data-cast-poster="npt:0:02"
      role="img"

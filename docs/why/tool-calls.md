@@ -36,7 +36,7 @@ async def test_reschedule_flow(agent_eval, booking_agent):
 
 <figure class="why-cast">
 <div class="why-cast-mount"
-     data-cast-id=""
+     data-cast-id="sash5Clv8LS3M3Dl"
      data-cast-slug="04-tool-calls-fail"
      data-cast-poster="npt:0:02"
      role="img"

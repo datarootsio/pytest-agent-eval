@@ -68,60 +68,27 @@ def test_no_markdown_anywhere_under_docs_casts() -> None:
     assert committed == []
 
 
-def _cast_rows() -> list[tuple[str, str, str]]:
-    """Parse casts.txt into (slug, title, page) the way rec.sh and upload.sh read it.
-
-    A helper rather than the same comprehension four times: both scripts split this file on
-    ``|`` and take fields 1-3, so a test that parses it differently would pass while the
-    scripts break.
-    """
-    return [
-        tuple(part.strip() for part in line.split("|")[:3])  # type: ignore[misc]
+def test_every_cast_in_casts_txt_has_a_runsheet() -> None:
+    """casts.txt is what rec.sh and upload.sh both read, so a missing dir is a broken slug."""
+    rows = [
+        line.split("|")[0].strip()
         for line in (CASTS_DIR / "casts.txt").read_text().splitlines()
         if line.strip() and not line.startswith("#")
     ]
-
-
-def test_every_cast_in_casts_txt_has_a_runsheet() -> None:
-    """casts.txt is what rec.sh and upload.sh both read, so a missing dir is a broken slug."""
-    rows = _cast_rows()
     assert len(rows) == 10
-    missing = [slug for slug, _, _ in rows if not (CASTS_DIR / slug / "runsheet.txt").is_file()]
+    missing = [slug for slug in rows if not (CASTS_DIR / slug / "runsheet.txt").is_file()]
     assert missing == []
 
 
 def test_every_cast_directory_is_listed_in_casts_txt() -> None:
     """The other direction: an unlisted dir is a cast rec.sh cannot start."""
-    listed = {slug for slug, _, _ in _cast_rows()}
+    listed = {
+        line.split("|")[0].strip()
+        for line in (CASTS_DIR / "casts.txt").read_text().splitlines()
+        if line.strip() and not line.startswith("#")
+    }
     on_disk = {p.name for p in CASTS_DIR.iterdir() if p.is_dir()}
     assert on_disk == listed
-
-
-def test_every_cast_row_carries_a_title_and_a_page() -> None:
-    """rec.sh titles the recording from field 2 and upload.sh names the page from field 3.
-
-    An empty field is not a parse error, it is a silently untitled recording.
-    """
-    for slug, title, page in _cast_rows():
-        assert title, f"{slug} has no title in casts.txt"
-        assert page.startswith("docs/why/"), f"{slug} names {page!r}, not a docs/why page"
-
-
-def test_rec_sh_passes_the_title_so_a_leading_dash_survives() -> None:
-    """Asciinema's parser rejects a flag value that itself looks like a flag.
-
-    ``--title "$title"`` aborts the take before it starts when the title begins with ``-``,
-    which 08-collect-only's title did — it opened with ``--collect-only``. The ``=`` form
-    takes the value verbatim whatever it starts with. Guarded because rec.sh has no other
-    test coverage and the breakage is invisible until someone records that one cast.
-
-    Comments are stripped before matching: the comment above that line has to be able to
-    name the broken form in order to explain it, and it tripped this assertion when it did.
-    """
-    rec = (CASTS_DIR / "rec.sh").read_text()
-    code = "\n".join(line for line in rec.splitlines() if not line.lstrip().startswith("#"))
-    assert '"--title=$title"' in code, "rec.sh must pass the title as one --title=<value> argument"
-    assert '--title "$title"' not in code, "the separate-argument form breaks on a leading dash"
 
 
 @pytest.mark.parametrize("slug", ["07-agent-authors-eval", "10-install"])

@@ -48,7 +48,7 @@ tags = ["smoke"]                         # threshold defaults to 1.0
 
 <figure class="why-cast">
 <div class="why-cast-mount"
-     data-cast-id=""
+     data-cast-id="We0sxR1OLbsbgO1u"
      data-cast-slug="06-group-summary"
      data-cast-poster="npt:0:02"
      role="img"

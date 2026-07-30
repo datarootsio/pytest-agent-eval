@@ -55,7 +55,7 @@ gives the judge something to check and gives you a verdict you can act on.
 
 <figure class="why-cast">
 <div class="why-cast-mount"
-     data-cast-id=""
+     data-cast-id="83K7HTEN9swwT4PJ"
      data-cast-slug="05-judge-reasoning"
      data-cast-poster="npt:0:02"
      role="img"
