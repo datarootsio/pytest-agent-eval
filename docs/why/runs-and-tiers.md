@@ -33,30 +33,6 @@ async def test_booking_confirmation(agent_eval, booking_agent):
 <figcaption>asciinema: <code>pytest --agent-eval-live -vv</code>, then again with <code>-rP</code></figcaption>
 </figure>
 
-??? note "Transcript"
-
-    ```console
-    $ pytest --agent-eval-live -vv
-    tests/test_booking.py::test_booking_confirmation PASSED                  [100%]
-
-    ============================== 1 passed in 0.01s ===============================
-
-    $ pytest --agent-eval-live -vv -rP
-    tests/test_booking.py::test_booking_confirmation PASSED                  [100%]
-
-    ==================================== PASSES ====================================
-    __________________________ test_booking_confirmation ___________________________
-    ----------------------------------- LLM Eval -----------------------------------
-    [2/3 runs, score=0.67 >= 0.66]
-      Run 1 ✅
-        All substring and pattern checks passed
-      Run 2 ❌
-        Reply did not contain any of ['confirmed', 'booked']
-      Run 3 ✅
-        All substring and pattern checks passed
-    ============================== 1 passed in 0.01s ===============================
-    ```
-
 !!! note "Why `-rP` and not just `-vv`"
 
     pytest only prints a report section for a test that **failed**. A passing eval's

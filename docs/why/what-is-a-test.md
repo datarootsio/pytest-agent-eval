@@ -29,29 +29,6 @@ The `discount` function is tested in the `test_discount_applies_to_subtotal` and
 <figcaption>asciinema: <code>pytest -q</code> on a passing test, then on a failing one</figcaption>
 </figure>
 
-??? note "Transcript"
-
-    ```console
-    $ pytest -q tests/test_pricing.py::test_discount_applies_to_subtotal
-    .                                                                        [100%]
-    1 passed in 0.00s
-
-    $ pytest -q tests/test_pricing.py::test_discount_dont_apply_to_subtotal
-    F                                                                        [100%]
-    =================================== FAILURES ===================================
-    _____________________ test_discount_dont_apply_to_subtotal _____________________
-
-        def test_discount_dont_apply_to_subtotal():
-    >       assert discount(subtotal=100, code="SPRINGS") == 90
-    E       AssertionError: assert 100 == 90
-    E        +  where 100 = discount(subtotal=100, code='SPRINGS')
-
-    tests/test_pricing.py:12: AssertionError
-    =========================== short test summary info ============================
-    FAILED tests/test_pricing.py::test_discount_dont_apply_to_subtotal - Assertio...
-    1 failed in 0.07s
-    ```
-
 Simple pattern, but in complex codebases, where functions call functions, abstractions, dependencies and classes, having these guarantees increases the **confidence** that the existing code works as expected.
 
 <figure class="why-fig">

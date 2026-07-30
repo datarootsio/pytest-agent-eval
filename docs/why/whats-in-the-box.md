@@ -22,7 +22,7 @@
 
 `cost safety`
 
-:   **nothing bills you by accident**: eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1` says otherwise — the first command below collects a voice eval with no credentials in the environment and skips it
+:   **nothing bills you by accident**: eval tests skip unless `--agent-eval-live` or `EVAL_LIVE=1` says otherwise
 
 `custom checks`
 
@@ -34,90 +34,17 @@
 
 `audio`
 
-:   **`synthesize_audio`**: turns the `user` text of a voice transcript into WAVs, cached by hash so it only re-synthesises what changed (the run below starts from an empty directory, so both turns are new; a second run prints `Synthesized 0 new WAVs, 2 already up to date.` and stops there)
+:   **`synthesize_audio`**: turns the `user` text of a voice transcript into WAVs, cached by hash so it only re-synthesises what changed
 
-<figure class="why-cast">
-<div class="why-cast-mount"
-     data-cast-id=""
-     data-cast-slug="09-voice-eval"
-     data-cast-poster="npt:0:02"
-     role="img"
-     aria-label="A voice transcript is collected without credentials and skipped, then synthesize_audio writes one WAV per turn and reports what it did, and finally the voice eval runs live through the LiveKit adapter and passes."></div>
-<figcaption>asciinema: <code>synthesize_audio</code>, then a voice eval</figcaption>
-</figure>
+```console
+$ python -m pytest_agent_eval.synthesize_audio tests/evals/
 
-??? note "Transcript"
+Synthesized 0 new WAVs, 2 already up to date.
 
-    ```console
-    $ pytest --collect-only -q
-    tests/evals/booking_voice.yaml::booking_voice
-
-    1 eval test(s) skipped: live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.
-    1 test collected in 0.00s
-
-    $ python -m pytest_agent_eval.synthesize_audio tests/evals/
-    synthesised    tests/evals/turn-01.wav
-    synthesised    tests/evals/turn-02.wav
-
-    Synthesized 2 new WAVs, 0 already up to date.
-    Wrote .gitignore in tests/evals (*.wav, *.wav.hash) — generated audio is local-only;
-    commit YAML transcripts only.
-
-    $ pytest --agent-eval-live -q
-    .                                                                        [100%]
-    1 passed in 25.31s
-    ```
-
-Monday morning — `uv init` first if there is no project yet, then four commands. The last
-one collects nothing, because `tests/evals` is still empty; that is exactly where the next
-section starts.
-
-<figure class="why-cast">
-<div class="why-cast-mount"
-     data-cast-id=""
-     data-cast-slug="10-install"
-     data-cast-poster="npt:0:02"
-     role="img"
-     aria-label="An empty project gets pytest-agent-eval added with uv, a tests/evals directory, and three lines appended to pyproject.toml. The first run finds no transcripts yet, which is where the next section picks up."></div>
-<figcaption>asciinema: four commands, from an empty project to the first run</figcaption>
-</figure>
-
-??? note "Transcript (package versions as resolved on the day)"
-
-    ```console
-    $ uv init
-    Initialized project `monday`
-
-    $ uv add pytest-agent-eval
-    Using CPython 3.14.2
-    Creating virtual environment at: .venv
-    Resolved 108 packages in 49ms
-    Installed 102 packages in 404ms
-     + aiofile==3.11.1
-     + annotated-types==0.8.0
-     ... 98 more
-     + pytest-agent-eval==0.3.0
-
-    $ mkdir -p tests/evals
-
-    $ printf '\n[tool.agent_eval]\nyaml_dirs = ["tests/evals"]\n' >> pyproject.toml
-
-    $ uv run pytest --agent-eval-live
-    ============================= test session starts ==============================
-    platform darwin -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
-    configfile: pyproject.toml
-    plugins: agent-eval-0.3.0, logfire-4.39.0, anyio-4.14.2
-    collected 0 items
-
-    ============================ no tests ran in 0.00s =============================
-    ```
-
-!!! warning "`uv run pytest`, not bare `pytest`"
-
-    `uv add` creates `.venv` but does not activate it, so a bare `pytest` on a clean machine
-    is `command not found` — or worse, silently runs some other pytest that has never heard
-    of this plugin. `uv run` is what puts the project's own interpreter in front of you, and
-    the `platform` line above is how you check: it must name the version `uv add` reported.
+$ pytest --agent-eval-live -q tests/evals/booking_voice.yaml
+.                                                          [100%]
+1 passed in 18.2s
+```
 
 ## Start small, add tiers as you need them
 

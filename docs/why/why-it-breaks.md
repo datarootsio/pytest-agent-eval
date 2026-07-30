@@ -86,48 +86,6 @@ async def test_naive_booking(agent):
 <figcaption>asciinema: the same <code>assert</code>, five processes, failing twice</figcaption>
 </figure>
 
-??? note "Transcript"
-
-    ```console
-    $ for i in 1 2 3 4 5; do pytest -q tests/test_naive.py; done
-    .                                                                        [100%]
-    1 passed in 0.00s
-    F                                                                        [100%]
-    =================================== FAILURES ===================================
-    ______________________________ test_naive_booking ______________________________
-
-    agent = Agent(reply="You're all set for tomorrow at 10am, ref BK-4417.")
-
-        async def test_naive_booking(agent):
-            reply, _ = await agent([Message(role="user", content="book me a slot tomorrow at 10am")])
-    >       assert "confirmed" in reply
-    E       assert 'confirmed' in "You're all set for tomorrow at 10am, ref BK-4417."
-
-    tests/test_naive.py:6: AssertionError
-    =========================== short test summary info ============================
-    FAILED tests/test_naive.py::test_naive_booking - assert 'confirmed' in "You'r...
-    1 failed in 0.07s
-    .                                                                        [100%]
-    1 passed in 0.00s
-    .                                                                        [100%]
-    1 passed in 0.00s
-    F                                                                        [100%]
-    =================================== FAILURES ===================================
-    ______________________________ test_naive_booking ______________________________
-
-    agent = Agent(reply='Done! Your 10am slot is reserved.')
-
-        async def test_naive_booking(agent):
-            reply, _ = await agent([Message(role="user", content="book me a slot tomorrow at 10am")])
-    >       assert "confirmed" in reply
-    E       AssertionError: assert 'confirmed' in 'Done! Your 10am slot is reserved.'
-
-    tests/test_naive.py:6: AssertionError
-    =========================== short test summary info ============================
-    FAILED tests/test_naive.py::test_naive_booking - AssertionError: assert 'conf...
-    1 failed in 0.07s
-    ```
-
 ## LLMs are probabilistic
 
 Run the naive test five times and it fails twice — same code, same prompt, same commit — not

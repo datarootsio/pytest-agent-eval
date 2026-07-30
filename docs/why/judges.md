@@ -63,28 +63,6 @@ gives the judge something to check and gives you a verdict you can act on.
 <figcaption>asciinema: <code>pytest --agent-eval-live -vv -rP</code>, with a live judge</figcaption>
 </figure>
 
-??? note "Transcript (the judge's wording is illustrative until this cast is recorded)"
-
-    ```console
-    $ pytest --agent-eval-live -vv -rP tests/test_reschedule.py
-    tests/test_reschedule.py::test_reschedule_reads_well PASSED              [100%]
-
-    ==================================== PASSES ====================================
-    __________________________ test_reschedule_reads_well __________________________
-    ----------------------------------- LLM Eval -----------------------------------
-    [2/3 runs, score=0.67 >= 0.66]
-      Run 1 ✅
-        States 11am and repeats BK-1234 unchanged. Nothing is re-asked.
-        All tool call checks passed
-      Run 2 ❌
-        Confirms the change but never states the new time, so the first requirement fails.
-        All tool call checks passed
-      Run 3 ✅
-        New time given as 11am, reference BK-1234 carried over, nothing re-asked.
-        All tool call checks passed
-    ============================== 1 passed in 4.31s ===============================
-    ```
-
 Run 2's sentence exemplifies when you may need a judge. A substring check that
 fails tells you a string was absent. A judge tells you **which clause of your rubric the reply
 broke**, in the reply's own terms, which is usually the sentence you would have had to write

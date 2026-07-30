@@ -44,34 +44,6 @@ async def test_reschedule_flow(agent_eval, booking_agent):
 <figcaption>asciinema: <code>tool_calls_exclude</code> catching a second booking</figcaption>
 </figure>
 
-??? note "Transcript"
-
-    ```console
-    $ pytest --agent-eval-live -vv tests/test_reschedule.py
-    tests/test_reschedule.py::test_reschedule_flow FAILED                    [100%]
-
-    =================================== FAILURES ===================================
-    _____________________________ test_reschedule_flow _____________________________
-    ...
-    E           AssertionError: LLM eval failed: score=0.00 < threshold=0.80 (0/3 runs passed)
-
-    ../../../src/pytest_agent_eval/models.py:279: AssertionError
-    ----------------------------------- LLM Eval -----------------------------------
-    [0/3 runs, score=0.00 < 0.80]
-      Run 1 ❌
-        All tool call checks passed
-        Forbidden tool 'create_booking' was called
-      Run 2 ❌
-        All tool call checks passed
-        Forbidden tool 'create_booking' was called
-      Run 3 ❌
-        All tool call checks passed
-        Forbidden tool 'create_booking' was called
-    =========================== short test summary info ============================
-    FAILED tests/test_reschedule.py::test_reschedule_flow - AssertionError: LLM eval failed: score=0.00 < threshold=0.80 (0/3 runs passed)
-    ============================== 1 failed in 0.08s ===============================
-    ```
-
 The reply was perfect — *"I've moved your booking to 11am."* — and all three runs fail anyway.
 What the agent actually did was move the booking *and* create a second one, and
 `tool_calls_exclude` is the check that saw it. You can read that off the output too: turn 2

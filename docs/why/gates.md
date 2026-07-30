@@ -56,28 +56,6 @@ tags = ["smoke"]                         # threshold defaults to 1.0
 <figcaption>asciinema: a group gate absorbing one failure, and <code>exit code 0</code></figcaption>
 </figure>
 
-??? note "Transcript"
-
-    ```console
-    $ pytest --agent-eval-live -q
-    .F............                                                           [100%]
-    =================================== FAILURES ===================================
-    ________________________ agent_eval: booking_edge_case _________________________
-    LLM eval failed: score=0.00 < threshold=1.00 (0/1 runs passed)
-    ================================ group summary =================================
-    booking: 9/10 passed (90%) >= 90% required -- PASSED
-      failures: booking_edge_case
-      must_pass: booking_confirmation ok
-    smoke: 4/4 passed (100%) >= 100% required -- PASSED
-    exit code overridden to 0: all group thresholds met
-    =========================== short test summary info ============================
-    FAILED evals/edge_case.yaml::booking_edge_case - LLM eval failed: score=0.00 ...
-    1 failed, 13 passed in 0.02s
-
-    $ echo $?
-    0
-    ```
-
 ## Predictability vs. flexibility
 
 A suite of probabilistic tests may fail *somewhere* almost every run. We may test for specific words, but
