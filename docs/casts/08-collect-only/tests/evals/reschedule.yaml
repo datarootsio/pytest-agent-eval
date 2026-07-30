@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+id: reschedule_flow
+threshold: 0.8
+runs: 3
+tags: [gate:booking]
+turns:
+  - user: "Actually make it 11am."
+    expect:
+      tool_calls_include: [update_booking]
+      tool_calls_exclude: [create_booking]

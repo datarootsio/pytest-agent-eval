@@ -1,0 +1,101 @@
+09-voice-eval — replaces the console block in docs/why/whats-in-the-box.md
+
+  start:   docs/casts/rec.sh 09-voice-eval
+  window:  80x24 (set for you)
+
+TIER B. Two of the three lines below spend real money on the OpenAI Realtime API:
+`synthesize_audio` pays for the text-to-speech, and `pytest --agent-eval-live` pays for
+the two voice turns. Cents, not dollars — but not zero, and a retake pays again, because
+rec.sh runs `git clean -fdqx` on this directory and that deletes the WAVs. Read the whole
+runsheet before you start recording.
+
+BEFORE rec.sh, off camera:
+
+    export OPENAI_API_KEY=sk-...
+
+Do NOT type that on camera. One key covers both halves: the Realtime TTS in
+`synthesize_audio` and `livekit.plugins.openai.realtime.RealtimeModel()` in conftest.py
+read the same variable.
+
+Line 1 is free and offline. Rehearse it as many times as you like — it proves the whole
+fixture is wired (pyproject rootdir, yaml_dirs, the livekit conftest importing with no
+credentials) before either paid line runs.
+
+TYPE `tests/evals/` ON LINE 2. NOT OPTIONAL. With no path argument, synthesize_audio resolves
+[tool.agent_eval].yaml_dirs against the CWD (synthesize_audio.py:135), joins each turn's
+`audio:` onto that (:186), and prints the result verbatim (:408) — so your home directory
+ends up on camera in an absolute path. Verified both ways offline.
+
+Two things on line 2 that look like mistakes and are not:
+
+  - `synthesised` on the per-WAV lines but `Synthesized` in the summary. The action
+    literal is British (TurnAction, synthesize_audio.py:59) and the summary sentence is
+    American (:416). Both are copied from the source; do not "fix" one on the page.
+  - the .gitignore notice (:423-426). It fires because rec.sh cleaned this directory, so
+    tests/evals/.gitignore does not exist yet and the run has to write one. It is
+    deterministic across retakes for the same reason, and it is the truthful version of
+    "the WAVs are not committed".
+
+There is no `✓`, no `→ turn-01.wav, turn-02.wav`, and no `(cached)` — the block this cast
+replaces invented all three. One line per WAV, then a blank line, then one summary
+sentence.
+
+Not reproducible, and fine: the `in X.XXs` on line 3, and the exact words the live model
+says. Line 3 is the only real risk in the take — see its failure notes.
+
+TYPE:
+  pytest --collect-only -q
+      -> tests/evals/booking_voice.yaml::booking_voice
+      -> (blank line)
+      -> 1 eval test(s) skipped: live mode is off. Pass --agent-eval-live or set
+         EVAL_LIVE=1.        <- one logical line, 84 chars, wrapped by the 80-col window
+      -> 1 test collected in 0.00s     <- 0.00s every time; collection does no work
+      -> if it says "no tests collected", pytest walked up and read the REPO's
+         pyproject.toml instead of this cast's: `cd` landed elsewhere. Ctrl-D, rerun
+      -> if it ends in ModuleNotFoundError: livekit, the venv is missing the extra.
+         Ctrl-D, `uv sync --all-extras --group dev`, rerun rec.sh
+      -> if the skip hint is missing, EVAL_LIVE=1 is leaking in from the environment.
+         Ctrl-D, `unset EVAL_LIVE`, rerun rec.sh — line 3 has to earn live mode with
+         its own flag
+
+  python -m pytest_agent_eval.synthesize_audio tests/evals/
+      -> synthesised    tests/evals/turn-01.wav      <- four spaces: the action is padded to a
+      -> synthesised    tests/evals/turn-02.wav         14-column field, then one separator
+      -> (blank line)
+      -> Synthesized 2 new WAVs, 0 already up to date.
+      -> Wrote .gitignore in tests/evals (*.wav, *.wav.hash) — generated audio is local-only;
+      -> commit YAML transcripts only.        <- second physical line of that one notice
+      -> takes ~10-20s: two Realtime sessions, with a 1s pause between turns
+      -> if you see an absolute path starting /Users/, you dropped the `tests/evals/`
+         argument. Ctrl-D and rerun rec.sh — and know that the retake re-synthesises
+      -> if it says "Missing credentials", OPENAI_API_KEY was not exported before
+         rec.sh. Ctrl-D, export it, rerun rec.sh. Never type the key on camera
+      -> if the second line says `up-to-date` instead of `synthesised`, the clean did
+         not happen and you are filming a cached run. Ctrl-D, `git status` this
+         directory, rerun rec.sh
+      -> if a turn prints `FAIL  tests/evals/turn-0N.wav: ...` on stderr, the summary gains
+         ` 1 failed.` and the exit code is 2. Ctrl-D and rerun — the whole point of the
+         line is two WAVs appearing
+
+  pytest --agent-eval-live -q
+      -> a single `.` padded out to column 73, then [100%]
+      -> 1 passed in 25.31s      <- the seconds are NOT reproducible. Two turns, each
+         with the adapter's 8s grace period, so expect 20-40s. Anything that passes is
+         a good take. Past 60s pytest switches to `in 65.43s (0:01:05)`, which is also
+         fine — just transcribe what you actually got
+      -> if it fails on `Reply did not contain any of ['confirmed', 'booked']` or
+         `['11am', '11 am', 'eleven']`, the model answered differently this time. That
+         is the transcript being a real eval, not a bad take — but it is not the take
+         the page needs. Ctrl-D and rerun rec.sh (the WAVs get re-synthesised; budget
+         for it), or loosen tests/evals/booking_voice.yaml first and commit that change
+      -> if it fails with `WAV fixture missing at tests/evals/turn-01.wav`, line 2 did not
+         run or ran against a different path. Ctrl-D and start over from line 1
+      -> if livekit prints WARNING lines between the progress line and the count, they
+         are real output and not a bad take, but check they carry no room name or token
+         before you upload
+
+  Ctrl-D
+
+THEN:
+  docs/casts/upload.sh 09-voice-eval
+  paste the printed data-cast-id="..." into docs/why/whats-in-the-box.md

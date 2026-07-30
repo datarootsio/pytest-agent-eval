@@ -1,0 +1,50 @@
+08-collect-only — replaces the second console block in docs/why/agents-author-evals.md
+
+  start:   docs/casts/rec.sh 08-collect-only
+  window:  80x24 (set for you)
+
+The point of this take is that tests/evals/reschedule.yaml — a file with no Python beside it
+and no Python inside it — is a pytest node id. One line, then Ctrl-D.
+
+Read the two notes below before the first take. Both were established by running the
+command, not reasoned about: pytest 9.1.1, this working tree.
+
+ORDER. Four things print, in this order: the node id, a BLANK line, the plugin's yellow
+skip hint, the count. That order is structural, not luck. In _pytest/terminal.py the
+`pytest_sessionfinish` wrapper prints the blank line (terminal.py:962), THEN calls the
+`pytest_terminal_summary` hook, which is where this plugin's hint comes from
+(plugin.py:70), THEN calls `summary_stats()` for the count (terminal.py:993). The node
+ids themselves come earlier still, from `pytest_collection_finish`. A plugin cannot
+print below the count — so if the order comes out differently, something is wrong with
+the take, not with the docs.
+
+WRAP. The hint is one 84-character line, so at 80 columns it wraps onto a second row
+ending in `EVAL_LIVE=1.`. That is correct and not a bad take.
+
+TYPE:
+  pytest --collect-only -q
+      -> tests/evals/reschedule.yaml::reschedule_flow
+      -> (blank line)
+      -> 1 eval test(s) skipped: live mode is off. Pass --agent-eval-live or set
+         EVAL_LIVE=1.        <- one logical line, wrapped by the 80-column window
+      -> 1 test collected in 0.00s
+      -> `in 0.01s` is fine and is not a retake. Collection does no work: 31 of 32 runs
+         here printed 0.00s, cold and warm, and one printed 0.01s. That digit is the
+         only character on screen that is not fixed.
+      -> if it says `no tests collected in 0.01s` under an INTERNALERROR traceback whose
+         last line is `pytest.PytestConfigWarning: Unknown config option:
+         pytester_example_dir`, pytest walked up and read the REPO's pyproject.toml
+         instead of this cast's: the cast's pyproject.toml is missing, or `cd` landed
+         elsewhere. Ctrl-D and rerun rec.sh
+      -> if you get the node id, a blank line and the count with NO skip hint, then
+         EVAL_LIVE=1 is leaking in from the environment — verified, that is exactly what
+         it does to this command. The hint is the second half of the lesson: Ctrl-D,
+         `unset EVAL_LIVE`, rerun rec.sh
+      -> if the id is anything other than `reschedule_flow`, tests/evals/reschedule.yaml has
+         been edited: Ctrl-D, `git status` this directory, rerun rec.sh
+
+  Ctrl-D
+
+THEN:
+  docs/casts/upload.sh 08-collect-only
+  paste the printed data-cast-id="..." into docs/why/agents-author-evals.md

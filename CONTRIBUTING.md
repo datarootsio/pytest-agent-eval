@@ -112,6 +112,103 @@ Two divergences from the wider house style are intentional: line length is **120
 
 The full Python style guide lives in [`CLAUDE.md`](CLAUDE.md).
 
+## Recording the docs/why casts
+
+Ten pages under `docs/why/` embed an asciinema recording of a real terminal session. The
+recordings are real runs — where a recording and a page disagreed, the page was corrected,
+not the recording. Until a cast is recorded and uploaded, its page renders an amber
+"Recording pending" box naming the command that would fix it, so a missing cast is
+self-documenting and never blocks a docs build.
+
+**You do the typing.** Nothing here simulates a keystroke. Each cast is a directory holding
+the real files that are on screen plus a `runsheet.txt` — the screenplay: the exact lines to
+type, in order, and what each should print. `rec.sh` only *starts* the recording in the
+right place with a clean prompt, then gets out of the way.
+
+```bash
+asciinema auth                        # STEP 0, ONCE, EVER. See the warning below.
+uv sync --all-extras --group dev      # the repo's own venv — rec.sh activates it for you
+
+cat docs/casts/03-runs-and-threshold/runsheet.txt   # read what you're about to type
+docs/casts/rec.sh 03-runs-and-threshold             # drops you in, recording, prompt is `$ `
+# ...you type the runsheet lines. Ctrl-D when done.
+asciinema play docs/casts/03-runs-and-threshold.cast   # review; unhappy? just rerun rec.sh
+docs/casts/upload.sh 03-runs-and-threshold          # prints the data-cast-id= line to paste
+```
+
+> **`asciinema auth` is not optional.** asciinema.org deletes any recording that is not
+> linked to an account after 7 days. An uploaded-then-expired cast is worse than a missing
+> one: the page renders a dead player instead of the placeholder that tells you how to fix
+> it.
+
+`docs/casts/casts.txt` is the inventory — one row per cast, giving its title and the page it
+belongs to. `rec.sh --help` prints the slugs.
+
+### What `rec.sh` does before handing you the keyboard
+
+Four things, all of them off camera on purpose:
+
+1. **Resets the cast directory** (`git checkout` + `git clean` on it). This is what makes a
+   retake identical to a first take. Without it the second recording of `02-flaky-assert`
+   starts from a warm counter file and fails on the wrong iterations.
+2. **`cd`s in and activates the repo's root `.venv`.** So what you type on screen is the
+   clean `pytest --agent-eval-live -vv` a reader would actually type — not `uv run pytest`.
+   Recording against the editable install is also the right default: the cast shows the
+   working tree, which is the version the docs are being built for.
+3. **Sets `PS1='$ '`** and unsets `VIRTUAL_ENV_PROMPT`, so the prompt matches the `$ ` in
+   every console block instead of showing your hostname, your cwd and a `(venv)` prefix.
+4. **Starts the recording** at `--window-size 80x24` with `--idle-time-limit 1.5`.
+
+One window size for all ten, or the embedded players end up different widths and the pages
+look ragged. 80 columns is what pytest's rule lines are already sized for and it stays
+legible on a phone. `--idle-time-limit` is what makes hand-typing viable at all: it is
+stored in the cast *header* and applied at **playback**, so your pauses while you find the
+next line get capped without altering the capture — and it can be re-tuned afterwards by
+editing the header, with no re-record.
+
+### Two casts record in a throwaway directory
+
+A cast whose directory holds nothing but its `runsheet.txt` records under `$TMPDIR` instead;
+`rec.sh` works this out from the directory rather than from a second list. `10-install` is
+one because it *is* `uv add` into an empty project. `07-agent-authors-eval` is one because
+the Claude Code session needs an `AGENTS.md` beside it, and **no `.md` file may live
+anywhere under `docs/casts/`** — any `.md` under `docs/` becomes a published, searchable
+page even when it is absent from `nav`, and zensical 0.0.51 has no `exclude` option. That is
+also why the runsheets are `.txt`.
+
+### Casts that need credentials
+
+Most casts are offline and byte-reproducible: the agent is a stub whose replies come from a
+fixed list, so the run is real through the whole plugin but a retake looks the same as the
+first take. Three are not, and each says so at the top of its runsheet:
+
+| Cast | Needs |
+|---|---|
+| `05-judge-reasoning` | `OPENAI_API_KEY` — three `gpt-4o-mini` judge calls, well under a cent. A re-record produces *different* reasoning, so update the transcript block on the page to match whatever the model said. |
+| `07-agent-authors-eval` | a real Claude Code session. Minutes, not seconds, and its output cannot be predicted. |
+| `09-voice-eval` | one paid `synthesize_audio` run (the WAVs cannot be committed — the tool writes a `.gitignore` declaring generated audio local-only), then the `[livekit]` extra plus live OpenAI Realtime credentials. |
+
+### Keeping a cast honest
+
+`tests/test_casts.py` runs each fixture directory through `pytester` and pins its terminal
+output with `fnmatch_lines`. If you change the plugin's output format, that test goes red
+and tells you which cast now needs re-recording — which is the whole point of it. Walk the
+runsheet by hand after any such change before reaching for the camera; a fixture whose stub
+fails on the wrong iteration is much cheaper to find there than mid-take.
+
+To check that a retake really is reproducible, record the same slug twice and diff the
+plain-text renderings:
+
+```bash
+docs/casts/rec.sh 02-flaky-assert && cp docs/casts/02-flaky-assert.cast /tmp/a.cast
+docs/casts/rec.sh 02-flaky-assert && cp docs/casts/02-flaky-assert.cast /tmp/b.cast
+asciinema convert /tmp/a.cast /tmp/a.txt && asciinema convert /tmp/b.cast /tmp/b.txt
+diff /tmp/a.txt /tmp/b.txt        # should differ only where a duration is printed
+```
+
+`.txt` selects the plain-text format automatically. Any *content* difference means
+`rec.sh`'s reset is incomplete for that cast.
+
 ## Commit conventions
 
 We use [Conventional Commits](https://www.conventionalcommits.org/). The first line of every commit is:

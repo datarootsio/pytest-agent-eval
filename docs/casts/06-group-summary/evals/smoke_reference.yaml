@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+id: smoke_reference
+threshold: 1.0
+runs: 1
+tags: [smoke]
+turns:
+  - user: "Table for four at 8pm."
+    expect:
+      reply_matches_any: ['BK-\d+']

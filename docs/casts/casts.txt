@@ -1,0 +1,26 @@
+# The cast inventory. One row per asciinema recording embedded in docs/why/.
+#
+# Format:  slug | title | the docs block it replaces
+#
+# The title is what `rec.sh` passes to `asciinema rec --title`, so it is what
+# asciinema.org shows above the player. Keep it a description of the command, not
+# of the page: a reader who lands on the recording out of context should still know
+# what they are watching.
+#
+# Tier A casts are offline and byte-reproducible — a stub agent, a fixed reply list,
+# no network. Tier B needs credentials or a long interactive session; those render
+# the "Recording pending" placeholder until someone with the credentials records them.
+#
+# Adding a row is not enough to make a cast real. See CONTRIBUTING.md, "Recording the
+# docs/why casts".
+
+01-pytest-basics      | pytest: one passing test, one failing test          | docs/why/what-is-a-test.md
+02-flaky-assert       | the same assert, five times, failing twice          | docs/why/why-it-breaks.md
+03-runs-and-threshold | runs=3 threshold=0.66: two of three runs pass       | docs/why/runs-and-tiers.md
+04-tool-calls-fail    | tool_calls_exclude catches a second booking         | docs/why/tool-calls.md
+05-judge-reasoning    | an LLM judge's verdict and its reasoning            | docs/why/judges.md
+06-group-summary      | a group gate absorbs one failure, exit code 0       | docs/why/gates.md
+07-agent-authors-eval | a coding agent writes a YAML transcript             | docs/why/agents-author-evals.md
+08-collect-only       | --collect-only: a transcript is a pytest test       | docs/why/agents-author-evals.md
+09-voice-eval         | synthesize_audio, then a voice eval                 | docs/why/whats-in-the-box.md
+10-install            | four commands, from empty project to first run      | docs/why/whats-in-the-box.md

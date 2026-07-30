@@ -1,0 +1,234 @@
+07-agent-authors-eval — replaces the first console block in docs/why/agents-author-evals.md
+
+  start:   TMPDIR=/tmp docs/casts/rec.sh 07-agent-authors-eval
+  window:  80x24 (set for you)
+
+TIER B. This take is a real Claude Code session, so it is the one cast that cannot be
+walked through in advance. Read all of the front matter before you start — the staging,
+the $TMPDIR and the two off-camera checks are decided BEFORE the recording begins and
+none of them can be fixed mid-take.
+
+  * It runs for MINUTES, not seconds. `--idle-time-limit 1.5` matters more here than in
+    any other cast — it is what turns "model thinks for 40s" into a 1.5s pause at
+    playback, and it lives in the cast HEADER, so you can re-tune it afterwards by
+    editing the header instead of re-recording.
+  * Its output cannot be predicted. The wording, the tool order, the number of steps and
+    whether Claude runs pytest itself are different every take.
+  * Therefore the console block in docs/why/agents-author-evals.md must be REWRITTEN
+    against your take, not matched. It is stylised throughout — its `…reading llms.txt`
+    and `…creating tests/evals/reschedule.yaml` lines are not anything Claude Code
+    prints — so of the ten pages this is the largest rewrite. See THEN.
+
+KEEP THIS DIRECTORY RUNSHEET-ONLY. rec.sh records in a throwaway scratch dir precisely
+because it finds nothing here but runsheet.txt (`find -mindepth 1 -not -name runsheet.txt`).
+Add the fixture files here "to help" and two things break at once: the take records into
+docs/casts/ and the AGENTS.md the session needs becomes a published, searchable docs page,
+because ANY .md under docs/ is published. That is why the files below are heredocs.
+
+WHY TMPDIR=/tmp IS IN THE START LINE. Claude Code prints its cwd in the welcome box, on
+camera. Left alone, rec.sh derives the scratch dir from $TMPDIR and macOS makes that
+`/var/folders/q9/8j…/T/`, i.e. a path named after your laptop — the exact thing rec.sh's
+`$ ` prompt exists to keep out of the docs. With TMPDIR=/tmp the box reads
+`/tmp/pytest-agent-eval-casts/07-agent-authors-eval` (Claude may resolve the symlink and
+show `/private/tmp/...`; either is fine).
+
+CHECK OFF CAMERA, BEFORE ANYTHING ELSE:
+  command -v claude
+      -> a path. The recorded shell is `bash --norc --noprofile`: it inherits your
+         exported PATH, so a real binary works, but a zsh alias or shell function does
+         NOT and you will find out on camera.
+  grep -n rtk ~/.claude/CLAUDE.md ~/.claude/settings.json
+      -> The session reads YOUR global config: user-level CLAUDE.md rules, hooks and
+         skills. A command-rewriting hook (rtk) or a "always fetch docs first" rule will
+         appear in the visible tool calls and end up in published documentation. Either
+         accept it and describe it on the page, or temporarily rename ~/.claude/CLAUDE.md
+         off camera and put it back after. Decide now, not after a five-minute take.
+
+STAGE THE PROJECT — off camera, in a directory rec.sh will not wipe. Everything from
+here to the next blank-line marker is at column 0 on purpose: paste it as-is, from the
+repo root, in one go. Indent the conftest heredoc and Python breaks.
+
+mkdir -p /tmp/pae-cast07-stage/tests/evals
+
+cat > /tmp/pae-cast07-stage/pyproject.toml <<'TOML'
+[tool.agent_eval]
+yaml_dirs = ["tests/evals"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+TOML
+
+cat > /tmp/pae-cast07-stage/conftest.py <<'PY'
+import pytest
+
+from pytest_agent_eval import AgentReply, ToolCall
+
+BOOKED = AgentReply(
+    "Booking confirmed for 10am. Reference BK-1234.",
+    [ToolCall("create_booking", {"time": "10am"})],
+)
+RESCHEDULED = AgentReply(
+    "Rescheduled to 11am. Booking BK-1234 is still confirmed.",
+    [ToolCall("update_booking", {"time": "11am"})],
+)
+
+
+@pytest.fixture
+def llm_eval_agent():
+    # Stub booking agent: fixed replies, so the evals need no API key.
+    async def agent(history):
+        return RESCHEDULED if "11am" in history[-1].content else BOOKED
+
+    return agent
+PY
+
+sed -n '17,76p' docs/agents.md > /tmp/pae-cast07-stage/AGENTS.md
+
+cat >> /tmp/pae-cast07-stage/AGENTS.md <<'MD'
+
+## This project
+
+No API keys here: deterministic checks only, no `judge:` rubrics.
+The agent under test is the stub `llm_eval_agent` fixture in conftest.py — read it, and
+write expectations its replies actually satisfy.
+MD
+
+--- end of the paste block. What each of the four files is doing, and what to check: ---
+
+  pyproject.toml is load-bearing, not decoration: it pins pytest's rootdir to the scratch
+  dir and names yaml_dirs. No [project] table, and those tables in that order.
+
+  conftest.py is the whole reason this take can pass offline, and both replies are
+  visible to Claude — which is what makes "passes first try" real rather than lucky: it
+  writes expectations against a reply it can read. Verified: this exact file passes the
+  transcript shape the AGENTS.md snippet teaches. The ToolCall args are not decoration
+  either — without them a transcript containing `tool_calls_args` fails, and that is one
+  of the shapes the snippet teaches.
+
+  AGENTS.md is NOT invented here. It is the snippet published in docs/agents.md under
+  "## AGENTS.md snippet" — the body of the ````markdown fence, which is why the `sed`
+  above takes lines 17-76. Check both ends before trusting those numbers: the file must
+  start `## Writing agent evals (pytest-agent-eval)` and end with the
+  `https://github.com/.../examples (runnable examples).` line. If it does not, the page
+  has moved — copy the fenced block by hand.
+
+  The appended "## This project" section carries the two facts the published snippet
+  cannot know. The first line is load-bearing (see the judge warning under `cat
+  tests/evals/reschedule.yaml`). The second is the one you must disclose on the page,
+  because it is doing real work.
+
+  tests/evals/ stays EMPTY. It is where the session's output lands, and `cp -R` keeps an
+  empty directory.
+
+GET IT INTO THE SCRATCH DIR. rec.sh `rm -rf`s the scratch dir at launch, so nothing you
+put there survives; everything it prints (including `scratch dir: ...`) is before the
+recording starts and is off camera. Two windows:
+
+  window 1:  TMPDIR=/tmp docs/casts/rec.sh 07-agent-authors-eval
+  window 2:  cp -R /tmp/pae-cast07-stage/. /tmp/pytest-agent-eval-casts/07-agent-authors-eval/
+  window 1:  now type the lines below — the first one proves the copy landed
+
+  One window only? Type the `cp -R` line as your first line on camera and accept that the
+  page's block has to show it. Any retake needs the copy again: rec.sh wipes the dir.
+
+TYPE:
+  ls
+      -> AGENTS.md   conftest.py   pyproject.toml   tests
+      -> if that is four names, the copy landed. If it prints nothing, window 2's cp did
+         not run (or ran before rec.sh, which then deleted it): Ctrl-D and start over
+
+  cat conftest.py
+      -> the 21-line stub above, longest line 71 chars, no wrapping at 80 columns
+      -> this is the honest setup shot: the reader sees there is no live model behind the
+         eval that is about to be written
+
+  claude
+      -> the welcome box, then the `>` input box. Confirm the cwd it prints is the
+         scratch dir and not your home directory
+      -> if it starts a resumed session or shows an onboarding/theme picker, Ctrl-D out,
+         deal with it off camera, rerun rec.sh AND the cp. First-run chrome has no place
+         on the page
+      -> the box and any diffs wrap at 80 columns. That is expected. Do not resize: all
+         ten players are 80x24 or the pages look ragged
+
+  write an eval for the reschedule flow.
+      -> typed at the `>` prompt, then Enter. Seven words, lower case, full stop — this
+         exact sentence is what the page claims was asked, so do not improve it
+      -> expect, in some order: it reads AGENTS.md and conftest.py, fetches
+         https://datarootsio.github.io/pytest-agent-eval/llms.txt and/or
+         schema/transcript.json, then writes tests/evals/reschedule.yaml. Rendered as
+         `●` tool lines with `⎿` results, NOT as the page's `…reading llms.txt`
+      -> a domain-permission prompt for datarootsio.github.io and a write-permission
+         prompt for tests/evals/reschedule.yaml are likely. Answering them is part of a
+         real session; keep rolling. (If you would rather not film them, that is a
+         decision for BEFORE the take: relaunch with `claude --permission-mode
+         acceptEdits`, and then the page's first line must show that flag too)
+      -> if it writes a Python test instead of YAML, or writes into evals/ instead of
+         tests/evals/, AGENTS.md was not loaded. Ctrl-D; check that the file is named
+         AGENTS.md, that your Claude Code version reads AGENTS.md (older ones only read
+         CLAUDE.md — if so, stage it as CLAUDE.md and say so on the page), and that
+         sed pulled the whole snippet. Do not ship both files: `ls` is on camera
+      -> if it runs pytest itself, fine — let it. Still type the bare pytest line below
+         after you exit: a human verifying the agent's work is the point of the block
+
+  /exit
+      -> back to the `$ ` prompt. `/exit`, not Ctrl-D — Ctrl-D here would end the whole
+         take with the pytest run unfilmed
+
+  cat tests/evals/reschedule.yaml
+      -> the transcript the session wrote. The only place it appears without Claude's
+         TUI chrome around it, which is why this line exists
+      -> it should open with the full
+         `# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json`
+         (the page elides that URL to `.../schema/transcript.json`; the real file does
+         not) and carry `id:`, `threshold:`, `runs:`, `turns:`
+      -> if you see a `judge:` block, STOP AND DECIDE. It needs OPENAI_API_KEY. Without
+         one the next line does not fail cleanly, it dumps a ~20-line pydantic-ai
+         traceback ending in `pydantic_ai.exceptions.UserError: Set the
+         `OPENAI_API_KEY` environment variable ...` and `1 failed in 0.59s`. Either
+         Ctrl-D and retake with the AGENTS.md "deterministic checks only" line actually
+         in place, or accept it, export the key off camera and retake
+
+  pytest --agent-eval-live -q
+      -> .                                                                        [100%]
+      -> 1 passed in 0.00s
+      -> the `.` line is 79 characters at an 80-column window, and the duration is
+         0.00s, not the page's 9.7s: the agent is a stub, so nothing here waits on a
+         network round trip
+      -> if it prints `1 eval test(s) skipped: live mode is off. Pass --agent-eval-live
+         or set EVAL_LIVE=1.` and `1 skipped in 0.00s`, you dropped `--agent-eval-live`.
+         Just type the line again — a visible correction beats a retake here
+      -> if it prints `no tests ran in 0.00s`, the YAML is not under tests/evals/ (see
+         the AGENTS.md failure above). Nothing left to film: Ctrl-D
+      -> if it FAILS, do not retake blind. The failure names the expectation the stub's
+         reply did not satisfy, and that is real information about what the model wrote —
+         read it, then decide whether the page shows a first-try pass or an honest
+         second try
+
+  Ctrl-D
+
+THEN:
+  ls -lh docs/casts/07-agent-authors-eval.cast
+      -> Claude Code's spinner redraws several times a second for the length of the
+         session, so this cast is far bigger than the other nine. If it is many MB,
+         the fix is a shorter session (fewer permission prompts, one narrower prompt),
+         never hand-editing the cast
+
+  asciinema play docs/casts/07-agent-authors-eval.cast
+  docs/casts/upload.sh 07-agent-authors-eval
+  paste the printed data-cast-id="..." into docs/why/agents-author-evals.md
+
+  Then REWRITE the collapsed transcript under that player from your take:
+
+    asciinema convert docs/casts/07-agent-authors-eval.cast /tmp/07.txt
+
+  `.txt` selects the plain-text format. It will contain box-drawing characters and
+  spinner residue, so trim it by hand to the lines that carry meaning. Four claims in
+  the current block have to go or change: the `…reading llms.txt` and `…creating ...`
+  pseudo-lines (Claude prints `●`/`⎿` tool lines), the elided `.../schema/transcript.json`
+  URL (the real file has it in full), the `9.7s` duration (a stub run is 0.00s), and the
+  `# first try, no edits` comment (no shell prints that; if the page keeps the claim it
+  belongs in prose). Add one sentence saying the project ships an AGENTS.md and a stub
+  agent the model could read — otherwise the page takes credit for something the setup
+  supplied.

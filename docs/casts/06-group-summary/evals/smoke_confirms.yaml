@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+id: smoke_confirms
+threshold: 1.0
+runs: 1
+tags: [smoke]
+turns:
+  - user: "Table for two at 7pm."
+    expect:
+      reply_contains_any: [confirmed]

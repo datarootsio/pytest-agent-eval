@@ -1,0 +1,120 @@
+10-install — replaces the second console block in docs/why/whats-in-the-box.md
+(the one under "Monday morning")
+
+  start:   docs/casts/rec.sh 10-install
+  window:  80x24 (set for you)
+
+This is the only cast with nothing beside this runsheet, so rec.sh records in a throwaway
+scratch dir instead of a fixture dir — it prints the path as `scratch dir: ...` before it
+hands over. That is right: this cast *is* `uv add` into an empty project, and there is no
+fixture to commit. It is also the only cast that touches the network (PyPI, one resolve).
+
+Read all five notes before the first take. Three of them are the difference between a
+usable recording and a retake.
+
+1. WARM THE UV CACHE FIRST. Do a full dry run — rec.sh, all six lines, Ctrl-D — and then
+   rerun rec.sh and record the second one. On a cold cache `uv add` adds download progress
+   lines (`Downloading pydantic-ai-slim (1.1MiB)`) that are not in the transcript below.
+   Two consecutive warm takes came out byte-identical except for the `in 49ms` / `in 17ms`
+   timings and pytest's `in 0.01s`.
+
+2. `unset VIRTUAL_ENV` is line 1 and it is not optional. rec.sh sources the repo's venv off
+   camera so the last line can be a bare `pytest`, and uv sees that as an active environment
+   that is not this project's. Left set, `uv add` opens with:
+
+     warning: `VIRTUAL_ENV=/Users/…/docs-why-asciinema/.venv` does not match the project
+     environment path `.venv` and will be ignored; use `--active` to target the active
+     environment instead
+
+   which puts the recorder's own absolute path on screen and advises a flag that would
+   install PyPI 0.3.0 straight over the repo's editable install and break every other
+   cast. Do not take that advice. If rec.sh is ever changed to unset VIRTUAL_ENV itself,
+   delete line 1 from this runsheet and re-record.
+
+3. `uv init` is on camera. It has to be — rec.sh creates the scratch dir empty and starts
+   recording in the same breath, so there is no off-camera window to use. It reads better
+   there anyway: `uv add` needs a project to add to, and one visible line that creates the
+   pyproject.toml is honest, where a pyproject.toml the reader never saw appear is not.
+   Lines 3–6 are then the page's four commands, verbatim.
+
+4. Nothing keeps .pytest_cache out of this run, and nothing needs to: rec.sh exports
+   PYTEST_ADDOPTS='-p no:cacheprovider' for every cast so the flag never appears on
+   camera, and here the directory is scratch and gets deleted on the next launch anyway.
+   The pytest line is therefore the page's fourth command, character for character.
+
+5. The version numbers are the one part of this cast that is not reproducible. `uv init`
+   pins requires-python from whatever CPython the recorder has, the resolve comes from
+   PyPI on the day, and pytest-agent-eval's own `pydantic-ai` dependency drags in ~100
+   packages whose versions move weekly. Do not chase the numbers below. Whoever publishes
+   the cast must re-transcribe the collapsed transcript from the take that was actually
+   uploaded, not copy the one that shipped with this runsheet.
+
+TYPE:
+  unset VIRTUAL_ENV
+      -> nothing. See note 2 — if this printed something, you are not in bash
+
+  uv init
+      -> Initialized project `10-install`
+      -> that is the whole output. It also writes main.py, README.md, .python-version
+         and .gitignore, which is fine: nothing in this cast ever lists the directory
+      -> if it says the name is invalid, rec.sh's scratch dir is not named after the
+         slug — Ctrl-D and check that rec.sh printed `scratch dir: .../10-install`
+
+  uv add pytest-agent-eval
+      -> Using CPython 3.14.2
+      -> Creating virtual environment at: .venv
+      -> Resolved 108 packages in 49ms
+      -> Installed 102 packages in 404ms
+      -> then 102 green `+ name==version` lines, alphabetical, aiofile to wrapt
+      -> in a real terminal the two `Resolved`/`Installed` lines are preceded by a
+         spinner and a block progress bar that redraw in place. They animate in the
+         player and settle to the four lines above; that is not a bad take
+      -> `+ pytest-agent-eval==0.3.0` is line 80 of the 102, so at 24 rows it scrolls
+         off before the command ends. Nothing to fix — the pytest line is where the
+         install is proved, not here
+      -> if you see a `warning: VIRTUAL_ENV=...` line at the top, you skipped line 1:
+         Ctrl-D and rerun rec.sh
+      -> if you see `Downloading ...` progress lines, the cache was cold: Ctrl-D and
+         rerun rec.sh, the cache is warm now
+
+  mkdir -p tests/evals
+      -> nothing
+
+  printf '\n[tool.agent_eval]\nyaml_dirs = ["tests/evals"]\n' >> pyproject.toml
+      -> nothing
+      -> type it whole, single quotes included. Without them the shell eats the \n and
+         you get one literal line, and pytest then prints no `configfile:` at all
+
+  pytest --agent-eval-live
+      -> ============================= test session starts ==============================
+      -> platform darwin -- Python 3.11.14, pytest-9.1.1, pluggy-1.6.0
+      -> rootdir: .../pytest-agent-eval-casts/10-install
+      -> configfile: pyproject.toml
+      -> plugins: agent-eval-0.3.0, langsmith-..., xdist-..., asyncio-..., anyio-...,
+         logfire-...        <- one logical line, wrapped by the 80-column window
+      -> asyncio: mode=Mode.STRICT, debug=False, ...
+      -> collected 0 items
+      -> (blank)
+      -> ============================ no tests ran in 0.01s =============================
+      -> THIS IS THE ENDING. tests/evals is empty, so there is nothing to collect and
+         pytest exits 5. The page's next section is "Start small, add tiers as you need
+         them" and opens with "One transcript is enough to start" — an empty first run
+         is what that sentence is answering, so let it sit for a beat before Ctrl-D
+      -> the two lines that carry the cast are `plugins: agent-eval-0.3.0`, which is the
+         install proving itself, and `configfile: pyproject.toml`, which is pytest saying
+         it read the file the printf just appended to. If `configfile:` is missing, the
+         printf went wrong: Ctrl-D and rerun rec.sh
+      -> `agent-eval-0.3.0` here is the repo's editable install, not the copy uv just
+         put in ./.venv — rec.sh activated the repo venv so that `pytest` could be bare.
+         Same version, same output. If it reports a version that is not the working
+         tree's, `uv sync` the repo and rerun rec.sh
+      -> if this says `no tests ran` AND has no `rootdir:` under a scratch path, the
+         shell is not in the scratch dir: Ctrl-D and rerun rec.sh
+
+  Ctrl-D
+
+THEN:
+  docs/casts/upload.sh 10-install
+  paste the printed data-cast-id="..." into docs/why/whats-in-the-box.md
+  (the second console block, under "Monday morning" — the first one, the
+  synthesize_audio block, belongs to 09-voice-eval)

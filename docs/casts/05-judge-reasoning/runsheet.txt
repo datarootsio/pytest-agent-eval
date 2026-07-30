@@ -1,0 +1,83 @@
+05-judge-reasoning — replaces the console block in docs/why/judges.md
+
+  start:   docs/casts/rec.sh 05-judge-reasoning
+  window:  80x24 (set for you)
+
+  READ ALL OF THIS BEFORE THE FIRST TAKE. This is the one cast that calls a real model.
+
+  0. export OPENAI_API_KEY=sk-... IN THE SHELL YOU RUN rec.sh FROM, BEFORE you run it.
+     Not on camera. rec.sh inherits your environment, so an already-exported key just
+     works and is never filmed; typing the export inside the recording puts your key
+     in a file you are about to upload to asciinema.org.
+
+  1. It costs a fraction of a cent. Three judge calls on openai:gpt-4o-mini, one per
+     run, on turn 2 only — turn 1 has no `expect`, so nothing judges it. Retakes are
+     cheap; take as many as you need.
+
+  2. The reasoning text WILL be different from the block currently in judges.md, and
+     from your own previous take. It is a model writing a sentence. So this take is not
+     finished when the .cast is uploaded: open docs/why/judges.md and replace the
+     transcript under the player with what the model actually said on camera, verbatim.
+     If you skip that, the page's collapsed transcript contradicts its own recording.
+
+  3. `-rP` on line 2 is not optional and is not a typo. pytest prints a report section
+     for a FAILED test automatically, but NEVER for a passing one — and this test passes.
+     Without `-rP` you get `1 passed` and no "LLM Eval" block at all, which is the one
+     thing this page exists to show.
+
+TYPE:
+  cat pyproject.toml
+      -> [tool.agent_eval]
+      -> model = "openai:gpt-4o-mini"
+      -> then [tool.pytest.ini_options] and the two asyncio settings
+      -> this line is here because tests/test_reschedule.py builds
+      ->   JudgeEvaluator(rubric=...) with no model= — the judge model is config, and
+      ->   this is where a reader can see it. Nothing is hidden off camera.
+
+  pytest --agent-eval-live -vv -rP tests/test_reschedule.py
+      -> rootdir: .../docs/casts/05-judge-reasoning
+      -> configfile: pyproject.toml
+      -> collecting ... collected 1 item
+      -> tests/test_reschedule.py::test_reschedule_reads_well PASSED            [100%]
+      -> ==================================== PASSES ====================================
+      -> __________________________ test_reschedule_reads_well __________________________
+      -> ----------------------------------- LLM Eval -----------------------------------
+      -> [2/3 runs, score=0.67 >= 0.66]
+      ->   Run 1 ✅
+      ->     <the model's sentence about run 1>
+      ->     All tool call checks passed
+      ->   Run 2 ❌
+      ->     <the model's sentence: reply never states the new time>
+      ->     All tool call checks passed
+      ->   Run 3 ✅
+      ->     <the model's sentence about run 3>
+      ->     All tool call checks passed
+      -> 1 passed in ~5-15s
+      -> two reasoning lines per run, not one: the judge's, then the deterministic
+      ->   tool-call check on the same turn. The score line sits at column 0, `Run N`
+      ->   at 2, reasoning at 4. No ` · ` join and no per-check tree.
+      -> if the last lines are a traceback ending in
+      ->    E  pydantic_ai.exceptions.UserError: Set the `OPENAI_API_KEY` environment
+      ->    variable ... and `1 failed in 0.4s`, step 0 did not happen. Ctrl-D, export
+      ->    the key, rerun rec.sh. The key is read when the judge is first used, so this
+      ->    is the only symptom you get and it costs nothing
+      -> if it says "1 skipped" and "1 eval test(s) skipped: live mode is off",
+      ->    --agent-eval-live did not make it onto the line. Ctrl-D and rerun rec.sh
+      -> if there is no "PASSES" section at all, only `1 passed`, you dropped -rP.
+      ->    Ctrl-D and rerun rec.sh
+      -> if it says "no tests ran" / "collected 0 items", or rootdir is the repo root
+      ->    rather than this directory, pytest read the REPO pyproject.toml instead of
+      ->    this cast's. Ctrl-D and rerun rec.sh
+      -> if all three runs are ✅ (3/3, score=1.00), the judge was lenient about run 2's
+      ->    reply, which states no time at all. That is judge variance, not a broken
+      ->    fixture — Ctrl-D and retake. If a second take also says 3/3, keep it and
+      ->    rewrite the surrounding prose in judges.md instead of fighting the model
+      -> if a run shows `Judge failed after 3 attempts: ...`, the API was unreachable.
+      ->    Ctrl-D, check the network, rerun rec.sh
+
+  Ctrl-D
+
+THEN:
+  docs/casts/upload.sh 05-judge-reasoning
+  paste the printed data-cast-id="..." into docs/why/judges.md
+  then update that page's collapsed transcript to the reasoning you just recorded (2)

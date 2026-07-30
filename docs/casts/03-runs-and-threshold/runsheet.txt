@@ -1,0 +1,55 @@
+03-runs-and-threshold — replaces the console block in docs/why/runs-and-tiers.md
+
+  start:   docs/casts/rec.sh 03-runs-and-threshold
+  window:  80x24 (set for you)
+
+  The point of the take: runs=3, threshold=0.66, run 2 flakes, the test is GREEN.
+  Read this before the first take — line 3 is not optional, and the reason is the
+  whole finding this cast exists to fix:
+
+    pytest does NOT print a report section for a test that PASSED. `-vv` alone
+    gives you `1 passed` and nothing else. The "LLM Eval" block only reaches the
+    terminal when you also ask for passed-test detail with `-rP`. Line 2 shows the
+    silence, line 3 shows the detail. Do not drop line 2 — the contrast is the
+    lesson.
+
+TYPE:
+  cat tests/test_booking.py
+      -> the 17-line test: @pytest.mark.agent_eval(runs=3, threshold=0.66),
+         one Turn, Expect(reply_contains_any=["confirmed", "booked"]),
+         result.assert_threshold()
+      -> if you see anything else in the file, Ctrl-D and rerun rec.sh
+
+  pytest --agent-eval-live -vv
+      -> rootdir: .../docs/casts/03-runs-and-threshold   configfile: pyproject.toml
+      -> tests/test_booking.py::test_booking_confirmation PASSED          [100%]
+      -> 1 passed in 0.01s
+      -> and NO "LLM Eval" section. That absence is deliberate; keep rolling.
+      -> if rootdir points at the repo root instead, the cast's pyproject.toml is
+         missing or `cd` landed elsewhere: Ctrl-D and rerun rec.sh
+
+  pytest --agent-eval-live -vv -rP
+      -> ==================== PASSES ====================
+      -> ______ test_booking_confirmation ______
+      -> ------ LLM Eval ------
+      -> [2/3 runs, score=0.67 >= 0.66]
+      ->   Run 1 ✅
+      ->     All substring and pattern checks passed
+      ->   Run 2 ❌
+      ->     Reply did not contain any of ['confirmed', 'booked']
+      ->   Run 3 ✅
+      ->     All substring and pattern checks passed
+      -> 1 passed in 0.01s
+      -> the score line sits at column 0, `Run N` at 2, reasoning at 4. There is no
+         ` · ` join and no per-check tree — if you see one, you are not running the
+         working tree's plugin.
+      -> if the ❌ lands on run 1 or run 3, the reply iterator started warm:
+         Ctrl-D, rerun rec.sh (it re-checkouts the fixture dir for you)
+      -> if all three runs are ✅, conftest.py's middle reply has been edited to
+         contain "confirmed" or "booked": Ctrl-D and fix it before recording
+
+  Ctrl-D
+
+THEN:
+  docs/casts/upload.sh 03-runs-and-threshold
+  paste the printed data-cast-id="..." into docs/why/runs-and-tiers.md

@@ -178,6 +178,13 @@ convention = "google"
 #   PLC0415 - the livekit example imports inside its factory on purpose, so the file
 #             can be collected without the extra installed
 "examples/**" = ["D", "ANN", "S101", "T201", "ARG001", "PLC0415", "INP001"]
+# The asciinema cast fixtures are the same thing as examples/, for the same reason: what
+# is on camera has to be the minimal snippet a reader would write, and holding it to the
+# docstring and annotation bar would put lines on screen that the page is not about.
+#   PLR2004 - the whole of 01-pytest-basics is `assert discount(...) == 90`, which is a
+#             magic-value comparison by construction. Hoisting the 90 into a constant would
+#             put a line on camera that the "what is a test" page is not about.
+"docs/casts/**" = ["D", "ANN", "S101", "T201", "ARG001", "PLC0415", "INP001", "PLR2004"]
 "scripts/**" = ["T201", "PLC0415"]
 
 [tool.ty.src]
