@@ -158,7 +158,7 @@ class AgentReply(NamedTuple):
     *contract* stays the wider plain tuple, so a hand-written
     ``async def agent(history) -> tuple[str, list[str]]`` remains valid.
 
-    Args:
+    Attributes:
         reply: The agent's text reply for this turn.
         tool_calls: Tools called during the turn. Plain strings are accepted; the
             runner normalises them to ``ToolCall`` with ``args=None``.
@@ -184,11 +184,6 @@ class ToolCall(str):
     returning ``list[str]`` (the runner normalises those to ``ToolCall`` with
     ``args=None``).
 
-    Args:
-        name: The tool name.
-        args: The arguments the tool was called with, or None when the adapter
-            could not capture them.
-
     Example:
         ```python
         call = ToolCall("book_slot", {"date": "tomorrow", "time": "10am"})
@@ -202,7 +197,13 @@ class ToolCall(str):
     args: ToolArgs | None
 
     def __new__(cls, name: str, args: ToolArgs | None = None) -> ToolCall:
-        """Create a ToolCall from a tool name and optional captured arguments."""
+        """Create a ToolCall from a tool name and optional captured arguments.
+
+        Args:
+            name: The tool name.
+            args: The arguments the tool was called with, or None when the adapter
+                could not capture them.
+        """
         obj = super().__new__(cls, name)
         obj.args = args
         return obj
@@ -353,7 +354,7 @@ RegexPattern = Annotated[str, AfterValidator(_valid_regex)]
 class JudgeConfig(_StrictModel):
     """Judge configuration for a YAML transcript turn.
 
-    Args:
+    Attributes:
         rubric: The rubric string passed to the LLM judge.
         model: Optional pydantic-ai model ID override (e.g. "openai:gpt-4o"), or a
             pydantic-ai ``Model`` instance. Falls back to [tool.agent_eval] model if None.
@@ -368,7 +369,7 @@ class JudgeConfig(_StrictModel):
 class ToolCallArgsConfig(_StrictModel):
     """One tool-argument assertion in a YAML transcript turn.
 
-    Args:
+    Attributes:
         tool: Name of the tool whose arguments to check.
         args: Expected arguments for the deterministic check, or None.
         mode: "subset" or "exact" (deterministic check only).
@@ -397,9 +398,9 @@ class ToolCallArgsConfig(_StrictModel):
 class Expect(_StrictModel):
     """Expectations for a single transcript turn.
 
-    Args:
-        evaluators: Programmatic evaluators (Python API). Excluded from serialisation
-            and from the JSON schema, since they are Python objects.
+    Attributes:
+        evaluators (list[Evaluator]): Programmatic evaluators (Python API). Excluded from
+            serialisation and from the JSON schema, since they are Python objects.
         judge: YAML-defined judge config.
         tool_calls_include: Tool names that must appear in tool_calls.
         tool_calls_exclude: Tool names that must NOT appear in tool_calls.
@@ -430,10 +431,10 @@ class Expect(_StrictModel):
 class Turn(_StrictModel):
     """A single turn in a transcript.
 
-    Args:
+    Attributes:
         user: The user message (also used as the transcript when ``audio`` is set).
-        audio: Optional path to a WAV file for voice adapters. Resolved relative to
-            the YAML file's directory when loaded from YAML.
+        audio (str | Path | None): Optional path to a WAV file for voice adapters. Resolved
+            relative to the YAML file's directory when loaded from YAML.
         expect: Expectations for the agent's reply.
     """
 
@@ -447,7 +448,7 @@ class Turn(_StrictModel):
 class Transcript(_StrictModel):
     """A multi-turn evaluation transcript.
 
-    Args:
+    Attributes:
         id: Unique identifier used as the pytest test name.
         turns: Ordered list of turns.
         threshold: Fraction of runs that must pass (0.0-1.0).

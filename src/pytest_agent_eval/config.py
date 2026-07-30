@@ -25,7 +25,7 @@ class AgentEvalConfig(BaseModel):
     contrasts with ``[tool.agent_eval.groups]``: a typo there would silently disable a
     CI gate, whereas a typo here leaves a documented default in place.
 
-    Args:
+    Attributes:
         model: pydantic-ai model string used by JudgeEvaluator (e.g. "openai:gpt-4o").
         judge_model: Dedicated judge model; takes priority over ``model``.
         threshold: Default fraction of runs that must pass (0.0-1.0).
