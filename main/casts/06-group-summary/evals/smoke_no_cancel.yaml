@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+id: smoke_no_cancel
+threshold: 1.0
+runs: 1
+tags: [smoke]
+turns:
+  - user: "Table for one at noon."
+    expect:
+      tool_calls_exclude: [cancel_booking]

@@ -1,0 +1,41 @@
+04-tool-calls-fail — replaces the console block in docs/why/tool-calls.md
+
+  start:   docs/casts/rec.sh 04-tool-calls-fail
+  window:  80x24 (set for you)
+
+The point of this take is the LLM Eval section at the bottom: three runs, all failing,
+score 0.00. The reply is fine every time — nothing checks it. What fails is
+tool_calls_exclude, because turn 2 booked a second slot instead of moving the first.
+
+One line, then Ctrl-D. Everything on screen is deterministic except two `0x...` object
+ids and the `in 0.0Ns` duration: those change on every take and are not a bad take.
+
+TYPE:
+  pytest --agent-eval-live -vv tests/test_reschedule.py
+      -> rootdir: .../docs/casts/04-tool-calls-fail
+      -> configfile: pyproject.toml
+      -> collecting ... collected 1 item
+      -> tests/test_reschedule.py::test_reschedule_flow FAILED                    [100%]
+      -> then the traceback: the test body, then assert_threshold in
+      ->   ../../../src/pytest_agent_eval/models.py:278
+      -> E  AssertionError: LLM eval failed: score=0.00 < threshold=0.80 (0/3 runs passed)
+      -> ----------------------------------- LLM Eval -----------------------------------
+      -> [0/3 runs, score=0.00 < 0.80]
+      ->   Run 1 ❌
+      ->     All tool call checks passed
+      ->     Forbidden tool 'create_booking' was called
+      -> ...and the same three lines again for Run 2 and Run 3
+      -> 1 failed in 0.0Ns
+      -> if it says "1 skipped" and "1 eval test(s) skipped: live mode is off",
+      ->    --agent-eval-live did not make it onto the line. Ctrl-D and rerun rec.sh
+      -> if it says "no tests ran" / "collected 0 items", or rootdir is the repo root
+      ->    rather than this directory, pytest read the REPO pyproject.toml instead of
+      ->    this cast's. Ctrl-D and rerun rec.sh
+      -> if a Run shows ✅, or the score is not 0.00, the conftest stub is not the
+      ->    deterministic one — Ctrl-D, `git status` this directory, rerun rec.sh
+
+  Ctrl-D
+
+THEN:
+  docs/casts/upload.sh 04-tool-calls-fail
+  paste the printed data-cast-id="..." into docs/why/tool-calls.md

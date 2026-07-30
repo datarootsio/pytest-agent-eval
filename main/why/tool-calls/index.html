@@ -1543,34 +1543,42 @@ by a string</strong>.</p>
 </span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="p">)</span>
 </span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    <span class="n">result</span><span class="o">.</span><span class="n">assert_threshold</span><span class="p">()</span>
 </span></code></pre></div>
-<div class="language-console highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span>pytest<span class="w"> </span>--agent-eval-live<span class="w"> </span>-vv<span class="w"> </span>tests/test_reschedule.py
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="sash5Clv8LS3M3Dl"
+     data-cast-slug="04-tool-calls-fail"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="A three-run eval that fails every run at score 0.00. The reply is correct each time; what fails is tool_calls_exclude, because the agent called create_booking a second time as well as moving the existing booking."></div>
+<figcaption>asciinema: <code>tool_calls_exclude</code> catching a second booking</figcaption>
+</figure>
+
+<p>The reply was perfect — <em>"I've moved your booking to 11am."</em> — and all three runs fail anyway.
+What the agent actually did was move the booking <em>and</em> create a second one, and
+<code>tool_calls_exclude</code> is the check that saw it. You can read that off the output too: turn 2
+also asserts <code>tool_calls_include=["update_booking"]</code>, and a single evaluator reports every
+failure it finds, so an absent <code>update_booking</code> would have printed its own line beside the
+forbidden one. Only <code>create_booking</code> is named — which means the move happened as well.</p>
+<p>Read the two lines under each run as the two turns, in order: the report flattens every turn's
+reasoning into one flat list and does not label which turn each line came from. <code>All tool call
+checks passed</code> is turn 1 booking the 10am slot; <code>Forbidden tool 'create_booking' was called</code> is
+turn 2. It is not one turn that somehow both passed and failed.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolCall</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">tests/test_reschedule.py::test_reschedule_flow FAILED</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="go">  ---- LLM Eval ----</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="go">  [0/3 runs, score=0.00 &lt; 0.80]</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="go">    Run 1 ❌  turn 2:</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="go">      ✅ tool_calls_include  [update_booking]</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="go">      ❌ tool_calls_exclude  create_booking was called</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="gp"># </span>the<span class="w"> </span>reply<span class="w"> </span>said<span class="w"> </span><span class="s2">&quot;I&#39;ve moved your booking to 11am.&quot;</span><span class="w"> </span>It<span class="w"> </span>was<span class="w"> </span>perfect.
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="gp"># </span>it<span class="w"> </span>made<span class="w"> </span>a<span class="w"> </span>second<span class="w"> </span>booking<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>moving<span class="w"> </span>the<span class="w"> </span>first.
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolCall</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">call</span> <span class="o">=</span> <span class="n">ToolCall</span><span class="p">(</span><span class="s2">&quot;create_booking&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;11am&quot;</span><span class="p">})</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">call</span> <span class="o">==</span> <span class="s2">&quot;create_booking&quot;</span>   <span class="c1"># True</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">call</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span>          <span class="c1"># &quot;11am&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">call</span> <span class="o">=</span> <span class="n">ToolCall</span><span class="p">(</span><span class="s2">&quot;create_booking&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;11am&quot;</span><span class="p">})</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">call</span> <span class="o">==</span> <span class="s2">&quot;create_booking&quot;</span>   <span class="c1"># True</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">call</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span>          <span class="c1"># &quot;11am&quot;</span>
 </span></code></pre></div>
 <p>Arguments are Python dictionaries, so asserting on them stays deterministic too: no model call, the
 same zero cost as the name checks.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolCallArgsEvaluator</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># subset (the default): only the keys you name are checked</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">ToolCallArgsEvaluator</span><span class="p">(</span><span class="n">tool</span><span class="o">=</span><span class="s2">&quot;update_booking&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;11am&quot;</span><span class="p">})</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># exact: the captured arguments must equal this dict</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">ToolCallArgsEvaluator</span><span class="p">(</span><span class="n">tool</span><span class="o">=</span><span class="s2">&quot;update_booking&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;11am&quot;</span><span class="p">},</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;exact&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolCallArgsEvaluator</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># subset (the default): only the keys you name are checked</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">ToolCallArgsEvaluator</span><span class="p">(</span><span class="n">tool</span><span class="o">=</span><span class="s2">&quot;update_booking&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;11am&quot;</span><span class="p">})</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># exact: the captured arguments must equal this dict</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">ToolCallArgsEvaluator</span><span class="p">(</span><span class="n">tool</span><span class="o">=</span><span class="s2">&quot;update_booking&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;11am&quot;</span><span class="p">},</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;exact&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>If the tool ran more than once in the turn, the assertion passes when any call matches. It does need
 the arguments to have been captured: the bundled adapters do that for you, and a hand-written agent
@@ -1582,7 +1590,8 @@ returns <code>ToolCall(name, args)</code> instead of a plain string.</p>
 </dd>
 <dt><code>tool_calls_ordered</code></dt>
 <dd>
-<p><strong>in what order</strong>: <code>authenticate</code> before <code>create_booking</code>, always</p>
+<p><strong>in what order</strong>: a bool that makes <code>tool_calls_include</code> order-sensitive, so
+<code>authenticate</code> must appear before <code>create_booking</code></p>
 </dd>
 <dt><code>tool_calls_args</code></dt>
 <dd>
@@ -1723,6 +1732,8 @@ costs exactly what checking a substring costs. Nothing. That is why the middle t
     
   
       <script src="../../assets/javascripts/bundle.d7f30b55.min.js"></script>
+      
+        <script src="../../javascripts/casts.js"></script>
       
     
   <script src="https://context7.com/widget.js"

@@ -1,13 +1,16 @@
-/* Diagram support for the "Why pytest-agent-eval" narrative pages (docs/why/).
+/* Diagram and recording support for the "Why pytest-agent-eval" pages (docs/why/).
  *
  * No typography. The claim, the prose, the captions and the section headings all
  * take the theme's own font, size and colour — nothing on those pages is styled
  * differently from the rest of the docs.
  *
- * This file exists for two things the theme cannot do on its own: keep a wide
- * diagram's scrollbar off the page body, and give inline SVG the fills and font
- * stacks it does not inherit from the typeset styles. The SVG rules mirror the
- * docs' own variables rather than introducing new values.
+ * This file exists for three things the theme cannot do on its own: keep a wide
+ * diagram's scrollbar off the page body; give inline SVG the fills and font
+ * stacks it does not inherit from the typeset styles; and give the asciinema
+ * mount a box, since a figure the theme sizes to fit-content collapses around an
+ * element that starts empty and is filled by docs/javascripts/casts.js. The SVG
+ * and mount rules mirror the docs' own variables rather than introducing new
+ * values.
  *
  * Only the four semantic colours are defined, with slate overrides; their soft
  * fills are color-mixed against --md-default-bg-color, so one declaration covers
@@ -25,11 +28,6 @@
   --why-red: #c0392b;
   --why-amber: #8d5c00;
   --why-accent: var(--md-primary-fg-color);
-
-  --why-green-soft: color-mix(in srgb, var(--why-green) 12%, var(--md-default-bg-color));
-  --why-red-soft: color-mix(in srgb, var(--why-red) 12%, var(--md-default-bg-color));
-  --why-amber-soft: color-mix(in srgb, var(--why-amber) 12%, var(--md-default-bg-color));
-  --why-accent-soft: color-mix(in srgb, var(--why-accent) 12%, var(--md-default-bg-color));
 }
 
 body[data-md-color-scheme="slate"] {
@@ -37,6 +35,22 @@ body[data-md-color-scheme="slate"] {
   --why-red: #f5776a;
   --why-amber: #f0a93b;
   --why-accent: #9095f2;
+}
+
+/* The tints are declared on body, not beside the semantics at :root, and that placement is
+ * the whole of the "one declaration covers both schemes" claim above. A custom property
+ * substitutes its var() references on the element that declares it, so a mix written at
+ * :root reads :root's values — and both halves of it change one level lower: the theme
+ * overrides --md-default-bg-color under [data-md-color-scheme=slate] on body, and so do the
+ * semantics right above. At :root every tint therefore stayed
+ * color-mix(in srgb, #8d5c00 12%, #fff) in slate as well: a near-white card on a near-black
+ * page, with the diagrams' 11px labels in slate's near-white ink on top of it. On body the
+ * cascade settles both halves first, so one line per tint really does cover both schemes. */
+body {
+  --why-green-soft: color-mix(in srgb, var(--why-green) 12%, var(--md-default-bg-color));
+  --why-red-soft: color-mix(in srgb, var(--why-red) 12%, var(--md-default-bg-color));
+  --why-amber-soft: color-mix(in srgb, var(--why-amber) 12%, var(--md-default-bg-color));
+  --why-accent-soft: color-mix(in srgb, var(--why-accent) 12%, var(--md-default-bg-color));
 }
 
 /* ---------- diagram layout ---------- */
@@ -112,4 +126,74 @@ body[data-md-color-scheme="slate"] {
 
 .why-fig .s-rule {
   stroke-width: 1;
+}
+
+/* ---------- asciinema mount ---------- */
+
+/* The theme sizes a figure to fit-content. The diagram figures get away with it
+ * because their SVG carries a min-width; a mount that starts empty would collapse
+ * to nothing and take the player's width: 100% with it. Everything else about the
+ * figure and its caption is the theme's, so these pages' recordings sit exactly
+ * like their diagrams. */
+.md-typeset .why-cast {
+  width: 100%;
+}
+
+/* The mount is also the box casts.js measures for the textStyle it forwards to the
+ * embed, so it states no colour or font of its own — it inherits the page's, which
+ * is the point. No color-scheme either: the theme sets one per palette on body
+ * ([data-md-color-scheme="default"] is color-scheme: light, slate is dark) and
+ * color-scheme inherits, so the palette toggle already reaches this box. Declaring
+ * `light dark` here would replace that with a pair the OS resolves — the page in slate
+ * and the mount following a light desktop. It would buy the embed nothing either: that
+ * document carries its own <meta name="color-scheme" content="light dark">, so nothing
+ * declared out here reaches inside it. One more thing only self-hosting fixes. */
+.md-typeset .why-cast-mount {
+  width: 100%;
+}
+
+/* height comes from the embed's bodySize message and visibility from its load, both
+ * inline from casts.js; overflow would put a scrollbar around the player's own. */
+.md-typeset .why-cast-mount > iframe {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+}
+
+/* The display above outranks the UA's own [hidden] rule, so the flag casts.js sets on a
+ * frame that never reported a height has to be honoured here — otherwise a refused embed
+ * keeps its 150px of blank above the note that explains it. */
+.md-typeset .why-cast-mount > iframe[hidden] {
+  display: none;
+}
+
+/* Not a decorative empty state — the text is the command that fills it in, so it
+ * has to be readable and copyable at any width. Amber is this file's existing
+ * "needs attention" semantic, already >= 4.5:1 on its own tint in both schemes. */
+.md-typeset .why-cast-pending {
+  margin: 0;
+  padding: 1.4em 1em;
+  border: 1px dashed var(--why-amber);
+  border-radius: 0.2rem;
+  background-color: var(--why-amber-soft);
+  color: var(--why-amber);
+  text-align: center;
+}
+
+/* Kept as the docs' own inline-code chip rather than restyled: its contrast is the
+ * theme's to guarantee, and a reader recognises it as something to type. Only the
+ * wrapping is ours — a slug plus a path overflows a phone otherwise. */
+.md-typeset .why-cast-pending code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The could-not-embed note links the cast on asciinema.org. The link takes the box's amber
+ * rather than the theme's link colour, which is the one contrast this file already rules
+ * out on a tint (3.05:1); underlined, since colour alone no longer distinguishes it. */
+.md-typeset .why-cast-pending a {
+  color: inherit;
+  text-decoration: underline;
 }

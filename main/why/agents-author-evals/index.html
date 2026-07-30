@@ -1556,7 +1556,7 @@
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="go">1 passed in 9.7s          # first try, no edits</span>
 </span></code></pre></div>
 <h2 id="the-yaml-transcript-surface">The YAML transcript surface<a class="headerlink" href="#the-yaml-transcript-surface" title="Permanent link">&para;</a></h2>
-<p>We also allow for tests and conversations and cases to be expressed as YAML files, which is more visualy appealing for humans but also more LLM-friendly:</p>
+<p>We also allow for tests and conversations and cases to be expressed as YAML files, which is more visually appealing for humans but also more LLM-friendly:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># tests/evals/reschedule.yaml</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
@@ -1592,12 +1592,16 @@ under <code>yaml_dirs</code> and generates one pytest test per transcript <em>dy
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">[tool.agent_eval]</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">yaml_dirs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests/evals&quot;</span><span class="p">]</span>
 </span></code></pre></div>
-<div class="language-console highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="gp">$ </span>pytest<span class="w"> </span>--collect-only<span class="w"> </span>-q
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="go">evals/reschedule.yaml::reschedule_flow</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="go">1 eval test(s) skipped: live mode is off. Pass --agent-eval-live or set EVAL_LIVE=1.</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="go">1 test collected in 0.00s</span>
-</span></code></pre></div>
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="XcNHiQW5xzH4eHNb"
+     data-cast-slug="08-collect-only"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="pytest collects a YAML transcript as a test node id with no Python file beside it, then reports that the eval was skipped because live mode is off."></div>
+<figcaption>asciinema: <code>pytest --collect-only -q</code> on a YAML transcript</figcaption>
+</figure>
+
 <p>Which means a transcript is a first-class pytest test from there on. <code>-k reschedule</code> selects it,
 <code>-n auto</code> distributes it, a tag puts it behind a gate, and the one thing it needs from you is the
 <code>llm_eval_agent</code> fixture that says what to run it against.</p>
@@ -1614,7 +1618,7 @@ with a published schema, so there is one shape to hit and <code>additionalProper
 anything else at load. Ask for Python instead and the model has to get imports, <code>async</code>, fixture
 names and a call graph right, any of which can be subtly wrong while still executing. Here the
 worst case is a field name, and a field name is exactly what the loader can catch and correct.</p>
-<p><code>Pytest-agent-eval</code> was also designed with AI native coding in mind. We also include other
+<p><code>pytest-agent-eval</code> was also designed with AI-native coding in mind. We also include other
 LLM-friendly features to support agent-driven development:</p>
 <dl>
 <dt><code>schema</code></dt>
@@ -1773,6 +1777,8 @@ LLM-friendly features to support agent-driven development:</p>
     
   
       <script src="../../assets/javascripts/bundle.d7f30b55.min.js"></script>
+      
+        <script src="../../javascripts/casts.js"></script>
       
     
   <script src="https://context7.com/widget.js"

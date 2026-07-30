@@ -1555,23 +1555,25 @@
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">[tool.agent_eval.groups.smoke]</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;smoke&quot;</span><span class="p">]</span><span class="w">                         </span><span class="c1"># threshold defaults to 1.0</span>
 </span></code></pre></div>
-<div class="language-console highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="go">============================== group summary ===============================</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="go">booking: 9/10 passed (90%) &gt;= 90% required -- PASSED</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">  failures: booking_edge_case</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="go">  must_pass: booking_confirmation ok</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="go">smoke:   4/4 passed (100%) &gt;= 100% required -- PASSED</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="go">exit code overridden to 0: all group thresholds met</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="gp">$ </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$?</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="go">0</span>
-</span></code></pre></div>
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="We0sxR1OLbsbgO1u"
+     data-cast-slug="06-group-summary"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="Fourteen evals run in one session. One fails, but the booking gate passes at nine of ten, the must_pass pin is satisfied, and the session exit code is overridden from failure to zero."></div>
+<figcaption>asciinema: a group gate absorbing one failure, and <code>exit code 0</code></figcaption>
+</figure>
+
 <h2 id="predictability-vs-flexibility">Predictability vs. flexibility<a class="headerlink" href="#predictability-vs-flexibility" title="Permanent link">&para;</a></h2>
 <p>A suite of probabilistic tests may fail <em>somewhere</em> almost every run. We may test for specific words, but
 we cannot cover all possible combinations (or would be extremely expensive). The idea is that the 90% that
 passes gives us enough indication that the remaining 10% is "ok". If any red turns CI red, you
 will be dealing with many false positives. So gate on the aggregate: 90% of booking
 evals must pass, <strong>with specific ones must pass individually</strong>. Everything else may
-flicker, and every failure is still printed.</p>
+flicker, and every failure is still printed — the run above ends <code>1 failed, 13 passed</code>
+<em>below</em> the override line, because the override changes the process exit code and not the
+report.</p>
 <p>One may argue that: <strong>three runs at 66% is not statistically significant.</strong> Correct.
 It is not a hypothesis test and should not be read as one: you are not estimating a true pass
 rate, you are placing a tripwire that catches large regressions cheaply.</p>
@@ -1700,6 +1702,8 @@ gate is the number you actually trust.</p>
     
   
       <script src="../../assets/javascripts/bundle.d7f30b55.min.js"></script>
+      
+        <script src="../../javascripts/casts.js"></script>
       
     
   <script src="https://context7.com/widget.js"

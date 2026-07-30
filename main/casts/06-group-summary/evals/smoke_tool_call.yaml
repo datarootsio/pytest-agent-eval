@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+id: smoke_tool_call
+threshold: 1.0
+runs: 1
+tags: [smoke]
+turns:
+  - user: "Book a table for six on Friday."
+    expect:
+      tool_calls_include: [create_booking]

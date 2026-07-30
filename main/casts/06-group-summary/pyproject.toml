@@ -1,0 +1,14 @@
+[tool.agent_eval]
+yaml_dirs = ["evals"]
+
+[tool.agent_eval.groups.booking]
+threshold = 0.9                          # 90% of matched tests must pass
+tags = ["gate:booking"]                  # match transcripts by tag
+must_pass = ["booking_confirmation"]     # this one must individually pass
+
+[tool.agent_eval.groups.smoke]
+tags = ["smoke"]                         # threshold defaults to 1.0
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

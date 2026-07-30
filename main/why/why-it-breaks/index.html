@@ -29,7 +29,7 @@
     
     
       
-        <title>Where LLM breaks - pytest-agent-eval</title>
+        <title>Where LLMs break - pytest-agent-eval</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#where-llm-breaks" class="md-skip">
+        <a href="#where-llms-break" class="md-skip">
           Skip to content
         </a>
       
@@ -127,7 +127,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Where LLM breaks
+              Where LLMs break
             
           </span>
         </div>
@@ -1510,7 +1510,7 @@
   
 
 
-<h1 id="where-llm-breaks">Where LLM breaks<a class="headerlink" href="#where-llm-breaks" title="Permanent link">&para;</a></h1>
+<h1 id="where-llms-break">Where LLMs break<a class="headerlink" href="#where-llms-break" title="Permanent link">&para;</a></h1>
 <figure class="why-fig">
 <div class="why-fig-scroll">
 <svg viewBox="0 0 760 260" role="img" aria-label="The same pipeline as the previous page, broken: the single output has become a distribution of replies, the assertion samples one point from it, and all four properties are struck through">
@@ -1573,34 +1573,32 @@
   <text class="s-note" x="8" y="236">You are not asserting on an output. You are asserting on a property of a distribution, from one sample.</text>
 </svg>
 </div>
-<figcaption>svg: the <a href="../what-is-a-test/">previous page's</a> geometry, broken. The rhyme is the point.</figcaption>
+<figcaption>svg: the <a href="../what-is-a-test/">previous page's</a> geometry, broken.</figcaption>
 </figure>
 
 <p>Now imagine you have a function that calls an LLM:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># tests/test_naive.py</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_naive_booking</span><span class="p">(</span><span class="n">agent</span><span class="p">):</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">reply</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="k">await</span> <span class="n">agent</span><span class="p">([</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;book me a slot tomorrow at 10am&quot;</span><span class="p">)])</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">assert</span> <span class="s2">&quot;confirmed&quot;</span> <span class="ow">in</span> <span class="n">reply</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Message</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_naive_booking</span><span class="p">(</span><span class="n">agent</span><span class="p">):</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">reply</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="k">await</span> <span class="n">agent</span><span class="p">([</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;book me a slot tomorrow at 10am&quot;</span><span class="p">)])</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="k">assert</span> <span class="s2">&quot;confirmed&quot;</span> <span class="ow">in</span> <span class="n">reply</span>
 </span></code></pre></div>
-<div class="language-console highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span><span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">5</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span>tests/test_naive.py<span class="p">;</span><span class="w"> </span><span class="k">done</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">.                                                          [100%]  1 passed</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="go">F                                                          [100%]  1 failed</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="go">    assert &quot;confirmed&quot; in reply</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="go">E   assert &#39;confirmed&#39; in &quot;You&#39;re all set for tomorrow at 10am, ref BK-4417.&quot;</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="go">.                                                          [100%]  1 passed</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="go">.                                                          [100%]  1 passed</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="go">F                                                          [100%]  1 failed</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="go">E   assert &#39;confirmed&#39; in &quot;Done! Your 10am slot is reserved.&quot;</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="gp"># </span>same<span class="w"> </span>code.<span class="w"> </span>same<span class="w"> </span>prompt.<span class="w"> </span>same<span class="w"> </span>commit.
-</span></code></pre></div>
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="NBB1Wr2RpBCObkaZ"
+     data-cast-slug="02-flaky-assert"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="The same one-line assertion run five times in a loop. Three runs pass and two fail, each failure showing a different perfectly good confirmation that happens not to contain the word &quot;confirmed&quot;."></div>
+<figcaption>asciinema: the same <code>assert</code>, five processes, failing twice</figcaption>
+</figure>
+
 <h2 id="llms-are-probabilistic">LLMs are probabilistic<a class="headerlink" href="#llms-are-probabilistic" title="Permanent link">&para;</a></h2>
-<p>Run the naive test five times and it fails twice, not because the agent misbehaved, but because
-"you're all set" and "reserved" are perfectly good confirmations that happen not to contain the
-word we picked. Every one of the four properties is gone at once, and they took the binary
-outcome down with them.</p>
+<p>Run the naive test five times and it fails twice - same code, same prompt, same commit - not
+because the agent misbehaved, but because "you're all set" and "reserved" are perfectly good
+confirmations that happen not to contain the word we picked. Every one of the four properties is
+gone at once, and they took the binary outcome down with them.</p>
 <p>LLMs are designed to predict the next likely token. However, especially for closed models, we cannot guarantee
 reproducibility for the models (even setting hyperparameters). In the end, <strong>you are looking at a sample, not the
 distribution.</strong> A single run cannot answer a question about a distribution's behaviour, and no
@@ -1728,6 +1726,8 @@ amount of staring at that one run will fix it.</p>
     
   
       <script src="../../assets/javascripts/bundle.d7f30b55.min.js"></script>
+      
+        <script src="../../javascripts/casts.js"></script>
       
     
   <script src="https://context7.com/widget.js"

@@ -1525,23 +1525,17 @@
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_discount_dont_apply_to_subtotal</span><span class="p">():</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="k">assert</span> <span class="n">discount</span><span class="p">(</span><span class="n">subtotal</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s2">&quot;SPRINGS&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">90</span>
 </span></code></pre></div>
-<p>The <code>discount</code> function is tested in the <code>test_discount_applies_to_subtotal</code> and <code>test_discount_applies_to_subtotal</code>, and we can verify with Pytest running:</p>
-<div class="language-console highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span>pytest<span class="w"> </span>tests/test_pricing.py::test_discount_applies_to_subtotal
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="go">.                                                          [100%]</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">1 passed in 0.02s</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="gp">$ </span>pytest<span class="w"> </span>tests/test_pricing.py::test_discount_dont_apply_to_subtotal
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="go">F                                                          [100%]</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="go">=============================== FAILURES ================================</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="go">___________________ test_discount_applies_to_subtotal ___________________</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="go">    def test_discount_applies_to_subtotal():</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="go">&gt;       assert discount(subtotal=100, code=&quot;SPRING&quot;) == 90</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="go">E       assert 100 == 90</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="go">E        +  where 100 = discount(subtotal=100, code=&#39;SPRING&#39;)</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="go">1 failed in 0.02s</span>
-</span></code></pre></div>
+<p>The <code>discount</code> function is tested in the <code>test_discount_applies_to_subtotal</code> and <code>test_discount_dont_apply_to_subtotal</code>, and we can verify with Pytest running:</p>
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="ozZGIEKSEcn1FU8Q"
+     data-cast-slug="01-pytest-basics"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="Two pytest runs on the same file. The first node id passes with a single dot. The second fails, and the assertion-rewrite traceback names test_discount_dont_apply_to_subtotal and reports assert 100 == 90 with the call that produced the 100."></div>
+<figcaption>asciinema: <code>pytest -q</code> on a passing test, then on a failing one</figcaption>
+</figure>
+
 <p>Simple pattern, but in complex codebases, where functions call functions, abstractions, dependencies and classes, having these guarantees increases the <strong>confidence</strong> that the existing code works as expected.</p>
 <figure class="why-fig">
 <div class="why-fig-scroll">
@@ -1599,7 +1593,7 @@
 <p>Mechanically, a pytest test is a function whose name starts with <code>test_</code> containing a bare
 <code>assert</code>. There is no class to subclass and no assertion API to learn: pytest rewrites the
 <code>assert</code> so a failure reports the actual values, which is why <code>assert 100 == 90</code> comes back with
-the call that produced the 100. You could apply many imputs with fixtures: <code>@pytest.mark.parametrize</code> runs the same body over many cases.</p>
+the call that produced the 100. To run the same body over many inputs, <code>@pytest.mark.parametrize</code> takes the cases as data.</p>
 <p>Conceptually it is a bet that four things hold. The input is <strong>deterministic</strong>. The output is
 <strong>single-valued</strong>: one right answer to compare against. The assertion is <strong>exact</strong>, equality or
 membership rather than taste. And the whole thing is <strong>cheap</strong>: milliseconds, no marginal cost,
@@ -1728,6 +1722,8 @@ which is the only reason it is sane to run thousands on every commit.</p>
     
   
       <script src="../../assets/javascripts/bundle.d7f30b55.min.js"></script>
+      
+        <script src="../../javascripts/casts.js"></script>
       
     
   <script src="https://context7.com/widget.js"

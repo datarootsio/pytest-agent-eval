@@ -1583,7 +1583,7 @@ Whether the reply actually answered the question. Whether it stayed on the booki
 already made instead of quietly starting a new one. Whether it asked the user to repeat something
 they had already said. Whether it used a specific tone of voice. These are judgements, and the top
 tier of the stack is where you make them: you write the standard down as a <strong>rubric</strong>, and another
-model grades the reply against it. This is commonly referred as <strong>LLM-as-a-Judge.</strong></p>
+model grades the reply against it. This is commonly referred to as <strong>LLM-as-a-Judge.</strong></p>
 <h2 id="the-rubric-is-the-test">The rubric is the test<a class="headerlink" href="#the-rubric-is-the-test" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># tests/test_reschedule.py</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
@@ -1623,24 +1623,23 @@ can reach.</p>
 grades nothing. Naming the required facts, and naming the failure modes you have actually seen,
 gives the judge something to check and gives you a verdict you can act on.</p>
 <h2 id="what-comes-back-is-a-verdict-and-its-reasoning">What comes back is a verdict and its reasoning<a class="headerlink" href="#what-comes-back-is-a-verdict-and-its-reasoning" title="Permanent link">&para;</a></h2>
-<div class="language-console highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span>pytest<span class="w"> </span>--agent-eval-live<span class="w"> </span>-vv<span class="w"> </span>tests/test_reschedule.py
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">tests/test_reschedule.py::test_reschedule_reads_well PASSED</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="go">  ---- LLM Eval ----</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="go">  [2/3 runs, score=0.67 &gt;= 0.66]</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="go">    Run 1 ✅</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="go">    States 11am and repeats BK-1234 unchanged. No repeated questions.</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="go">    Run 2 ❌</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="go">    Confirms the change but never states the new time, so the first requirement fails.</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="go">    Run 3 ✅</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="go">    New time given as 11am, reference BK-1234 carried over, nothing re-asked.</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="go">1 passed in 12.08s</span>
-</span></code></pre></div>
-<p>That second line exemplifies when you may need a judge. A substring check that
+<figure class="why-cast">
+<div class="why-cast-mount"
+     data-cast-id="83K7HTEN9swwT4PJ"
+     data-cast-slug="05-judge-reasoning"
+     data-cast-poster="npt:0:02"
+     role="img"
+     aria-label="A three-run eval whose second run fails the rubric. The judge's verdict for each run is printed with its reasoning in the model's own words, and the test passes overall at score 0.67."></div>
+<figcaption>asciinema: <code>pytest --agent-eval-live -vv -rP</code>, with a live judge</figcaption>
+</figure>
+
+<p>Run 2's sentence exemplifies when you may need a judge. A substring check that
 fails tells you a string was absent. A judge tells you <strong>which clause of your rubric the reply
 broke</strong>, in the reply's own terms, which is usually the sentence you would have had to write
 yourself while debugging.</p>
+<p>The <code>All tool call checks passed</code> line under each verdict is that same turn's
+<code>tool_calls_include</code> reporting next to the judge: every evaluator on a turn prints its own
+reasoning, so the check that costs nothing and the one that costs a cent sit side by side.</p>
 <figure class="why-fig">
 <div class="why-fig-scroll">
 <svg viewBox="0 0 760 220" role="img" aria-label="What the judge receives and returns: the rubric, the conversation history with the user turn, and the agent reply all feed one judge model call, which returns a boolean verdict and a reasoning string">
@@ -1679,7 +1678,7 @@ yourself while debugging.</p>
 
   <rect x="528" y="112" width="222" height="44" rx="8" class="s-box"/>
   <text class="s-node" x="540" y="132">reasoning: str</text>
-  <text class="s-lbl" x="540" y="148">printed at -vv, in the report</text>
+  <text class="s-lbl" x="540" y="148">printed at -vv -rP</text>
 
   <line class="s-rule" x1="8" y1="196" x2="752" y2="196"/>
   <text class="s-note" x="8" y="212">The judge is itself a sample. That is why it sits at the top of the cost stack, not the bottom.</text>
@@ -1691,12 +1690,12 @@ yourself while debugging.</p>
 <h2 id="judging-arguments-not-just-the-answer">Judging arguments, not just the answer<a class="headerlink" href="#judging-arguments-not-just-the-answer" title="Permanent link">&para;</a></h2>
 <p>The same idea applies one level in. Some constraints on a tool's arguments are awkward to write as
 exact values, and that is what <code>ToolCallArgsJudgeEvaluator</code> is for:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolCallArgsJudgeEvaluator</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">ToolCallArgsJudgeEvaluator</span><span class="p">(</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">tool</span><span class="o">=</span><span class="s2">&quot;create_booking&quot;</span><span class="p">,</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">rubric</span><span class="o">=</span><span class="s2">&quot;The requested time must fall within business hours, 9am to 6pm.&quot;</span><span class="p">,</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytest_agent_eval</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolCallArgsJudgeEvaluator</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">ToolCallArgsJudgeEvaluator</span><span class="p">(</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">tool</span><span class="o">=</span><span class="s2">&quot;create_booking&quot;</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">rubric</span><span class="o">=</span><span class="s2">&quot;The requested time must fall within business hours, 9am to 6pm.&quot;</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>It short-circuits before spending anything: if the tool was never called, or was called without
 captured arguments, the evaluator fails with a precise message and no judge call is made. Only a
@@ -1719,7 +1718,7 @@ rubric that says "the reply must contain a reference number", you have written
 <p class="admonition-title">Judge tests</p>
 <p>When we are talking about LLM testing, we need to think in terms of probabilities
 that the outcomes are aligned with what we expect. LLMs may not be perfect
-all the time,including Judges. Tests increases our confidence that nothing will
+all the time, including Judges. Tests increases our confidence that nothing will
 break, but they cannot guarantee it.</p>
 </div>
 <h2 id="go-deeper">Go deeper<a class="headerlink" href="#go-deeper" title="Permanent link">&para;</a></h2>
@@ -1845,6 +1844,8 @@ break, but they cannot guarantee it.</p>
     
   
       <script src="../../assets/javascripts/bundle.d7f30b55.min.js"></script>
+      
+        <script src="../../javascripts/casts.js"></script>
       
     
   <script src="https://context7.com/widget.js"

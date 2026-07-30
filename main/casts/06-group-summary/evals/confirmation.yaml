@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://datarootsio.github.io/pytest-agent-eval/schema/transcript.json
+# The must_pass pin: the gate absorbs a failure anywhere else, never this one.
+id: booking_confirmation
+threshold: 1.0
+runs: 1
+tags: [gate:booking]
+turns:
+  - user: "Book a table for two tomorrow at 8pm."
+    expect:
+      reply_contains_any: [confirmed, booked]
+      tool_calls_include: [create_booking]
