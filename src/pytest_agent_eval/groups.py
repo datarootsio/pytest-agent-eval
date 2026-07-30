@@ -19,7 +19,7 @@ class GroupConfig(BaseModel):
     Validated strictly, unlike the rest of [tool.agent_eval] where unknown keys are
     ignored: a typo'd key or threshold here would silently disable a CI gate.
 
-    Args:
+    Attributes:
         name: Group name (the table key, not a key inside the table).
         threshold: Fraction of matched, non-skipped tests that must pass (0.0-1.0).
         tags: Transcript tags selecting members (OR-combined with pytest_markers).
