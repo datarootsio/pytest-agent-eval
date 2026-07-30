@@ -14,7 +14,7 @@
     lesson.
 
 TYPE:
-  cat tests/test_booking.py
+  bat tests/test_booking.py
       -> the 17-line test: @pytest.mark.agent_eval(runs=3, threshold=0.66),
          one Turn, Expect(reply_contains_any=["confirmed", "booked"]),
          result.assert_threshold()

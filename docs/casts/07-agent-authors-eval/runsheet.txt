@@ -138,7 +138,7 @@ TYPE:
       -> if that is four names, the copy landed. If it prints nothing, window 2's cp did
          not run (or ran before rec.sh, which then deleted it): Ctrl-D and start over
 
-  cat conftest.py
+  bat conftest.py
       -> the 21-line stub above, longest line 71 chars, no wrapping at 80 columns
       -> this is the honest setup shot: the reader sees there is no live model behind the
          eval that is about to be written
@@ -217,18 +217,30 @@ THEN:
 
   asciinema play docs/casts/07-agent-authors-eval.cast
   docs/casts/upload.sh 07-agent-authors-eval
-  paste the printed data-cast-id="..." into docs/why/agents-author-evals.md
+  This page does NOT yet have a player. Its first block is still the hand-authored
+  ```console block that shipped on main, because nothing has been recorded for it. So
+  publishing this take means REPLACING that block with a figure, copying the markup from
+  any of the seven pages that already have one — for example docs/why/gates.md:
 
-  Then REWRITE the collapsed transcript under that player from your take:
+    <figure class="why-cast">
+    <div class="why-cast-mount"
+         data-cast-id="<the id upload.sh printed>"
+         data-cast-slug="07-agent-authors-eval"
+         data-cast-poster="npt:0:02"
+         role="img"
+         aria-label="<what the recording shows, for someone who cannot watch it>"></div>
+    <figcaption>asciinema: a real Claude Code session writing a YAML transcript</figcaption>
+    </figure>
 
-    asciinema convert docs/casts/07-agent-authors-eval.cast /tmp/07.txt
+  No collapsed transcript goes with it: the pages carry the player alone, and the
+  recording is the record. That is worth knowing before you record, because it means the
+  take has to stand on its own — nothing beside it will explain what scrolled past.
 
-  `.txt` selects the plain-text format. It will contain box-drawing characters and
-  spinner residue, so trim it by hand to the lines that carry meaning. Four claims in
-  the current block have to go or change: the `…reading llms.txt` and `…creating ...`
+  Four claims in the block you are deleting were never real output, and are the reason it
+  is being replaced rather than corrected: the `…reading llms.txt` and `…creating ...`
   pseudo-lines (Claude prints `●`/`⎿` tool lines), the elided `.../schema/transcript.json`
   URL (the real file has it in full), the `9.7s` duration (a stub run is 0.00s), and the
-  `# first try, no edits` comment (no shell prints that; if the page keeps the claim it
-  belongs in prose). Add one sentence saying the project ships an AGENTS.md and a stub
-  agent the model could read — otherwise the page takes credit for something the setup
-  supplied.
+  `# first try, no edits` comment (no shell prints that). If the page should keep the
+  "first try" claim, it belongs in prose. Add one sentence there saying the project ships
+  an AGENTS.md and a stub agent the model could read — otherwise the page takes credit
+  for something the setup supplied.

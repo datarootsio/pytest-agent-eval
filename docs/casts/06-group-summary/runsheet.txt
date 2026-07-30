@@ -16,7 +16,7 @@ Four lines. Two facts to watch, because they are the two the page asserts:
 Everything on screen is deterministic except the `in 0.0Ns` duration.
 
 TYPE:
-  cat pyproject.toml
+  bat pyproject.toml
       -> the two group tables gates.md quotes, then [tool.pytest.ini_options]
       -> [tool.agent_eval.groups.booking] threshold = 0.9 / tags / must_pass
       -> [tool.agent_eval.groups.smoke]   tags = ["smoke"]

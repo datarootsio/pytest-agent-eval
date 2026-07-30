@@ -197,7 +197,7 @@ first take. Three are not, and each says so at the top of its runsheet:
 
 | Cast | Needs |
 |---|---|
-| `05-judge-reasoning` | `OPENAI_API_KEY` — three `gpt-4o-mini` judge calls, well under a cent. A re-record produces *different* reasoning, so update the transcript block on the page to match whatever the model said. |
+| `05-judge-reasoning` | `OPENAI_API_KEY` — three `gpt-4o-mini` judge calls, well under a cent. A re-record produces *different* reasoning every time, which needs no follow-up: the page quotes no transcript, so the recording is the record. |
 | `07-agent-authors-eval` | a real Claude Code session. Minutes, not seconds, and its output cannot be predicted. |
 | `09-voice-eval` | one paid `synthesize_audio` run (the WAVs cannot be committed — the tool writes a `.gitignore` declaring generated audio local-only), then the `[livekit]` extra plus live OpenAI Realtime credentials. |
 

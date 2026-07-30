@@ -45,9 +45,10 @@ usable recording and a retake.
 5. The version numbers are the one part of this cast that is not reproducible. `uv init`
    pins requires-python from whatever CPython the recorder has, the resolve comes from
    PyPI on the day, and pytest-agent-eval's own `pydantic-ai` dependency drags in ~100
-   packages whose versions move weekly. Do not chase the numbers below. Whoever publishes
-   the cast must re-transcribe the collapsed transcript from the take that was actually
-   uploaded, not copy the one that shipped with this runsheet.
+   packages whose versions move weekly. Do not chase the numbers below. Nothing on the
+   page quotes them either — publishing this take replaces the hand-authored ```console
+   block with a player and no transcript, so the recording is the only record of what got
+   installed on the day. See THEN.
 
 TYPE:
   unset VIRTUAL_ENV

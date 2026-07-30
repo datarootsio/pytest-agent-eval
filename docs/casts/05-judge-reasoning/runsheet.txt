@@ -14,11 +14,11 @@
      run, on turn 2 only — turn 1 has no `expect`, so nothing judges it. Retakes are
      cheap; take as many as you need.
 
-  2. The reasoning text WILL be different from the block currently in judges.md, and
-     from your own previous take. It is a model writing a sentence. So this take is not
-     finished when the .cast is uploaded: open docs/why/judges.md and replace the
-     transcript under the player with what the model actually said on camera, verbatim.
-     If you skip that, the page's collapsed transcript contradicts its own recording.
+  2. The reasoning text WILL be different from your own previous take. It is a model
+     writing a sentence, so no two takes read the same. That is fine and needs no
+     follow-up: judges.md quotes no transcript, the recording is the only record of what
+     the judge said. Just watch the take back and check the sentences actually make the
+     page's point — that a judge names the clause of the rubric the reply broke.
 
   3. `-rP` on line 2 is not optional and is not a typo. pytest prints a report section
      for a FAILED test automatically, but NEVER for a passing one — and this test passes.
@@ -26,7 +26,7 @@
      thing this page exists to show.
 
 TYPE:
-  cat pyproject.toml
+  bat pyproject.toml
       -> [tool.agent_eval]
       -> model = "openai:gpt-4o-mini"
       -> then [tool.pytest.ini_options] and the two asyncio settings
@@ -80,4 +80,3 @@ TYPE:
 THEN:
   docs/casts/upload.sh 05-judge-reasoning
   paste the printed data-cast-id="..." into docs/why/judges.md
-  then update that page's collapsed transcript to the reasoning you just recorded (2)
