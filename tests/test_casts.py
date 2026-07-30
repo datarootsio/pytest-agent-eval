@@ -267,6 +267,28 @@ def test_tool_calls_cast_fails_every_run_on_the_forbidden_tool(pytester: pytest.
     )
 
 
+def test_tool_calls_page_quotes_the_traceback_locator_it_would_really_get(pytester: pytest.Pytester) -> None:
+    """The page's transcript names a line inside models.py, and that line moves.
+
+    It already did: a docstring-only change to ``models.py`` shifted
+    ``assert_threshold``'s ``raise`` by one, silently making the published transcript
+    wrong. Rather than hard-code the number here — which would go red on every unrelated
+    edit to that file — this asserts the page and a real run agree. It fires exactly when
+    the docs go stale and never otherwise, which is the drift this whole file exists for.
+    """
+    page = (Path(__file__).parent.parent / "docs" / "why" / "tool-calls.md").read_text()
+    claimed = re.search(r"models\.py:(\d+): AssertionError", page)
+    assert claimed, "tool-calls.md no longer quotes a models.py traceback locator"
+
+    result = _run(pytester, "04-tool-calls-fail", "--agent-eval-live", "-vv", "tests/test_reschedule.py")
+    actual = re.search(r"models\.py:(\d+): AssertionError", result.stdout.str())
+    assert actual, "the run no longer emits a models.py traceback locator"
+    assert claimed.group(1) == actual.group(1), (
+        f"docs/why/tool-calls.md quotes models.py:{claimed.group(1)} but the real run reports "
+        f"models.py:{actual.group(1)} — update the transcript and re-record 04-tool-calls-fail"
+    )
+
+
 # --------------------------------------------------------------------------------------
 # 05-judge-reasoning — docs/why/judges.md
 # --------------------------------------------------------------------------------------

@@ -55,7 +55,7 @@ async def test_reschedule_flow(agent_eval, booking_agent):
     ...
     E           AssertionError: LLM eval failed: score=0.00 < threshold=0.80 (0/3 runs passed)
 
-    ../../../src/pytest_agent_eval/models.py:278: AssertionError
+    ../../../src/pytest_agent_eval/models.py:279: AssertionError
     ----------------------------------- LLM Eval -----------------------------------
     [0/3 runs, score=0.00 < 0.80]
       Run 1 ❌
