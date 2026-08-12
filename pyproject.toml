@@ -54,7 +54,7 @@ dev = [
     "jsonschema>=4",
     "coverage>=7.6",
     # Pinned exactly: ty is 0.0.x and renames rules between releases.
-    "ty==0.0.64",
+    "ty==0.0.69",
 ]
 docs = [
     "zensical",
